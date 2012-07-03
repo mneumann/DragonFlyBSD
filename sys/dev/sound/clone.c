@@ -37,10 +37,7 @@
 #include "opt_snd.h"
 #endif
 
-#if defined(SND_DIAGNOSTIC) || defined(SND_DEBUG)
 #include <dev/sound/pcm/sound.h>
-#endif
-
 #include <dev/sound/clone.h>
 
 /*

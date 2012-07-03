@@ -598,6 +598,9 @@ int	sound_oss_card_info(oss_card_info *);
 #define PCM_KLDSTRING(a) ""
 #endif
 
+#define dev2unit(x)	((minor(x) & 0xff) | (minor(x) >> 8))
+#define unit2minor(x)	(x)
+
 #endif /* _KERNEL */
 
 #endif	/* _OS_H_ */
