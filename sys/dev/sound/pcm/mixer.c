@@ -1084,7 +1084,7 @@ mixer_close(struct cdev *i_dev, int flags, int mode, struct thread *td)
 
 static int
 mixer_ioctl_channel(struct cdev *dev, u_long cmd, caddr_t arg, int mode,
-    struct thread *td, int from)
+    int from)
 {
 	struct snddev_info *d;
 	struct snd_mixer *m;
@@ -1092,7 +1092,7 @@ mixer_ioctl_channel(struct cdev *dev, u_long cmd, caddr_t arg, int mode,
 	pid_t pid;
 	int j, ret;
 
-	if (td == NULL || td->td_proc == NULL)
+	if (curproc == NULL)
 		return (-1);
 
 	m = dev->si_drv1;
@@ -1111,7 +1111,7 @@ mixer_ioctl_channel(struct cdev *dev, u_long cmd, caddr_t arg, int mode,
 		break;
 	}
 
-	pid = td->td_proc->p_pid;
+	pid = curproc->p_pid;
 	rdch = NULL;
 	wrch = NULL;
 	c = NULL;
@@ -1210,11 +1210,11 @@ mixer_ioctl(struct cdev *i_dev, u_long cmd, caddr_t arg, int mode,
 	ret = -1;
 
 	if (mixer_bypass != 0 && (d->flags & SD_F_VPC))
-		ret = mixer_ioctl_channel(i_dev, cmd, arg, mode, td,
+		ret = mixer_ioctl_channel(i_dev, cmd, arg, mode,
 		    MIXER_CMD_CDEV);
 
 	if (ret == -1)
-		ret = mixer_ioctl_cmd(i_dev, cmd, arg, mode, td,
+		ret = mixer_ioctl_cmd(i_dev, cmd, arg, mode,
 		    MIXER_CMD_CDEV);
 
 	PCM_RELEASE_QUICK(d);
@@ -1229,7 +1229,7 @@ mixer_ioctl(struct cdev *i_dev, u_long cmd, caddr_t arg, int mode,
  */
 int
 mixer_ioctl_cmd(struct cdev *i_dev, u_long cmd, caddr_t arg, int mode,
-    struct thread *td, int from)
+    int from)
 {
 	struct snd_mixer *m;
 	int ret = EINVAL, *arg_i = (int *)arg;
@@ -1327,7 +1327,9 @@ mixer_clone(void *arg,
 		d = devclass_get_softc(pcm_devclass, snd_unit);
 		if (PCM_REGISTERED(d) && d->mixer_dev != NULL) {
 			*dev = d->mixer_dev;
+#if 0
 			dev_ref(*dev);
+#endif
 		}
 	}
 }
