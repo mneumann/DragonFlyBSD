@@ -110,7 +110,6 @@ struct snd_midi {
 	struct lock qlock;		/* Protects inq, outq and flags */
 	MIDIQ_HEAD(, char) inq, outq;
 	int	rchan, wchan;
-	struct selinfo rsel, wsel;
 	int	hiwat;			/* QLEN(outq)>High-water -> disable
 					 * writes from userland */
 	enum midi_states inq_state;
