@@ -67,7 +67,6 @@ MAN=	aac.4 \
 	cmx.4 \
 	coretemp.4 \
 	crypto.4 \
-	csa.4 \
 	cue.4 \
 	cxm.4 \
 	da.4 \
@@ -277,8 +276,6 @@ MAN=	aac.4 \
 	snd_atiixp.4 \
 	snd_cmi.4 \
 	snd_cs4281.4 \
-	snd_csa.4 \
-	snd_ds1.4 \
 	snd_emu10k1.4 \
 	snd_envy24.4 \
 	snd_envy24ht.4 \
