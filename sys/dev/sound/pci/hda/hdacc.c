@@ -393,10 +393,10 @@ hdacc_probe(device_t dev)
 		if ((hdacc_codecs[i].id & 0xffff) != 0xffff)
 			strlcpy(buf, hdacc_codecs[i].name, sizeof(buf));
 		else
-			snprintf(buf, sizeof(buf), "%s (0x%04x)",
+			ksnprintf(buf, sizeof(buf), "%s (0x%04x)",
 			    hdacc_codecs[i].name, hda_get_device_id(dev));
 	} else
-		snprintf(buf, sizeof(buf), "Generic (0x%04x)", id);
+		ksnprintf(buf, sizeof(buf), "Generic (0x%04x)", id);
 	strlcat(buf, " HDA CODEC", sizeof(buf));
 	device_set_desc_copy(dev, buf);
 	return (BUS_PROBE_DEFAULT);
@@ -434,7 +434,7 @@ hdacc_attach(device_t dev)
 		    startnode, endnode - 1);
 	);
 
-	codec->fgs = malloc(sizeof(struct hdacc_fg) * codec->fgcnt,
+	codec->fgs = kmalloc(sizeof(struct hdacc_fg) * codec->fgcnt,
 	    M_HDACC, M_ZERO | M_WAITOK);
 	for (i = startnode, n = 0; i < endnode; i++, n++) {
 		codec->fgs[n].nid = i;
@@ -465,7 +465,7 @@ hdacc_detach(device_t dev)
 	int error;
 
 	error = device_delete_children(dev);
-	free(codec->fgs, M_HDACC);
+	kfree(codec->fgs, M_HDACC);
 	return (error);
 }
 
@@ -475,7 +475,7 @@ hdacc_child_location_str(device_t dev, device_t child, char *buf,
 {
 	struct hdacc_fg *fg = device_get_ivars(child);
 
-	snprintf(buf, buflen, "nid=%d", fg->nid);
+	ksnprintf(buf, buflen, "nid=%d", fg->nid);
 	return (0);
 }
 
@@ -485,7 +485,7 @@ hdacc_child_pnpinfo_str_method(device_t dev, device_t child, char *buf,
 {
 	struct hdacc_fg *fg = device_get_ivars(child);
 
-	snprintf(buf, buflen, "type=0x%02x subsystem=0x%08x",
+	ksnprintf(buf, buflen, "type=0x%02x subsystem=0x%08x",
 	    fg->type, fg->subsystem_id);
 	return (0);
 }
@@ -497,7 +497,7 @@ hdacc_print_child(device_t dev, device_t child)
 	int retval;
 
 	retval = bus_print_child_header(dev, child);
-	retval += printf(" at nid %d", fg->nid);
+	retval += kprintf(" at nid %d", fg->nid);
 	retval += bus_print_child_footer(dev, child);
 
 	return (retval);
@@ -684,7 +684,7 @@ hdacc_pindump(device_t dev)
 		return;
 	for (i = 0; i < devcount; i++)
 		HDAC_PINDUMP(devlist[i]);
-	free(devlist, M_TEMP);
+	kfree(devlist, M_TEMP);
 }
 
 static device_method_t hdacc_methods[] = {

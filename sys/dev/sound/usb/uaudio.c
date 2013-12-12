@@ -29,10 +29,10 @@
  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
+ *
+ * $FreeBSD: head/sys/dev/sound/usb/uaudio.c 250765 2013-05-18 07:16:20Z hselasky $
  */
 
-#include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/dev/sound/usb/uaudio.c 250765 2013-05-18 07:16:20Z hselasky $");
 
 /*
  * USB audio specs: http://www.usb.org/developers/devclass_docs/audio10.pdf
@@ -49,7 +49,6 @@ __FBSDID("$FreeBSD: head/sys/dev/sound/usb/uaudio.c 250765 2013-05-18 07:16:20Z 
  */
 
 #include <sys/stdint.h>
-#include <sys/stddef.h>
 #include <sys/param.h>
 #include <sys/queue.h>
 #include <sys/types.h>
@@ -61,16 +60,15 @@ __FBSDID("$FreeBSD: head/sys/dev/sound/usb/uaudio.c 250765 2013-05-18 07:16:20Z 
 #include <sys/mutex.h>
 #include <sys/condvar.h>
 #include <sys/sysctl.h>
-#include <sys/sx.h>
 #include <sys/unistd.h>
 #include <sys/callout.h>
 #include <sys/malloc.h>
 #include <sys/priv.h>
 
 #include "usbdevs.h"
-#include <dev/usb/usb.h>
-#include <dev/usb/usbdi.h>
-#include <dev/usb/usbdi_util.h>
+#include <bus/usb/usb.h>
+#include <bus/usb/usbdi.h>
+#include <bus/usb/usbdi_util.h>
 #include <dev/usb/usbhid.h>
 #include <dev/usb/usb_request.h>
 #include <dev/usb/usb_process.h>

@@ -53,8 +53,9 @@
 
 #include <dev/sound/pcm/sound.h>
 #include <dev/sound/pcm/ac97.h>
-#include <dev/pci/pcireg.h>
-#include <dev/pci/pcivar.h>
+#include <bus/pci/pcireg.h>
+#include <bus/pci/pcivar.h>
+#include <sys/thread2.h>
 
 #include <dev/sound/pci/maestro_reg.h>
 
@@ -88,10 +89,8 @@ SND_DECLARE_FILE("$FreeBSD: head/sys/dev/sound/pci/maestro.c 254263 2013-08-12 2
 
 
 /* compatibility */
-#if __FreeBSD_version < 500000
-# define critical_enter()	disable_intr()
-# define critical_exit()	enable_intr()
-#endif
+# define critical_enter()	crit_enter()
+# define critical_exit()	crit_exit()
 
 #ifndef PCIR_BAR
 #define PCIR_BAR(x)	(PCIR_MAPS + (x) * 4)
@@ -1178,7 +1177,7 @@ calc_timer_div(struct agg_chinfo *ch)
 	speed = ch->speed;
 #ifdef INVARIANTS
 	if (speed == 0) {
-		printf("snd_maestro: pch[%d].speed == 0, which shouldn't\n",
+		kprintf("snd_maestro: pch[%d].speed == 0, which shouldn't\n",
 		       ch->num);
 		speed = 1;
 	}
@@ -1195,7 +1194,7 @@ calc_timer_div_rch(struct agg_rchinfo *ch)
 	speed = ch->speed;
 #ifdef INVARIANTS
 	if (speed == 0) {
-		printf("snd_maestro: rch.speed == 0, which shouldn't\n");
+		kprintf("snd_maestro: rch.speed == 0, which shouldn't\n");
 		speed = 1;
 	}
 #endif
@@ -1337,9 +1336,9 @@ adjust_pchbase(struct agg_chinfo *chans, u_int n, u_int size)
 #undef BASE_SHIFT
 
 	if (bootverbose) {
-		printf("Total of %d bases are assigned.\n", k);
+		kprintf("Total of %d bases are assigned.\n", k);
 		for (i = 0; i < n; i++) {
-			printf("ch.%d: phys 0x%llx, wpwa 0x%llx\n",
+			kprintf("ch.%d: phys 0x%llx, wpwa 0x%llx\n",
 			       i, (long long)chans[i].phys,
 			       (long long)(chans[i].phys -
 					   chans[i].base) >> 1);
@@ -1709,7 +1708,7 @@ setmap(void *arg, bus_dma_segment_t *segs, int nseg, int error)
 	*phys = error? 0 : segs->ds_addr;
 
 	if (bootverbose) {
-		printf("setmap (%lx, %lx), nseg=%d, error=%d\n",
+		kprintf("setmap (%lx, %lx), nseg=%d, error=%d\n",
 		    (unsigned long)segs->ds_addr, (unsigned long)segs->ds_len,
 		    nseg, error);
 	}
@@ -1777,7 +1776,7 @@ agg_attach(device_t dev)
 	char	status[SND_STATUSLEN];
 	int	dacn, ret = 0;
 
-	ess = malloc(sizeof(*ess), M_DEVBUF, M_WAITOK | M_ZERO);
+	ess = kmalloc(sizeof(*ess), M_DEVBUF, M_WAITOK | M_ZERO);
 	ess->dev = dev;
 
 	mtx_init(&ess->lock, device_get_desc(dev), "snd_maestro softc",
@@ -1914,7 +1913,7 @@ agg_attach(device_t dev)
 	pcm_addchan(dev, PCMDIR_REC, &aggrch_class, ess);
 	adjust_pchbase(ess->pch, ess->playchns, ess->bufsz);
 
-	snprintf(status, SND_STATUSLEN,
+	ksnprintf(status, SND_STATUSLEN,
 	    "port 0x%lx-0x%lx irq %ld at device %d.%d on pci%d",
 	    rman_get_start(reg), rman_get_end(reg), rman_get_start(irq),
 	    pci_get_slot(dev), pci_get_function(dev), pci_get_bus(dev));
@@ -1940,7 +1939,7 @@ agg_attach(device_t dev)
 			bus_dma_tag_destroy(ess->buf_dmat);
 		if (mtx_initialized(&ess->lock))
 			mtx_destroy(&ess->lock);
-		free(ess, M_DEVBUF);
+		kfree(ess, M_DEVBUF);
 	}
 
 	return ret;
@@ -1981,7 +1980,7 @@ agg_detach(device_t dev)
 	bus_dma_tag_destroy(ess->stat_dmat);
 	bus_dma_tag_destroy(ess->buf_dmat);
 	mtx_destroy(&ess->lock);
-	free(ess, M_DEVBUF);
+	kfree(ess, M_DEVBUF);
 	return 0;
 }
 

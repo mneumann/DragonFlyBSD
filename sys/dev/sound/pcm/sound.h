@@ -42,7 +42,6 @@
 #include <sys/filio.h>
 #include <sys/sockio.h>
 #include <sys/fcntl.h>
-#include <sys/selinfo.h>
 #include <sys/proc.h>
 #include <sys/kernel.h> /* for DATA_SET */
 #include <sys/module.h>
@@ -53,8 +52,6 @@
 #include <sys/errno.h>
 #include <sys/malloc.h>
 #include <sys/bus.h>
-#include <machine/resource.h>
-#include <machine/bus.h>
 #include <sys/rman.h>
 #include <sys/limits.h>
 #include <sys/mman.h>

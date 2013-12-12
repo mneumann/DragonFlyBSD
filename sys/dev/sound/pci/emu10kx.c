@@ -30,7 +30,6 @@
 #include <sys/param.h>
 #include <sys/types.h>
 #include <sys/bus.h>
-#include <machine/bus.h>
 #include <sys/rman.h>
 #include <sys/systm.h>
 #include <sys/sbuf.h>
@@ -38,10 +37,9 @@
 #include <sys/lock.h>
 #include <sys/mutex.h>
 #include <sys/sysctl.h>
-#include <sys/kdb.h>
 
-#include <dev/pci/pcireg.h>
-#include <dev/pci/pcivar.h>
+#include <bus/pci/pcireg.h>
+#include <bus/pci/pcivar.h>
 
 #include <machine/clock.h>	/* for DELAY */
 
@@ -1050,7 +1048,7 @@ emu_setmap(void *arg, bus_dma_segment_t * segs, int nseg, int error)
 	*phys = error ? 0 : (bus_addr_t) segs->ds_addr;
 
 	if (bootverbose) {
-		printf("emu10kx: setmap (%lx, %lx), nseg=%d, error=%d\n",
+		kprintf("emu10kx: setmap (%lx, %lx), nseg=%d, error=%d\n",
 		    (unsigned long)segs->ds_addr, (unsigned long)segs->ds_len,
 		    nseg, error);
 	}
@@ -1114,7 +1112,7 @@ emu_memalloc(struct emu_mem *mem, uint32_t sz, bus_addr_t * addr, const char *ow
 			device_printf(mem->card->dev, "emu_memalloc: no free space in bitmap\n");
 		return (NULL);
 		}
-	blk = malloc(sizeof(*blk), M_DEVBUF, M_NOWAIT);
+	blk = kmalloc(sizeof(*blk), M_DEVBUF, M_NOWAIT);
 	if (blk == NULL) {
 		if (mem->card->dbg_level > 2)
 			device_printf(mem->card->dev, "emu_memalloc: buffer allocation failed\n");
@@ -1126,7 +1124,7 @@ emu_memalloc(struct emu_mem *mem, uint32_t sz, bus_addr_t * addr, const char *ow
 	if (membuf == NULL) {
 		if (mem->card->dbg_level > 2)
 			device_printf(mem->card->dev, "emu_memalloc: can't setup HW memory\n");
-		free(blk, M_DEVBUF);
+		kfree(blk, M_DEVBUF);
 		return (NULL);
 	}
 	blk->buf = membuf;
@@ -1165,7 +1163,7 @@ emu_memfree(struct emu_mem *mem, void *membuf)
 		mem->bmap[idx >> 3] &= ~(1 << (idx & 7));
 		mem->ptb_pages[idx] = tmp | idx;
 	}
-	free(blk, M_DEVBUF);
+	kfree(blk, M_DEVBUF);
 	return (0);
 }
 
@@ -1571,7 +1569,7 @@ emu_addefxmixer(struct emu_sc_info *sc, const char *mix_name, const int mix_id, 
 		 * see freebsd-current mailing list, emu10kx driver
 		 * discussion around 2006-05-24.
 		 */
-		snprintf(sysctl_name, 32, "_%s", mix_name);
+		ksnprintf(sysctl_name, 32, "_%s", mix_name);
 		SYSCTL_ADD_PROC(sc->ctx,
 			SYSCTL_CHILDREN(sc->root),
 			OID_AUTO, sysctl_name,
@@ -2360,7 +2358,7 @@ emu_rm_init(struct emu_sc_info *sc)
 	int maxcount;
 	struct emu_rm *rm;
 
-	rm = malloc(sizeof(struct emu_rm), M_DEVBUF, M_NOWAIT | M_ZERO);
+	rm = kmalloc(sizeof(struct emu_rm), M_DEVBUF, M_NOWAIT | M_ZERO);
 	if (rm == NULL) {
 		return (ENOMEM);
 	}
@@ -2393,7 +2391,7 @@ emu_rm_uninit(struct emu_sc_info *sc)
 	}
 
 	mtx_destroy(&(sc->rm->gpr_lock));
-	free(sc->rm, M_DEVBUF);
+	kfree(sc->rm, M_DEVBUF);
 	return (0);
 }
 
@@ -2878,7 +2876,7 @@ emu_init(struct emu_sc_info *sc)
 			tmp = emu_rd(sc, EMU_A_IOCFG, 2);
 			device_printf(sc->dev, "Audigy Card Configuration (    0x%04x )\n", tmp);
 			device_printf(sc->dev, "Audigy Card Configuration (  & 0xff00 )");
-			printf(" : %s%s%s%s%s%s%s%s\n",
+			kprintf(" : %s%s%s%s%s%s%s%s\n",
 			    (tmp & 0x8000 ? "[Rear Speakers] " : ""),
 			    (tmp & 0x4000 ? "[Front Speakers] " : ""),
 			    (tmp & 0x2000 ? "[0x20] " : ""),
@@ -2888,7 +2886,7 @@ emu_init(struct emu_sc_info *sc)
 			    (tmp & 0x0200 ? "[0x02] " : ""),
 			    (tmp & 0x0100 ? "[AudigyDrive Phones]" : " "));
 			device_printf(sc->dev, "Audigy Card Configuration (  & 0x00ff )");
-			printf(" : %s%s%s%s%s%s%s%s\n",
+			kprintf(" : %s%s%s%s%s%s%s%s\n",
 			    (tmp & 0x0080 ? "[0x80] " : ""),
 			    (tmp & 0x0040 ? "[Mute AnalogOut] " : ""),
 			    (tmp & 0x0020 ? "[0x20] " : ""),
@@ -3197,9 +3195,8 @@ emu_pci_attach(device_t dev)
 
 	i = 0;
 	sc->irq = bus_alloc_resource_any(dev, SYS_RES_IRQ, &i, RF_ACTIVE | RF_SHAREABLE);
-	if ((sc->irq == NULL) || bus_setup_intr(dev, sc->irq, INTR_MPSAFE | INTR_TYPE_AV,
-	    NULL,
-	    emu_intr, sc, &sc->ih)) {
+	if ((sc->irq == NULL) || bus_setup_intr(dev, sc->irq, INTR_MPSAFE,
+	    emu_intr, sc, &sc->ih, NULL)) {
 		device_printf(dev, "unable to map interrupt\n");
 		goto bad;
 	}
@@ -3220,7 +3217,7 @@ emu_pci_attach(device_t dev)
 		device_printf(dev, "unable to create control device\n");
 		goto bad;
 	}
-	snprintf(status, 255, "rev %d at io 0x%lx irq %ld", sc->rev, rman_get_start(sc->reg), rman_get_start(sc->irq));
+	ksnprintf(status, 255, "rev %d at io 0x%lx irq %ld", sc->rev, rman_get_start(sc->reg), rman_get_start(sc->irq));
 
 	/* Voices */
 	for (i = 0; i < NUM_G; i++) {
@@ -3241,12 +3238,14 @@ emu_pci_attach(device_t dev)
 		sc->pcm[i] = NULL;
 
 	/* FRONT */
-	func = malloc(sizeof(struct sndcard_func), M_DEVBUF, M_NOWAIT | M_ZERO);
+	func = kmalloc(sizeof(struct sndcard_func), M_DEVBUF,
+		       M_NOWAIT | M_ZERO);
 	if (func == NULL) {
 		error = ENOMEM;
 		goto bad;
 	}
-	pcminfo = malloc(sizeof(struct emu_pcminfo), M_DEVBUF, M_NOWAIT | M_ZERO);
+	pcminfo = kmalloc(sizeof(struct emu_pcminfo), M_DEVBUF,
+			  M_NOWAIT | M_ZERO);
 	if (pcminfo == NULL) {
 		error = ENOMEM;
 		goto bad;
@@ -3261,12 +3260,14 @@ emu_pci_attach(device_t dev)
 
 	if (!(sc->mch_disabled)) {
 		/* REAR */
-		func = malloc(sizeof(struct sndcard_func), M_DEVBUF, M_NOWAIT | M_ZERO);
+		func = kmalloc(sizeof(struct sndcard_func), M_DEVBUF,
+			       M_NOWAIT | M_ZERO);
 		if (func == NULL) {
 			error = ENOMEM;
 			goto bad;
 		}
-		pcminfo = malloc(sizeof(struct emu_pcminfo), M_DEVBUF, M_NOWAIT | M_ZERO);
+		pcminfo = kmalloc(sizeof(struct emu_pcminfo), M_DEVBUF,
+				  M_NOWAIT | M_ZERO);
 		if (pcminfo == NULL) {
 			error = ENOMEM;
 			goto bad;
@@ -3280,12 +3281,14 @@ emu_pci_attach(device_t dev)
 		device_set_ivars(sc->pcm[RT_REAR], func);
 		if (sc->has_51) {
 			/* CENTER */
-			func = malloc(sizeof(struct sndcard_func), M_DEVBUF, M_NOWAIT | M_ZERO);
+			func = kmalloc(sizeof(struct sndcard_func), M_DEVBUF,
+				       M_NOWAIT | M_ZERO);
 			if (func == NULL) {
 				error = ENOMEM;
 				goto bad;
 			}
-			pcminfo = malloc(sizeof(struct emu_pcminfo), M_DEVBUF, M_NOWAIT | M_ZERO);
+			pcminfo = kmalloc(sizeof(struct emu_pcminfo),
+					  M_DEVBUF, M_NOWAIT | M_ZERO);
 			if (pcminfo == NULL) {
 				error = ENOMEM;
 				goto bad;
@@ -3298,12 +3301,14 @@ emu_pci_attach(device_t dev)
 			sc->pcm[RT_CENTER] = device_add_child(dev, "pcm", -1);
 			device_set_ivars(sc->pcm[RT_CENTER], func);
 			/* SUB */
-			func = malloc(sizeof(struct sndcard_func), M_DEVBUF, M_NOWAIT | M_ZERO);
+			func = kmalloc(sizeof(struct sndcard_func), M_DEVBUF,
+				       M_NOWAIT | M_ZERO);
 			if (func == NULL) {
 				error = ENOMEM;
 				goto bad;
 			}
-			pcminfo = malloc(sizeof(struct emu_pcminfo), M_DEVBUF, M_NOWAIT | M_ZERO);
+			pcminfo = kmalloc(sizeof(struct emu_pcminfo),
+					  M_DEVBUF, M_NOWAIT | M_ZERO);
 			if (pcminfo == NULL) {
 				error = ENOMEM;
 				goto bad;
@@ -3318,12 +3323,14 @@ emu_pci_attach(device_t dev)
 		}
 		if (sc->has_71) {
 			/* SIDE */
-			func = malloc(sizeof(struct sndcard_func), M_DEVBUF, M_NOWAIT | M_ZERO);
+			func = kmalloc(sizeof(struct sndcard_func), M_DEVBUF,
+				       M_NOWAIT | M_ZERO);
 			if (func == NULL) {
 				error = ENOMEM;
 				goto bad;
 			}
-			pcminfo = malloc(sizeof(struct emu_pcminfo), M_DEVBUF, M_NOWAIT | M_ZERO);
+			pcminfo = kmalloc(sizeof(struct emu_pcminfo),
+					  M_DEVBUF, M_NOWAIT | M_ZERO);
 			if (pcminfo == NULL) {
 				error = ENOMEM;
 				goto bad;
@@ -3339,12 +3346,14 @@ emu_pci_attach(device_t dev)
 	} /* mch_disabled */
 
 	if (sc->mch_rec) {
-		func = malloc(sizeof(struct sndcard_func), M_DEVBUF, M_NOWAIT | M_ZERO);
+		func = kmalloc(sizeof(struct sndcard_func), M_DEVBUF,
+			       M_NOWAIT | M_ZERO);
 		if (func == NULL) {
 			error = ENOMEM;
 			goto bad;
 		}
-		pcminfo = malloc(sizeof(struct emu_pcminfo), M_DEVBUF, M_NOWAIT | M_ZERO);
+		pcminfo = kmalloc(sizeof(struct emu_pcminfo), M_DEVBUF,
+				  M_NOWAIT | M_ZERO);
 		if (pcminfo == NULL) {
 			error = ENOMEM;
 			goto bad;
@@ -3447,8 +3456,8 @@ emu_pci_detach(device_t dev)
 			func = device_get_ivars(sc->pcm[i]);
 			if (func != NULL && func->func == SCF_PCM) {
 				device_set_ivars(sc->pcm[i], NULL);
-				free(func->varinfo, M_DEVBUF);
-				free(func, M_DEVBUF);
+				kfree(func->varinfo, M_DEVBUF);
+				kfree(func, M_DEVBUF);
 			}
 			r = device_delete_child(dev, sc->pcm[i]);
 			if (r)	return (r);
@@ -3459,8 +3468,8 @@ emu_pci_detach(device_t dev)
 		func = device_get_ivars(sc->midi[0]);
 		if (func != NULL && func->func == SCF_MIDI) {
 			device_set_ivars(sc->midi[0], NULL);
-			free(func->varinfo, M_DEVBUF);
-			free(func, M_DEVBUF);
+			kfree(func->varinfo, M_DEVBUF);
+			kfree(func, M_DEVBUF);
 		}
 		r = device_delete_child(dev, sc->midi[0]);
 		if (r)	return (r);
@@ -3470,8 +3479,8 @@ emu_pci_detach(device_t dev)
 		func = device_get_ivars(sc->midi[1]);
 		if (func != NULL && func->func == SCF_MIDI) {
 			device_set_ivars(sc->midi[1], NULL);
-			free(func->varinfo, M_DEVBUF);
-			free(func, M_DEVBUF);
+			kfree(func->varinfo, M_DEVBUF);
+			kfree(func, M_DEVBUF);
 		}
 		r = device_delete_child(dev, sc->midi[1]);
 		if (r)	return (r);
@@ -3483,13 +3492,13 @@ emu_pci_detach(device_t dev)
 			func = device_get_ivars(childlist[i]);
 			if (func != NULL && (func->func == SCF_MIDI || func->func == SCF_PCM)) {
 				device_set_ivars(childlist[i], NULL);
-				free(func->varinfo, M_DEVBUF);
-				free(func, M_DEVBUF);
+				kfree(func->varinfo, M_DEVBUF);
+				kfree(func, M_DEVBUF);
 			}
 			device_delete_child(dev, childlist[i]);
 		}
 	if (childlist != NULL)
-		free(childlist, M_TEMP);
+		kfree(childlist, M_TEMP);
 
 	r = emu10kx_dev_uninit(sc);
 	if (r)

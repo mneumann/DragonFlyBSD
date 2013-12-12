@@ -60,8 +60,8 @@
 #include <dev/sound/pcm/sound.h>
 #include <dev/sound/pcm/ac97.h>
 
-#include <dev/pci/pcireg.h>
-#include <dev/pci/pcivar.h>
+#include <bus/pci/pcireg.h>
+#include <bus/pci/pcivar.h>
 #include <sys/sysctl.h>
 #include <sys/endian.h>
 
@@ -1097,7 +1097,7 @@ atiixp_chip_post_init(void *arg)
 	    "polling", CTLTYPE_INT | CTLFLAG_RW, sc->dev, sizeof(sc->dev),
 	    sysctl_atiixp_polling, "I", "Enable polling mode");
 
-	snprintf(status, SND_STATUSLEN, "at memory 0x%lx irq %ld %s",
+	ksnprintf(status, SND_STATUSLEN, "at memory 0x%lx irq %ld %s",
 	    rman_get_start(sc->reg), rman_get_start(sc->irq),
 	    PCM_KLDSTRING(snd_atiixp));
 
@@ -1161,7 +1161,7 @@ atiixp_release_resource(struct atiixp_info *sc)
 		snd_mtxfree(sc->lock);
 		sc->lock = NULL;
 	}
-	free(sc, M_DEVBUF);
+	kfree(sc, M_DEVBUF);
 }
 
 static int
@@ -1189,11 +1189,11 @@ atiixp_pci_attach(device_t dev)
 	struct atiixp_info *sc;
 	int i;
 
-	sc = malloc(sizeof(*sc), M_DEVBUF, M_WAITOK | M_ZERO);
+	sc = kmalloc(sizeof(*sc), M_DEVBUF, M_WAITOK | M_ZERO);
 	sc->lock = snd_mtxcreate(device_get_nameunit(dev), "snd_atiixp softc");
 	sc->dev = dev;
 
-	callout_init(&sc->poll_timer, CALLOUT_MPSAFE);
+	callout_init_mp(&sc->poll_timer);
 	sc->poll_ticks = 1;
 
 	if (resource_int_value(device_get_name(sc->dev),

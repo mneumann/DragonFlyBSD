@@ -22,10 +22,9 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
+ *
+ * $FreeBSD: head/sys/dev/sound/midi/mpu401.c 193979 2009-06-11 09:06:09Z ariff $
  */
-
-#include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/dev/sound/midi/mpu401.c 193979 2009-06-11 09:06:09Z ariff $");
 
 #include <sys/param.h>
 #include <sys/types.h>
@@ -178,14 +177,14 @@ mpu401_init(kobj_class_t cls, void *cookie, driver_intr_t softintr,
 	struct mpu401 *m;
 
 	*cb = NULL;
-	m = malloc(sizeof(*m), M_MIDI, M_NOWAIT | M_ZERO);
+	m = kmalloc(sizeof(*m), M_MIDI, M_NOWAIT | M_ZERO);
 
 	if (!m)
 		return NULL;
 
 	kobj_init((kobj_t)m, cls);
 
-	callout_init(&m->timer, CALLOUT_MPSAFE);
+	callout_init_mp(&m->timer);
 
 	m->si = softintr;
 	m->cookie = cookie;
@@ -197,8 +196,8 @@ mpu401_init(kobj_class_t cls, void *cookie, driver_intr_t softintr,
 	*cb = mpu401_intr;
 	return m;
 err:
-	printf("mpu401_init error\n");
-	free(m, M_MIDI);
+	kprintf("mpu401_init error\n");
+	kfree(m, M_MIDI);
 	return NULL;
 }
 
@@ -211,7 +210,7 @@ mpu401_uninit(struct mpu401 *m)
 	retval = midi_uninit(m->mid);
 	if (retval)
 		return retval;
-	free(m, M_MIDI);
+	kfree(m, M_MIDI);
 	return 0;
 }
 
@@ -235,7 +234,7 @@ mpu401_minit(struct snd_midi *sm, void *arg)
 		CMD(m, MPU_UART);
 		return 0;
 	}
-	printf("mpu401_minit failed active sensing\n");
+	kprintf("mpu401_minit failed active sensing\n");
 	return 1;
 }
 

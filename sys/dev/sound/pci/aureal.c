@@ -32,8 +32,8 @@
 #include <dev/sound/pcm/ac97.h>
 #include <dev/sound/pci/aureal.h>
 
-#include <dev/pci/pcireg.h>
-#include <dev/pci/pcivar.h>
+#include <bus/pci/pcireg.h>
+#include <bus/pci/pcivar.h>
 
 SND_DECLARE_FILE("$FreeBSD: head/sys/dev/sound/pci/aureal.c 254263 2013-08-12 23:30:01Z scottl $");
 

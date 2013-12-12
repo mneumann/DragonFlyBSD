@@ -139,7 +139,7 @@ sndstat_open(struct cdev *i_dev, int flags, int mode, struct thread *td)
 		sx_unlock(&sndstat_lock);
 		return EBUSY;
 	}
-	SNDSTAT_PID_SET(i_dev, td->td_proc->p_pid);
+	SNDSTAT_PID_SET(i_dev, curproc->p_pid);
 	if (sbuf_new(&sndstat_sbuf, NULL, 4096, SBUF_AUTOEXTEND) == NULL) {
 		SNDSTAT_PID_SET(i_dev, 0);
 		sx_unlock(&sndstat_lock);
@@ -272,7 +272,7 @@ sndstat_register(device_t dev, char *str, sndstat_handler handler)
 		unit = -1;
 	}
 
-	ent = malloc(sizeof *ent, M_DEVBUF, M_WAITOK | M_ZERO);
+	ent = kmalloc(sizeof *ent, M_DEVBUF, M_WAITOK | M_ZERO);
 	ent->dev = dev;
 	ent->str = str;
 	ent->type = type;
@@ -305,7 +305,7 @@ sndstat_unregister(device_t dev)
 		if (ent->dev == dev) {
 			SLIST_REMOVE(&sndstat_devlist, ent, sndstat_entry, link);
 			sx_unlock(&sndstat_lock);
-			free(ent, M_DEVBUF);
+			kfree(ent, M_DEVBUF);
 
 			return 0;
 		}
@@ -326,7 +326,7 @@ sndstat_unregisterfile(char *str)
 			SLIST_REMOVE(&sndstat_devlist, ent, sndstat_entry, link);
 			sndstat_files--;
 			sx_unlock(&sndstat_lock);
-			free(ent, M_DEVBUF);
+			kfree(ent, M_DEVBUF);
 
 			return 0;
 		}

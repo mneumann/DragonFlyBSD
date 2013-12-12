@@ -178,7 +178,7 @@ struct pcm_channel {
 	SLIST_FOREACH(x, CHN_HEAD(y, z), CHN_LINK(z))
 
 #define CHN_FOREACH_SAFE(w, x, y, z)					\
-	SLIST_FOREACH_SAFE(w, CHN_HEAD(x, z), CHN_LINK(z), y)
+	SLIST_FOREACH_MUTABLE(w, CHN_HEAD(x, z), CHN_LINK(z), y)
 
 #define CHN_INSERT_HEAD(x, y, z)					\
 	SLIST_INSERT_HEAD(CHN_HEAD(x, z), y, CHN_LINK(z))

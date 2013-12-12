@@ -34,8 +34,8 @@
 #include <dev/sound/pcm/ac97.h>
 #include <dev/sound/pci/emuxkireg.h>
 
-#include <dev/pci/pcireg.h>
-#include <dev/pci/pcivar.h>
+#include <bus/pci/pcireg.h>
+#include <bus/pci/pcivar.h>
 #include <sys/queue.h>
 
 #include <dev/sound/midi/mpu401.h>
@@ -1308,7 +1308,7 @@ emu_setmap(void *arg, bus_dma_segment_t *segs, int nseg, int error)
 	*phys = error ? 0 : (bus_addr_t)segs->ds_addr;
 
 	if (bootverbose) {
-		printf("emu: setmap (%lx, %lx), nseg=%d, error=%d\n",
+		kprintf("emu: setmap (%lx, %lx), nseg=%d, error=%d\n",
 		    (unsigned long)segs->ds_addr, (unsigned long)segs->ds_len,
 		    nseg, error);
 	}
@@ -1359,13 +1359,13 @@ emu_memalloc(struct sc_info *sc, u_int32_t sz, bus_addr_t *addr)
 	}
 	if (!found)
 		return NULL;
-	blk = malloc(sizeof(*blk), M_DEVBUF, M_NOWAIT);
+	blk = kmalloc(sizeof(*blk), M_DEVBUF, M_NOWAIT);
 	if (blk == NULL)
 		return NULL;
 	buf = emu_malloc(sc, sz, &blk->buf_addr);
 	*addr = blk->buf_addr;
 	if (buf == NULL) {
-		free(blk, M_DEVBUF);
+		kfree(blk, M_DEVBUF);
 		return NULL;
 	}
 	blk->buf = buf;
@@ -1411,7 +1411,7 @@ emu_memfree(struct sc_info *sc, void *buf)
 		mem->bmap[idx >> 3] &= ~(1 << (idx & 7));
 		mem->ptb_pages[idx] = tmp | idx;
 	}
-	free(blk, M_DEVBUF);
+	kfree(blk, M_DEVBUF);
 	return 0;
 }
 
@@ -2070,7 +2070,7 @@ emu_pci_attach(device_t dev)
 	int i, gotmic;
 	char status[SND_STATUSLEN];
 
-	sc = malloc(sizeof(*sc), M_DEVBUF, M_WAITOK | M_ZERO);
+	sc = kmalloc(sizeof(*sc), M_DEVBUF, M_WAITOK | M_ZERO);
 	sc->lock = snd_mtxcreate(device_get_nameunit(dev), "snd_emu10k1 softc");
 	sc->dev = dev;
 	sc->type = pci_get_devid(dev);
@@ -2126,7 +2126,7 @@ emu_pci_attach(device_t dev)
 		goto bad;
 	}
 
-	snprintf(status, SND_STATUSLEN, "at io 0x%lx irq %ld %s",
+	ksnprintf(status, SND_STATUSLEN, "at io 0x%lx irq %ld %s",
 	    rman_get_start(sc->reg), rman_get_start(sc->irq),
 	    PCM_KLDSTRING(snd_emu10k1));
 
@@ -2147,7 +2147,7 @@ bad:
 	if (sc->irq) bus_release_resource(dev, SYS_RES_IRQ, 0, sc->irq);
 	if (sc->parent_dmat) bus_dma_tag_destroy(sc->parent_dmat);
 	if (sc->lock) snd_mtxfree(sc->lock);
-	free(sc, M_DEVBUF);
+	kfree(sc, M_DEVBUF);
 	return ENXIO;
 }
 
@@ -2170,7 +2170,7 @@ emu_pci_detach(device_t dev)
 	bus_release_resource(dev, SYS_RES_IRQ, 0, sc->irq);
 	bus_dma_tag_destroy(sc->parent_dmat);
 	snd_mtxfree(sc->lock);
-	free(sc, M_DEVBUF);
+	kfree(sc, M_DEVBUF);
 
 	return 0;
 }

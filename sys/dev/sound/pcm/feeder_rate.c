@@ -723,7 +723,7 @@ z_resampler_reset(struct z_info *info)
 	info->z_coeff = NULL;
 	info->z_dcoeff = NULL;
 	if (info->z_pcoeff != NULL) {
-		free(info->z_pcoeff, M_DEVBUF);
+		kfree(info->z_pcoeff, M_DEVBUF);
 		info->z_pcoeff = NULL;
 	}
 	info->z_scale = Z_ONE;
@@ -765,7 +765,7 @@ z_resampler_sinc_len(struct z_info *info)
 
 	if (len != Z_SINC_LEN(info)) {
 #ifdef _KERNEL
-		printf("%s(): sinc l=%d != Z_SINC_LEN=%d\n",
+		kprintf("%s(): sinc l=%d != Z_SINC_LEN=%d\n",
 		    __func__, len, Z_SINC_LEN(info));
 #else
 		fprintf(stderr, "%s(): sinc l=%d != Z_SINC_LEN=%d\n",
@@ -1038,7 +1038,7 @@ z_resampler_build_polyphase(struct z_info *info)
 
 	/* Let this be here first. */
 	if (info->z_pcoeff != NULL) {
-		free(info->z_pcoeff, M_DEVBUF);
+		kfree(info->z_pcoeff, M_DEVBUF);
 		info->z_pcoeff = NULL;
 	}
 
@@ -1056,7 +1056,7 @@ z_resampler_build_polyphase(struct z_info *info)
 		return (E2BIG);
 	}
 
-	info->z_pcoeff = malloc(sizeof(int32_t) *
+	info->z_pcoeff = kmalloc(sizeof(int32_t) *
 	    info->z_size * info->z_gy * 2, M_DEVBUF, M_NOWAIT | M_ZERO);
 	if (info->z_pcoeff == NULL)
 		return (ENOMEM);
@@ -1163,7 +1163,7 @@ z_resampler_setup(struct pcm_feeder *f)
 		 */
 z_setup_adaptive_sinc:
 		if (info->z_pcoeff != NULL) {
-			free(info->z_pcoeff, M_DEVBUF);
+			kfree(info->z_pcoeff, M_DEVBUF);
 			info->z_pcoeff = NULL;
 		}
 
@@ -1350,8 +1350,8 @@ z_setup_adaptive_sinc:
 	if (info->z_delay == NULL || info->z_alloc < i ||
 	    i <= (info->z_alloc >> 1)) {
 		if (info->z_delay != NULL)
-			free(info->z_delay, M_DEVBUF);
-		info->z_delay = malloc(i, M_DEVBUF, M_NOWAIT | M_ZERO);
+			kfree(info->z_delay, M_DEVBUF);
+		info->z_delay = kmalloc(i, M_DEVBUF, M_NOWAIT | M_ZERO);
 		if (info->z_delay == NULL)
 			return (ENOMEM);
 		info->z_alloc = i;
@@ -1527,7 +1527,7 @@ z_resampler_init(struct pcm_feeder *f)
 	if (f->desc->in != f->desc->out)
 		return (EINVAL);
 
-	info = malloc(sizeof(*info), M_DEVBUF, M_NOWAIT | M_ZERO);
+	info = kmalloc(sizeof(*info), M_DEVBUF, M_NOWAIT | M_ZERO);
 	if (info == NULL)
 		return (ENOMEM);
 
@@ -1541,10 +1541,10 @@ z_resampler_init(struct pcm_feeder *f)
 	ret = z_resampler_setup(f);
 	if (ret != 0) {
 		if (info->z_pcoeff != NULL)
-			free(info->z_pcoeff, M_DEVBUF);
+			kfree(info->z_pcoeff, M_DEVBUF);
 		if (info->z_delay != NULL)
-			free(info->z_delay, M_DEVBUF);
-		free(info, M_DEVBUF);
+			kfree(info->z_delay, M_DEVBUF);
+		kfree(info, M_DEVBUF);
 		f->data = NULL;
 	}
 
@@ -1559,10 +1559,10 @@ z_resampler_free(struct pcm_feeder *f)
 	info = f->data;
 	if (info != NULL) {
 		if (info->z_pcoeff != NULL)
-			free(info->z_pcoeff, M_DEVBUF);
+			kfree(info->z_pcoeff, M_DEVBUF);
 		if (info->z_delay != NULL)
-			free(info->z_delay, M_DEVBUF);
-		free(info, M_DEVBUF);
+			kfree(info->z_delay, M_DEVBUF);
+		kfree(info, M_DEVBUF);
 	}
 
 	f->data = NULL;

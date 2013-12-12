@@ -31,6 +31,7 @@
 #endif
 
 #include <dev/sound/pcm/sound.h>
+#include <sys/eventhandler.h>
 
 #include "feeder_if.h"
 #include "mixer_if.h"
@@ -622,7 +623,7 @@ mixer_obj_create(device_t dev, kobj_class_t cls, void *devinfo,
 	    ("invalid mixer type=%d", type));
 
 	m = (struct snd_mixer *)kobj_create(cls, M_MIXER, M_WAITOK | M_ZERO);
-	snprintf(m->name, sizeof(m->name), "%s:mixer",
+	ksnprintf(m->name, sizeof(m->name), "%s:mixer",
 	    device_get_nameunit(dev));
 	if (desc != NULL) {
 		strlcat(m->name, ":", sizeof(m->name));
@@ -747,11 +748,11 @@ mixer_init(device_t dev, kobj_class_t cls, void *devinfo)
 				    snd_mixernames[i]);
 			}
 			if (m->parent[i] < SOUND_MIXER_NRDEVICES)
-				printf(" parent=\"%s\"",
+				kprintf(" parent=\"%s\"",
 				    snd_mixernames[m->parent[i]]);
 			if (m->child[i] != 0)
-				printf(" child=0x%08x", m->child[i]);
-			printf("\n");
+				kprintf(" child=0x%08x", m->child[i]);
+			kprintf("\n");
 		}
 		if (snddev->flags & SD_F_SOFTPCMVOL)
 			device_printf(dev, "Soft PCM mixer ENABLED\n");
@@ -1316,9 +1317,6 @@ done:
 
 static void
 mixer_clone(void *arg,
-#if __FreeBSD_version >= 600034
-    struct ucred *cred,
-#endif
     char *name, int namelen, struct cdev **dev)
 {
 	struct snddev_info *d;
@@ -1422,7 +1420,7 @@ mixer_oss_mixerinfo(struct cdev *i_dev, oss_mixerinfo *mi)
 			 */
 			bzero((void *)mi, sizeof(*mi));
 			mi->dev = nmix;
-			snprintf(mi->id, sizeof(mi->id), "mixer%d", i);
+			ksnprintf(mi->id, sizeof(mi->id), "mixer%d", i);
 			strlcpy(mi->name, m->name, sizeof(mi->name));
 			mi->modify_counter = m->modify_counter;
 			mi->card_number = i;

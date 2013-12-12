@@ -35,8 +35,8 @@
 #endif
 
 #include <dev/sound/pcm/sound.h>
-#include <dev/pci/pcireg.h>
-#include <dev/pci/pcivar.h>
+#include <bus/pci/pcireg.h>
+#include <bus/pci/pcivar.h>
 
 #include <sys/ctype.h>
 #include <sys/taskqueue.h>
@@ -241,7 +241,7 @@ hdac_config_fetch(struct hdac_softc *sc, uint32_t *on, uint32_t *off)
 			i++;
 		if (res[i] == '\0') {
 			HDA_BOOTVERBOSE(
-				printf("\n");
+				kprintf("\n");
 			);
 			return;
 		}
@@ -261,7 +261,7 @@ hdac_config_fetch(struct hdac_softc *sc, uint32_t *on, uint32_t *off)
 			if (len - inv != strlen(hdac_quirks_tab[k].key))
 				continue;
 			HDA_BOOTVERBOSE(
-				printf(" %s%s", (inv != 0) ? "no" : "",
+				kprintf(" %s%s", (inv != 0) ? "no" : "",
 				    hdac_quirks_tab[k].key);
 			);
 			if (inv == 0) {
@@ -695,7 +695,7 @@ hdac_irq_alloc(struct hdac_softc *sc)
 
 	if ((sc->quirks_off & HDAC_QUIRK_MSI) == 0 &&
 	    (result = pci_msi_count(sc->dev)) == 1 &&
-	    pci_alloc_msi(sc->dev, &result) == 0)
+	    pci_alloc_msi(sc->dev, &result, 1, -1) == 0)
 		irq->irq_rid = 0x1;
 
 	irq->irq_res = bus_alloc_resource_any(sc->dev, SYS_RES_IRQ,
@@ -705,7 +705,7 @@ hdac_irq_alloc(struct hdac_softc *sc)
 		    __func__);
 		goto hdac_irq_alloc_fail;
 	}
-	result = bus_setup_intr(sc->dev, irq->irq_res, INTR_MPSAFE | INTR_TYPE_AV,
+	result = bus_setup_intr(sc->dev, irq->irq_res, INTR_MPSAFE,
 	    NULL, hdac_intr_handler, sc, &irq->irq_handle);
 	if (result != 0) {
 		device_printf(sc->dev,
@@ -1033,7 +1033,7 @@ hdac_probe(device_t dev)
 		if (HDA_DEV_MATCH(hdac_devices[i].model, model) &&
 		    class == PCIC_MULTIMEDIA &&
 		    subclass == PCIS_MULTIMEDIA_HDA) {
-			snprintf(desc, sizeof(desc),
+			ksnprintf(desc, sizeof(desc),
 			    "%s (0x%04x)",
 			    hdac_devices[i].desc, pci_get_device(dev));
 			result = BUS_PROBE_GENERIC;
@@ -1042,7 +1042,7 @@ hdac_probe(device_t dev)
 	}
 	if (result == ENXIO && class == PCIC_MULTIMEDIA &&
 	    subclass == PCIS_MULTIMEDIA_HDA) {
-		snprintf(desc, sizeof(desc), "Generic (0x%08x)", model);
+		ksnprintf(desc, sizeof(desc), "Generic (0x%08x)", model);
 		result = BUS_PROBE_GENERIC;
 	}
 	if (result != ENXIO) {
@@ -1112,7 +1112,7 @@ hdac_attach(device_t dev)
 	sc->lock = snd_mtxcreate(device_get_nameunit(dev), "HDA driver mutex");
 	sc->dev = dev;
 	TASK_INIT(&sc->unsolq_task, 0, hdac_unsolq_task, sc);
-	callout_init(&sc->poll_callout, CALLOUT_MPSAFE);
+	callout_init_mp(&sc->poll_callout);
 	for (i = 0; i < HDAC_CODEC_MAX; i++)
 		sc->codecs[i].dev = NULL;
 	if (devid >= 0) {
@@ -1234,7 +1234,7 @@ hdac_attach(device_t dev)
 	    sc->rirb_size * sizeof(struct hdac_rirb));
 	if (result != 0)
 		goto hdac_attach_fail;
-	sc->streams = malloc(sizeof(struct hdac_stream) * sc->num_ss,
+	sc->streams = kmalloc(sizeof(struct hdac_stream) * sc->num_ss,
 	    M_HDAC, M_ZERO | M_WAITOK);
 	for (i = 0; i < sc->num_ss; i++) {
 		result = hdac_dma_alloc(sc, &sc->streams[i].bdl,
@@ -1305,7 +1305,7 @@ hdac_attach_fail:
 	hdac_irq_free(sc);
 	for (i = 0; i < sc->num_ss; i++)
 		hdac_dma_free(sc, &sc->streams[i].bdl);
-	free(sc->streams, M_HDAC);
+	kfree(sc->streams, M_HDAC);
 	hdac_dma_free(sc, &sc->rirb_dma);
 	hdac_dma_free(sc, &sc->corb_dma);
 	hdac_mem_free(sc);
@@ -1346,7 +1346,7 @@ sysctl_hdac_pindump(SYSCTL_HANDLER_ARGS)
 	for (i = 0; i < devcount; i++)
 		HDAC_PINDUMP(devlist[i]);
 	hdac_unlock(sc);
-	free(devlist, M_TEMP);
+	kfree(devlist, M_TEMP);
 	return (0);
 }
 
@@ -1659,12 +1659,12 @@ hdac_detach(device_t dev)
 	for (i = 0; i < devcount; i++) {
 		cad = (intptr_t)device_get_ivars(devlist[i]);
 		if ((error = device_delete_child(dev, devlist[i])) != 0) {
-			free(devlist, M_TEMP);
+			kfree(devlist, M_TEMP);
 			return (error);
 		}
 		sc->codecs[cad].dev = NULL;
 	}
-	free(devlist, M_TEMP);
+	kfree(devlist, M_TEMP);
 
 	hdac_lock(sc);
 	hdac_reset(sc, 0);
@@ -1674,7 +1674,7 @@ hdac_detach(device_t dev)
 
 	for (i = 0; i < sc->num_ss; i++)
 		hdac_dma_free(sc, &sc->streams[i].bdl);
-	free(sc->streams, M_HDAC);
+	kfree(sc->streams, M_HDAC);
 	hdac_dma_free(sc, &sc->pos_dma);
 	hdac_dma_free(sc, &sc->rirb_dma);
 	hdac_dma_free(sc, &sc->corb_dma);
@@ -1701,7 +1701,7 @@ hdac_print_child(device_t dev, device_t child)
 	int retval;
 
 	retval = bus_print_child_header(dev, child);
-	retval += printf(" at cad %d",
+	retval += kprintf(" at cad %d",
 	    (int)(intptr_t)device_get_ivars(child));
 	retval += bus_print_child_footer(dev, child);
 
@@ -1713,7 +1713,7 @@ hdac_child_location_str(device_t dev, device_t child, char *buf,
     size_t buflen)
 {
 
-	snprintf(buf, buflen, "cad=%d",
+	ksnprintf(buf, buflen, "cad=%d",
 	    (int)(intptr_t)device_get_ivars(child));
 	return (0);
 }
@@ -1725,7 +1725,7 @@ hdac_child_pnpinfo_str_method(device_t dev, device_t child, char *buf,
 	struct hdac_softc *sc = device_get_softc(dev);
 	nid_t cad = (uintptr_t)device_get_ivars(child);
 
-	snprintf(buf, buflen, "vendor=0x%04x device=0x%04x revision=0x%02x "
+	ksnprintf(buf, buflen, "vendor=0x%04x device=0x%04x revision=0x%02x "
 	    "stepping=0x%02x",
 	    sc->codecs[cad].vendor_id, sc->codecs[cad].device_id,
 	    sc->codecs[cad].revision_id, sc->codecs[cad].stepping_id);
