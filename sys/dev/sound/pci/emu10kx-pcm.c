@@ -90,7 +90,7 @@ struct emu_pcm_rchinfo {
 #endif
 
 struct emu_pcm_info {
-	struct mtx		*lock;
+	struct lock		*lock;
 	device_t		dev;		/* device information */
 	struct emu_sc_info 	*card;
 	struct emu_pcm_pchinfo	pch[MAX_CHANNELS];	/* hardware channels */

@@ -88,30 +88,28 @@ sndstat_prepare_pcm(SNDSTAT_PREPARE_PCM_ARGS)
 void *
 snd_mtxcreate(const char *desc, const char *type)
 {
-	struct mtx *m;
+	struct lock *m;
 
 	m = kmalloc(sizeof(*m), M_DEVBUF, M_WAITOK | M_ZERO);
-	mtx_init(m, desc, type, MTX_DEF);
+	lockinit(m, desc, 0, LK_CANRECURSE);
 	return m;
 }
 
 void
 snd_mtxfree(void *m)
 {
-	struct mtx *mtx = m;
+	struct lock *mtx = m;
 
-	mtx_destroy(mtx);
+	lockuninit(mtx);
 	kfree(mtx, M_DEVBUF);
 }
 
 void
 snd_mtxassert(void *m)
 {
-#ifdef INVARIANTS
-	struct mtx *mtx = m;
+	struct lock *lk = m;
 
-	mtx_assert(mtx, MA_OWNED);
-#endif
+	KKASSERT(lockstatus(lk, curthread) != 0);
 }
 
 int

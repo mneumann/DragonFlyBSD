@@ -125,7 +125,7 @@ struct cfg_info {
 /* device private data */
 struct sc_info {
 	device_t	dev;
-	struct mtx	*lock;
+	struct lock	*lock;
 
 	/* Control/Status registor */
 	struct resource *cs;

@@ -52,7 +52,7 @@ struct hdacc_fg {
 
 struct hdacc_softc {
 	device_t	dev;
-	struct mtx	*lock;
+	struct lock	*lock;
 	nid_t		cad;
 	device_t	streams[2][16];
 	device_t	tags[64];
@@ -551,7 +551,7 @@ hdacc_read_ivar(device_t dev, device_t child, int which, uintptr_t *result)
 	return (0);
 }
 
-static struct mtx *
+static struct lock *
 hdacc_get_mtx(device_t dev, device_t child)
 {
 	struct hdacc_softc *codec = device_get_softc(dev);

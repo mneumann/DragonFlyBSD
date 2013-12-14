@@ -49,7 +49,7 @@ struct spicds_info {
 	unsigned int dvc;    /* De-emphasis and Volume Control */
 	unsigned int left, right;
 	char name[SPICDS_NAMELEN];
-	struct mtx *lock;
+	struct lock *lock;
 };
 
 static void

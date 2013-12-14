@@ -287,7 +287,7 @@ struct emu_mem {
 /* rm */
 struct emu_rm {
 	struct emu_sc_info *card;
-	struct mtx	gpr_lock;
+	struct lock	gpr_lock;
 	signed int	allocmap[EMU_MAX_GPR];
 	int		num_gprs;
 	int		last_free_gpr;
@@ -302,8 +302,8 @@ struct emu_intr_handler {
 };
 
 struct emu_sc_info {
-	struct mtx	lock;
-	struct mtx	rw;		/* Hardware exclusive access lock */
+	struct lock	lock;
+	struct lock	rw;		/* Hardware exclusive access lock */
 
 	/* Hardware and subdevices */
 	device_t	dev;
@@ -316,7 +316,7 @@ struct emu_sc_info {
 	bus_space_handle_t sh;
 
 	struct cdev	*cdev;		/* /dev/emu10k character device */
-	struct mtx	emu10kx_lock;
+	struct lock	emu10kx_lock;
 	int		emu10kx_isopen;
 	struct sbuf	emu10kx_sbuf;
 	int		emu10kx_bufptr;
@@ -442,11 +442,11 @@ static int	emu_modevent(module_t mod __unused, int cmd, void *data __unused);
 
 #define EMU_RWLOCK() do {		\
 	EMU_MTX_DEBUG();		\
-	mtx_lock(&(sc->rw));		\
+	lockmgr(&(sc->rw), LK_EXCLUSIVE);		\
 	} while (0)
 
 #define EMU_RWUNLOCK() do {		\
-	mtx_unlock(&(sc->rw));		\
+	lockmgr(&(sc->rw), LK_RELEASE);		\
 	EMU_MTX_DEBUG();		\
 	} while (0)
 
@@ -813,15 +813,15 @@ emu_timer_create(struct emu_sc_info *sc)
 
 	timer = -1;
 
-	mtx_lock(&sc->lock);
+	lockmgr(&sc->lock, LK_EXCLUSIVE);
 	for (i = 0; i < EMU_MAX_IRQ_CONSUMERS; i++)
 		if (sc->timer[i] == 0) {
 			sc->timer[i] = -1;	/* disable it */
 			timer = i;
-			mtx_unlock(&sc->lock);
+			lockmgr(&sc->lock, LK_RELEASE);
 			return (timer);
 		}
-	mtx_unlock(&sc->lock);
+	lockmgr(&sc->lock, LK_RELEASE);
 
 	return (-1);
 }
@@ -837,7 +837,7 @@ emu_timer_set(struct emu_sc_info *sc, int timer, int delay)
 	RANGE(delay, 16, 1024);
 	RANGE(timer, 0, EMU_MAX_IRQ_CONSUMERS-1);
 
-	mtx_lock(&sc->lock);
+	lockmgr(&sc->lock, LK_EXCLUSIVE);
 	sc->timer[timer] = delay;
 	for (i = 0; i < EMU_MAX_IRQ_CONSUMERS; i++)
 		if (sc->timerinterval > sc->timer[i])
@@ -845,7 +845,7 @@ emu_timer_set(struct emu_sc_info *sc, int timer, int delay)
 
 	/* XXX */
 	emu_wr(sc, EMU_TIMER, sc->timerinterval & 0x03ff, 2);
-	mtx_unlock(&sc->lock);
+	lockmgr(&sc->lock, LK_RELEASE);
 
 	return (timer);
 }
@@ -862,7 +862,7 @@ emu_timer_enable(struct emu_sc_info *sc, int timer, int go)
 
 	RANGE(timer, 0, EMU_MAX_IRQ_CONSUMERS-1);
 
-	mtx_lock(&sc->lock);
+	lockmgr(&sc->lock, LK_EXCLUSIVE);
 
 	if ((go == 1) && (sc->timer[timer] < 0))
 		sc->timer[timer] = -sc->timer[timer];
@@ -888,7 +888,7 @@ emu_timer_enable(struct emu_sc_info *sc, int timer, int go)
 		x &= ~EMU_INTE_INTERTIMERENB;
 		emu_wr(sc, EMU_INTE, x, 4);
 	}
-	mtx_unlock(&sc->lock);
+	lockmgr(&sc->lock, LK_RELEASE);
 	return (0);
 }
 
@@ -902,10 +902,10 @@ emu_timer_clear(struct emu_sc_info *sc, int timer)
 
 	emu_timer_enable(sc, timer, 0);
 
-	mtx_lock(&sc->lock);
+	lockmgr(&sc->lock, LK_EXCLUSIVE);
 	if (sc->timer[timer] != 0)
 		sc->timer[timer] = 0;
-	mtx_unlock(&sc->lock);
+	lockmgr(&sc->lock, LK_RELEASE);
 
 	return (timer);
 }
@@ -919,7 +919,7 @@ emu_intr_register(struct emu_sc_info *sc, uint32_t inte_mask, uint32_t intr_mask
 	int i;
 	uint32_t x;
 
-	mtx_lock(&sc->lock);
+	lockmgr(&sc->lock, LK_EXCLUSIVE);
 	for (i = 0; i < EMU_MAX_IRQ_CONSUMERS; i++)
 		if (sc->ihandler[i].inte_mask == 0) {
 			sc->ihandler[i].inte_mask = inte_mask;
@@ -929,13 +929,13 @@ emu_intr_register(struct emu_sc_info *sc, uint32_t inte_mask, uint32_t intr_mask
 			x = emu_rd(sc, EMU_INTE, 4);
 			x |= inte_mask;
 			emu_wr(sc, EMU_INTE, x, 4);
-			mtx_unlock(&sc->lock);
+			lockmgr(&sc->lock, LK_RELEASE);
 			if (sc->dbg_level > 1)
 				device_printf(sc->dev, "ihandle %d registered\n", i);
 
 			return (i);
 		}
-	mtx_unlock(&sc->lock);
+	lockmgr(&sc->lock, LK_RELEASE);
 	if (sc->dbg_level > 1)
 		device_printf(sc->dev, "ihandle not registered\n");
 
@@ -948,10 +948,10 @@ emu_intr_unregister(struct emu_sc_info *sc, int hnumber)
 	uint32_t x;
 	int i;
 
-	mtx_lock(&sc->lock);
+	lockmgr(&sc->lock, LK_EXCLUSIVE);
 
 	if (sc->ihandler[hnumber].inte_mask == 0) {
-		mtx_unlock(&sc->lock);
+		lockmgr(&sc->lock, LK_RELEASE);
 		return (-1);
 	}
 
@@ -970,7 +970,7 @@ emu_intr_unregister(struct emu_sc_info *sc, int hnumber)
 
 	emu_wr(sc, EMU_INTE, x, 4);
 
-	mtx_unlock(&sc->lock);
+	lockmgr(&sc->lock, LK_RELEASE);
 	return (hnumber);
 }
 
@@ -1254,13 +1254,13 @@ emu_valloc(struct emu_sc_info *sc)
 	int i;
 
 	v = NULL;
-	mtx_lock(&sc->lock);
+	lockmgr(&sc->lock, LK_EXCLUSIVE);
 	for (i = 0; i < NUM_G && sc->voice[i].busy; i++);
 	if (i < NUM_G) {
 		v = &sc->voice[i];
 		v->busy = 1;
 	}
-	mtx_unlock(&sc->lock);
+	lockmgr(&sc->lock, LK_RELEASE);
 	return (v);
 }
 
@@ -1269,7 +1269,7 @@ emu_vfree(struct emu_sc_info *sc, struct emu_voice *v)
 {
 	int i, r;
 
-	mtx_lock(&sc->lock);
+	lockmgr(&sc->lock, LK_EXCLUSIVE);
 	for (i = 0; i < NUM_G; i++) {
 		if (v == &sc->voice[i] && sc->voice[i].busy) {
 			v->busy = 0;
@@ -1282,7 +1282,7 @@ emu_vfree(struct emu_sc_info *sc, struct emu_voice *v)
 				r = emu_memfree(&sc->mem, v->vbuf);
 		}
 	}
-	mtx_unlock(&sc->lock);
+	lockmgr(&sc->lock, LK_RELEASE);
 }
 
 int
@@ -2198,13 +2198,13 @@ emu10kx_open(struct cdev *i_dev, int flags __unused, int mode __unused, struct t
 	struct emu_sc_info *sc;
 
 	sc = i_dev->si_drv1;
-	mtx_lock(&sc->emu10kx_lock);
+	lockmgr(&sc->emu10kx_lock, LK_EXCLUSIVE);
 	if (sc->emu10kx_isopen) {
-		mtx_unlock(&sc->emu10kx_lock);
+		lockmgr(&sc->emu10kx_lock, LK_RELEASE);
 		return (EBUSY);
 	}
 	sc->emu10kx_isopen = 1;
-	mtx_unlock(&sc->emu10kx_lock);
+	lockmgr(&sc->emu10kx_lock, LK_RELEASE);
 	if (sbuf_new(&sc->emu10kx_sbuf, NULL, 4096, 0) == NULL) {
 		error = ENXIO;
 		goto out;
@@ -2213,9 +2213,9 @@ emu10kx_open(struct cdev *i_dev, int flags __unused, int mode __unused, struct t
 	error = (emu10kx_prepare(sc, &sc->emu10kx_sbuf) > 0) ? 0 : ENOMEM;
 out:
 	if (error) {
-		mtx_lock(&sc->emu10kx_lock);
+		lockmgr(&sc->emu10kx_lock, LK_EXCLUSIVE);
 		sc->emu10kx_isopen = 0;
-		mtx_unlock(&sc->emu10kx_lock);
+		lockmgr(&sc->emu10kx_lock, LK_RELEASE);
 	}
 	return (error);
 }
@@ -2227,14 +2227,14 @@ emu10kx_close(struct cdev *i_dev, int flags __unused, int mode __unused, struct 
 
 	sc = i_dev->si_drv1;
 
-	mtx_lock(&sc->emu10kx_lock);
+	lockmgr(&sc->emu10kx_lock, LK_EXCLUSIVE);
 	if (!(sc->emu10kx_isopen)) {
-		mtx_unlock(&sc->emu10kx_lock);
+		lockmgr(&sc->emu10kx_lock, LK_RELEASE);
 		return (EBADF);
 	}
 	sbuf_delete(&sc->emu10kx_sbuf);
 	sc->emu10kx_isopen = 0;
-	mtx_unlock(&sc->emu10kx_lock);
+	lockmgr(&sc->emu10kx_lock, LK_RELEASE);
 
 	return (0);
 }
@@ -2246,12 +2246,12 @@ emu10kx_read(struct cdev *i_dev, struct uio *buf, int flag __unused)
 	struct emu_sc_info *sc;
 
 	sc = i_dev->si_drv1;
-	mtx_lock(&sc->emu10kx_lock);
+	lockmgr(&sc->emu10kx_lock, LK_EXCLUSIVE);
 	if (!(sc->emu10kx_isopen)) {
-		mtx_unlock(&sc->emu10kx_lock);
+		lockmgr(&sc->emu10kx_lock, LK_RELEASE);
 		return (EBADF);
 	}
-	mtx_unlock(&sc->emu10kx_lock);
+	lockmgr(&sc->emu10kx_lock, LK_RELEASE);
 
 	l = min(buf->uio_resid, sbuf_len(&sc->emu10kx_sbuf) - sc->emu10kx_bufptr);
 	err = (l > 0) ? uiomove(sbuf_data(&sc->emu10kx_sbuf) + sc->emu10kx_bufptr, l, buf) : 0;
@@ -2323,7 +2323,8 @@ emu10kx_dev_init(struct emu_sc_info *sc)
 {
 	int unit;
 
-	mtx_init(&sc->emu10kx_lock, device_get_nameunit(sc->dev), "kxdevlock", 0);
+	lockinit(&sc->emu10kx_lock, device_get_nameunit(sc->dev), 0,
+		 LK_CANRECURSE);
 	unit = device_get_unit(sc->dev);
 
 	sc->cdev = make_dev(&emu10kx_cdevsw, PCMMINOR(unit), UID_ROOT, GID_WHEEL, 0640, "emu10kx%d", unit);
@@ -2337,16 +2338,16 @@ emu10kx_dev_init(struct emu_sc_info *sc)
 static int
 emu10kx_dev_uninit(struct emu_sc_info *sc)
 {
-	mtx_lock(&sc->emu10kx_lock);
+	lockmgr(&sc->emu10kx_lock, LK_EXCLUSIVE);
 	if (sc->emu10kx_isopen) {
-		mtx_unlock(&sc->emu10kx_lock);
+		lockmgr(&sc->emu10kx_lock, LK_RELEASE);
 		return (EBUSY);
 	}
 	if (sc->cdev)
 		destroy_dev(sc->cdev);
 	sc->cdev = 0;
 
-	mtx_destroy(&sc->emu10kx_lock);
+	lockuninit(&sc->emu10kx_lock);
 	return (0);
 }
 
@@ -2366,7 +2367,8 @@ emu_rm_init(struct emu_sc_info *sc)
 	rm->card = sc;
 	maxcount = sc->num_gprs;
 	rm->num_used = 0;
-	mtx_init(&(rm->gpr_lock), device_get_nameunit(sc->dev), "gpr alloc", MTX_DEF);
+	lockinit(&(rm->gpr_lock), device_get_nameunit(sc->dev), 0,
+		 LK_CANRECURSE);
 	rm->num_gprs = (maxcount < EMU_MAX_GPR ? maxcount : EMU_MAX_GPR);
 	for (i = 0; i < rm->num_gprs; i++)
 		rm->allocmap[i] = 0;
@@ -2383,14 +2385,14 @@ emu_rm_uninit(struct emu_sc_info *sc)
 	int i;
 
 	if (sc->dbg_level > 1) {
-		mtx_lock(&(sc->rm->gpr_lock));
+		lockmgr(&(sc->rm->gpr_lock), LK_EXCLUSIVE);
 		for (i = 1; i < sc->rm->last_free_gpr; i++)
 			if (sc->rm->allocmap[i] > 0)
 				device_printf(sc->dev, "rm: gpr %d not free before uninit\n", i);
-		mtx_unlock(&(sc->rm->gpr_lock));
+		lockmgr(&(sc->rm->gpr_lock), LK_RELEASE);
 	}
 
-	mtx_destroy(&(sc->rm->gpr_lock));
+	lockuninit(&(sc->rm->gpr_lock));
 	kfree(sc->rm, M_DEVBUF);
 	return (0);
 }
@@ -2403,7 +2405,7 @@ emu_rm_gpr_alloc(struct emu_rm *rm, int count)
 
 	allocated_gpr = rm->num_gprs;
 	/* try fast way first */
-	mtx_lock(&(rm->gpr_lock));
+	lockmgr(&(rm->gpr_lock), LK_EXCLUSIVE);
 	if (rm->last_free_gpr + count <= rm->num_gprs) {
 		allocated_gpr = rm->last_free_gpr;
 		rm->last_free_gpr += count;
@@ -2438,7 +2440,7 @@ emu_rm_gpr_alloc(struct emu_rm *rm, int count)
 		allocated_gpr = (-1);
 	if (allocated_gpr >= 0)
 		rm->num_used += count;
-	mtx_unlock(&(rm->gpr_lock));
+	lockmgr(&(rm->gpr_lock), LK_RELEASE);
 	return (allocated_gpr);
 }
 
@@ -3075,8 +3077,8 @@ emu_pci_attach(device_t dev)
             OID_AUTO, "debug", CTLFLAG_RW, &(sc->dbg_level), 0, "Debug level");
 
 	/* Fill in the softc. */
-	mtx_init(&sc->lock, device_get_nameunit(dev), "bridge conf", MTX_DEF);
-	mtx_init(&sc->rw, device_get_nameunit(dev), "exclusive io", MTX_DEF);
+	lockinit(&sc->lock, device_get_nameunit(dev), 0, LK_CANRECURSE);
+	lockinit(&sc->rw, device_get_nameunit(dev), 0, LK_CANRECURSE);
 	sc->dev = dev;
 	sc->type = pci_get_devid(dev);
 	sc->rev = pci_get_revid(dev);
@@ -3435,8 +3437,8 @@ bad:
 		bus_teardown_intr(dev, sc->irq, sc->ih);
 	if (sc->irq)
 		bus_release_resource(dev, SYS_RES_IRQ, 0, sc->irq);
-	mtx_destroy(&sc->rw);
-	mtx_destroy(&sc->lock);
+	lockuninit(&sc->rw);
+	lockuninit(&sc->lock);
 	return (error);
 }
 
@@ -3515,8 +3517,8 @@ emu_pci_detach(device_t dev)
 		bus_release_resource(dev, SYS_RES_IOPORT, PCIR_BAR(0), sc->reg);
 	bus_teardown_intr(dev, sc->irq, sc->ih);
 	bus_release_resource(dev, SYS_RES_IRQ, 0, sc->irq);
-	mtx_destroy(&sc->rw);
-	mtx_destroy(&sc->lock);
+	lockuninit(&sc->rw);
+	lockuninit(&sc->lock);
 
 	return (bus_generic_detach(dev));
 }

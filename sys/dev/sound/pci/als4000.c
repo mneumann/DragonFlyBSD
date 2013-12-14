@@ -79,7 +79,7 @@ struct sc_info {
 	struct resource		*reg, *irq;
 	int			regid, irqid;
 	void			*ih;
-	struct mtx		*lock;
+	struct lock		*lock;
 
 	unsigned int		bufsz;
 	struct sc_chinfo	pch, rch;

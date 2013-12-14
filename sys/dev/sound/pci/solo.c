@@ -102,7 +102,7 @@ struct ess_info {
 
     	struct ess_chinfo pch, rch;
 #if ESS18XX_MPSAFE == 1
-	struct mtx *lock;
+	struct lock *lock;
 #endif
 };
 
@@ -1032,11 +1032,6 @@ ess_attach(device_t dev)
 			/*maxsize*/sc->bufsz, /*nsegments*/1,
 			/*maxsegz*/0x3ffff,
 			/*flags*/0,
-#if ESS18XX_MPSAFE == 1
-			/*lockfunc*/NULL, /*lockarg*/NULL,
-#else
-			/*lockfunc*/busdma_lock_mutex, /*lockarg*/&Giant,
-#endif
 			&sc->parent_dmat) != 0) {
 		device_printf(dev, "unable to create dma tag\n");
 		goto no;

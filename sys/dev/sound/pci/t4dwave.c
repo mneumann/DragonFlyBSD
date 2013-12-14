@@ -99,7 +99,7 @@ struct tr_info {
 	int regtype, regid, irqid;
 	void *ih;
 
-	struct mtx *lock;
+	struct lock *lock;
 
 	u_int32_t hwchns;
 	u_int32_t playchns;

@@ -196,7 +196,7 @@ struct sc_info {
 	uint16_t vendor;
 	uint16_t devid;
 	uint32_t flags;
-	struct mtx *ich_lock;
+	struct lock *ich_lock;
 };
 
 /* -------------------------------------------------------------------- */

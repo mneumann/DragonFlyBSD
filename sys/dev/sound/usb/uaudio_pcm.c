@@ -135,18 +135,18 @@ ua_mixer_init(struct snd_mixer *m)
 static int
 ua_mixer_set(struct snd_mixer *m, unsigned type, unsigned left, unsigned right)
 {
-	struct mtx *mtx = mixer_get_lock(m);
+	struct lock *lock = mixer_get_lock(m);
 	uint8_t do_unlock;
 
-	if (mtx_owned(mtx)) {
+	if (lockstatus(lock, curthread)) {
 		do_unlock = 0;
 	} else {
 		do_unlock = 1;
-		mtx_lock(mtx);
+		lockmgr(lock, LK_EXCLUSIVE);
 	}
 	uaudio_mixer_set(mix_getdevinfo(m), type, left, right);
 	if (do_unlock) {
-		mtx_unlock(mtx);
+		lockmgr(lock, LK_RELEASE);
 	}
 	return (left | (right << 8));
 }
@@ -154,19 +154,19 @@ ua_mixer_set(struct snd_mixer *m, unsigned type, unsigned left, unsigned right)
 static uint32_t
 ua_mixer_setrecsrc(struct snd_mixer *m, uint32_t src)
 {
-	struct mtx *mtx = mixer_get_lock(m);
+	struct lock *lock = mixer_get_lock(m);
 	int retval;
 	uint8_t do_unlock;
 
-	if (mtx_owned(mtx)) {
+	if (lockstatus(lock, curthread)) {
 		do_unlock = 0;
 	} else {
 		do_unlock = 1;
-		mtx_lock(mtx);
+		lockmgr(lock, LK_EXCLUSIVE);
 	}
 	retval = uaudio_mixer_setrecsrc(mix_getdevinfo(m), src);
 	if (do_unlock) {
-		mtx_unlock(mtx);
+		lockmgr(lock, LK_RELEASE);
 	}
 	return (retval);
 }

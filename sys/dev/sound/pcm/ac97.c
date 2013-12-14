@@ -64,7 +64,7 @@ struct ac97_info {
 	u_int32_t flags;
 	struct ac97mixtable_entry mix[AC97_MIXER_SIZE];
 	char name[16];
-	struct mtx *lock;
+	struct lock *lock;
 };
 
 struct ac97_vendorid {

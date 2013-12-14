@@ -121,7 +121,7 @@ struct via_info {
 	uint16_t codec_caps;
 	uint16_t n_dxs_registered;
 	int play_num, rec_num;
-	struct mtx *lock;
+	struct lock *lock;
 	struct callout poll_timer;
 	int poll_ticks, polling;
 };

@@ -160,7 +160,7 @@ struct agg_info {
 	bus_dma_tag_t		stat_dmat;
 
 	/* FreeBSD SMPng related */
-	struct mtx		lock;	/* mutual exclusion */
+	struct lock		lock;	/* mutual exclusion */
 	/* FreeBSD newpcm related */
 	struct ac97_info	*codec;
 
@@ -279,7 +279,7 @@ agg_sleep(struct agg_info *sc, const char *wmesg, int msec)
 	timo = msec * hz / 1000;
 	if (timo == 0)
 		timo = 1;
-	msleep(sc, &sc->lock, PWAIT, wmesg, timo);
+	lksleep(sc, &sc->lock, 0, wmesg, timo);
 }
 
 
@@ -1779,13 +1779,7 @@ agg_attach(device_t dev)
 	ess = kmalloc(sizeof(*ess), M_DEVBUF, M_WAITOK | M_ZERO);
 	ess->dev = dev;
 
-	mtx_init(&ess->lock, device_get_desc(dev), "snd_maestro softc",
-		 MTX_DEF | MTX_RECURSE);
-	if (!mtx_initialized(&ess->lock)) {
-		device_printf(dev, "failed to create a mutex.\n");
-		ret = ENOMEM;
-		goto bad;
-	}
+	lockinit(&ess->lock, device_get_desc(dev), 0, LK_CANRECURSE);
 
 	if (resource_int_value(device_get_name(dev), device_get_unit(dev),
 	    "dac", &dacn) == 0) {
@@ -1937,8 +1931,7 @@ agg_attach(device_t dev)
 			bus_dma_tag_destroy(ess->stat_dmat);
 		if (ess->buf_dmat != NULL)
 			bus_dma_tag_destroy(ess->buf_dmat);
-		if (mtx_initialized(&ess->lock))
-			mtx_destroy(&ess->lock);
+		lockuninit(&ess->lock);
 		kfree(ess, M_DEVBUF);
 	}
 
@@ -1979,7 +1972,7 @@ agg_detach(device_t dev)
 	dma_free(ess->stat_dmat, ess->stat);
 	bus_dma_tag_destroy(ess->stat_dmat);
 	bus_dma_tag_destroy(ess->buf_dmat);
-	mtx_destroy(&ess->lock);
+	lockuninit(&ess->lock);
 	kfree(ess, M_DEVBUF);
 	return 0;
 }

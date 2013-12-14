@@ -215,7 +215,7 @@ struct sc_info {
 
 	struct resource *reg, *irq;
 	void		*ih;
-	struct mtx	*lock;
+	struct lock	*lock;
 
 	unsigned int bufsz;
 	int timer, timerinterval;

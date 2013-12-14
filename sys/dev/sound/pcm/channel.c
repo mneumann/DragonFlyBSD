@@ -209,8 +209,9 @@ SYSCTL_INT(_hw_snd, OID_AUTO, syncdelay, CTLFLAG_RW,
  * Clients should acquire this lock @b without holding any channel locks
  * before touching syncgroups or the main syncgroup list.
  */
-struct mtx snd_pcm_syncgroups_mtx;
-MTX_SYSINIT(pcm_syncgroup, &snd_pcm_syncgroups_mtx, "PCM channel sync group lock", MTX_DEF);
+struct lock snd_pcm_syncgroups_mtx;
+LOCK_SYSINIT(pcm_syncgroup, &snd_pcm_syncgroups_mtx,
+	"PCM channel sync group lock", LK_CANRECURSE);
 /**
  * @brief syncgroups' master list
  *
@@ -2513,7 +2514,7 @@ chn_syncdestroy(struct pcm_channel *c)
 
 	sg_id = 0;
 
-	PCM_SG_LOCKASSERT(MA_OWNED);
+	PCM_SG_ASSERTOWNED;
 
 	if (c->sm != NULL) {
 		sm = c->sm;

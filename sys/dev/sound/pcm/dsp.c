@@ -2973,8 +2973,8 @@ dsp_oss_syncstart(int sg_id)
 				}
 
 				/** @todo Is PRIBIO correct/ */
-				ret = msleep(sm, &snd_pcm_syncgroups_mtx,
-				    PRIBIO | PCATCH, "pcmsg", timo);
+				ret = lksleep(sm, &snd_pcm_syncgroups_mtx,
+				    PCATCH, "pcmsg", timo);
 				if (ret == EINTR || ret == ERESTART)
 					break;
 

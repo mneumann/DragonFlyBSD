@@ -224,7 +224,7 @@ struct es_info {
 	uint32_t	sctrl;
 	uint32_t	escfg;
 	struct es_chinfo ch[ES_NCHANS];
-	struct mtx	*lock;
+	struct lock	*lock;
 	struct callout	poll_timer;
 	int poll_ticks, polling;
 };

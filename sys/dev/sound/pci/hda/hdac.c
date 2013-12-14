@@ -53,7 +53,7 @@ SND_DECLARE_FILE("$FreeBSD: head/sys/dev/sound/pci/hda/hdac.c 258170 2013-11-15 
 #define hdac_lock(sc)		snd_mtxlock((sc)->lock)
 #define hdac_unlock(sc)		snd_mtxunlock((sc)->lock)
 #define hdac_lockassert(sc)	snd_mtxassert((sc)->lock)
-#define hdac_lockowned(sc)	mtx_owned((sc)->lock)
+#define hdac_lockowned(sc)	lockstatus((sc)->lock, curthread)
 
 #define HDAC_QUIRK_64BIT	(1 << 0)
 #define HDAC_QUIRK_DMAPOS	(1 << 1)
@@ -1769,7 +1769,7 @@ hdac_read_ivar(device_t dev, device_t child, int which, uintptr_t *result)
 	return (0);
 }
 
-static struct mtx *
+static struct lock *
 hdac_get_mtx(device_t dev, device_t child)
 {
 	struct hdac_softc *sc = device_get_softc(dev);

@@ -53,7 +53,7 @@
 #include <dev/sound/pci/emu10kx.h>
 
 struct emu_midi_softc {
-	struct mtx	mtx;
+	struct lock	mtx;
 	device_t	dev;
 	struct mpu401	*mpu;
 	mpu401_intr_t	*mpu_intr;
@@ -98,9 +98,9 @@ emu_muninit(struct mpu401 *arg __unused, void *cookie)
 {
 	struct emu_midi_softc *sc = cookie;
 
-	mtx_lock(&sc->mtx);
+	lockmgr(&sc->mtx, LK_EXCLUSIVE);
 	sc->mpu_intr = NULL;
-	mtx_unlock(&sc->mtx);
+	lockmgr(&sc->mtx, LK_RELEASE);
 
 	return (0);
 }
@@ -170,7 +170,7 @@ emu_midi_attach(device_t dev)
 	scp->port = midiinfo->port;
 	scp->card = midiinfo->card;
 
-	mtx_init(&scp->mtx, device_get_nameunit(dev), "midi softc", MTX_DEF);
+	lockinit(&scp->mtx, device_get_nameunit(dev), 0, LK_CANRECURSE);
 
 	if (scp->is_emu10k1) {
 		/* SB Live! - only one MIDI device here */
@@ -202,7 +202,7 @@ emu_midi_attach(device_t dev)
 	scp->mpu = mpu401_init(&emu_mpu_class, scp, emu_midi_intr, &scp->mpu_intr);
 	if (scp->mpu == NULL) {
 		emu_intr_unregister(scp->card, scp->ihandle);
-		mtx_destroy(&scp->mtx);
+		lockuninit(&scp->mtx);
 		return (ENOMEM);
 	}
 	/*
@@ -229,7 +229,7 @@ emu_midi_detach(device_t dev)
 	scp = device_get_softc(dev);
 	mpu401_uninit(scp->mpu);
 	emu_intr_unregister(scp->card, scp->ihandle);
-	mtx_destroy(&scp->mtx);
+	lockuninit(&scp->mtx);
 	return (0);
 }
 

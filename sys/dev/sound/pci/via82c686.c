@@ -90,7 +90,7 @@ struct via_info {
 	struct via_chinfo pch, rch;
 	struct via_dma_op *sgd_table;
 	u_int16_t codec_caps;
-	struct mtx *lock;
+	struct lock *lock;
 };
 
 static u_int32_t via_fmt[] = {

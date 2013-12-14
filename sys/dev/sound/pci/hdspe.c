@@ -163,8 +163,6 @@ hdspe_alloc_resources(struct sc_info *sc)
 		/*nsegments*/2,
 		/*maxsegsz*/HDSPE_DMASEGSIZE,
 		/*flags*/0,
-		/*lockfunc*/busdma_lock_mutex,
-		/*lockarg*/&Giant,
 		/*dmatag*/&sc->dmat) != 0) {
 		device_printf(sc->dev, "Unable to create dma tag.\n");
 		return (ENXIO);

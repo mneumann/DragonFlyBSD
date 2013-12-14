@@ -65,7 +65,7 @@ struct snd_mixer {
 	u_int32_t child[32];
 	u_int8_t realdev[32];
 	char name[MIXER_NAMELEN];
-	struct mtx *lock;
+	struct lock *lock;
 	oss_mixer_enuminfo enuminfo;
 	/** 
 	 * Counter is incremented when applications change any of this
@@ -156,12 +156,12 @@ mixer_set_softpcmvol(struct snd_mixer *m, struct snddev_info *d,
 	if (!PCM_REGISTERED(d))
 		return (EINVAL);
 
-	if (mtx_owned(m->lock))
+	if (lockstatus(m->lock, curthread))
 		dropmtx = 1;
 	else
 		dropmtx = 0;
 	
-	if (!(d->flags & SD_F_MPSAFE) || mtx_owned(d->lock) != 0)
+	if (!(d->flags & SD_F_MPSAFE) || lockstatus(d->lock, curthread) == 0)
 		acquiremtx = 0;
 	else
 		acquiremtx = 1;
@@ -209,12 +209,12 @@ mixer_set_eq(struct snd_mixer *m, struct snddev_info *d,
 	if (!PCM_REGISTERED(d))
 		return (EINVAL);
 
-	if (mtx_owned(m->lock))
+	if (lockstatus(m->lock, curthread))
 		dropmtx = 1;
 	else
 		dropmtx = 0;
 	
-	if (!(d->flags & SD_F_MPSAFE) || mtx_owned(d->lock) != 0)
+	if (!(d->flags & SD_F_MPSAFE) || lockstatus(d->lock, curthread) == 0)
 		acquiremtx = 0;
 	else
 		acquiremtx = 1;
@@ -265,7 +265,7 @@ mixer_set(struct snd_mixer *m, u_int dev, u_int lev)
 		return -1;
 
 	/* It is safe to drop this mutex due to Giant. */
-	if (!(d->flags & SD_F_MPSAFE) && mtx_owned(m->lock) != 0)
+	if (!(d->flags & SD_F_MPSAFE) && lockstatus(m->lock, curthread) == 0)
 		dropmtx = 1;
 	else
 		dropmtx = 0;
@@ -347,7 +347,7 @@ mixer_setrecsrc(struct snd_mixer *mixer, u_int32_t src)
 	d = device_get_softc(mixer->dev);
 	if (d == NULL)
 		return -1;
-	if (!(d->flags & SD_F_MPSAFE) && mtx_owned(mixer->lock) != 0)
+	if (!(d->flags & SD_F_MPSAFE) && lockstatus(mixer->lock, curthread) == 0)
 		dropmtx = 1;
 	else
 		dropmtx = 0;
@@ -1409,7 +1409,7 @@ mixer_oss_mixerinfo(struct cdev *i_dev, oss_mixerinfo *mi)
 		    ((mi->dev == -1 && d->mixer_dev == i_dev) ||
 		    mi->dev == nmix)) {
 			m = d->mixer_dev->si_drv1;
-			mtx_lock(m->lock);
+			lockmgr(m->lock, LK_EXCLUSIVE);
 
 			/*
 			 * At this point, the following synchronization stuff
@@ -1482,7 +1482,7 @@ mixer_oss_mixerinfo(struct cdev *i_dev, oss_mixerinfo *mi)
 			sizeof(mi->devnode));
 			mi->legacy_device = i;
 			 */
-			mtx_unlock(m->lock);
+			lockmgr(m->lock, LK_RELEASE);
 		} else
 			++nmix;
 
@@ -1499,12 +1499,10 @@ mixer_oss_mixerinfo(struct cdev *i_dev, oss_mixerinfo *mi)
  * Allow the sound driver to use the mixer lock to protect its mixer
  * data:
  */
-struct mtx *
+struct lock *
 mixer_get_lock(struct snd_mixer *m)
 {
-	if (m->lock == NULL) {
-		return (&Giant);
-	}
+	KASSERT(m->lock != NULL, ("mixer_get_lock() called with NULL parameter"));
 	return (m->lock);
 }
 

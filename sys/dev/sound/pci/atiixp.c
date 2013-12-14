@@ -129,7 +129,7 @@ struct atiixp_info {
 	uint32_t blkcnt;
 	int registered_channels;
 
-	struct mtx *lock;
+	struct lock *lock;
 	struct callout poll_timer;
 	int poll_ticks, polling;
 };
@@ -1020,7 +1020,7 @@ atiixp_chip_post_init(void *arg)
 	if (sc->codec_not_ready_bits == 0) {
 		/* wait for the interrupts to happen */
 		do {
-			msleep(sc, sc->lock, PWAIT, "ixpslp", max(hz / 10, 1));
+			lksleep(sc, sc->lock, 0, "ixpslp", max(hz / 10, 1));
 			if (sc->codec_not_ready_bits != 0)
 				break;
 		} while (--timeout);
