@@ -2261,8 +2261,7 @@ dsp_mmap_single(struct cdev *i_dev, vm_ooffset_t *offset,
 
 	*offset = (uintptr_t)sndbuf_getbufofs(c->bufsoft, *offset);
 	relchns(i_dev, rdch, wrch, SD_F_PRIO_RD | SD_F_PRIO_WR);
-	*object = vm_pager_allocate(OBJT_DEVICE, i_dev,
-	    size, nprot, *offset, curthread->td_ucred);
+	*object = dev_pager_alloc(i_dev, size, nprot, *offset);
 
 	PCM_GIANT_LEAVE(d);
 
@@ -2456,8 +2455,10 @@ dsp_clone_alloc:
 
 	PCM_RELEASE_QUICK(d);
 
+#if 0
 	if (*dev != NULL)
 		dev_ref(*dev);
+#endif
 }
 
 static void

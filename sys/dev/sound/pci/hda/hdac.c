@@ -312,7 +312,7 @@ hdac_intr_handler(void *context)
 			rirbsts = HDAC_READ_1(&sc->mem, HDAC_RIRBSTS);
 		}
 		if (sc->unsolq_rp != sc->unsolq_wp)
-			taskqueue_enqueue(taskqueue_thread, &sc->unsolq_task);
+			taskqueue_enqueue(taskqueue_thread[mycpuid], &sc->unsolq_task);
 	}
 
 	if (intsts & HDAC_INTSTS_SIS_MASK) {
@@ -706,7 +706,7 @@ hdac_irq_alloc(struct hdac_softc *sc)
 		goto hdac_irq_alloc_fail;
 	}
 	result = bus_setup_intr(sc->dev, irq->irq_res, INTR_MPSAFE,
-	    NULL, hdac_intr_handler, sc, &irq->irq_handle);
+	    hdac_intr_handler, sc, &irq->irq_handle, NULL);
 	if (result != 0) {
 		device_printf(sc->dev,
 		    "%s: Unable to setup interrupt handler (%x)\n",
@@ -995,7 +995,7 @@ hdac_send_command(struct hdac_softc *sc, nid_t cad, uint32_t verb)
 	}
 
 	if (sc->unsolq_rp != sc->unsolq_wp)
-		taskqueue_enqueue(taskqueue_thread, &sc->unsolq_task);
+		taskqueue_enqueue(taskqueue_thread[mycpuid], &sc->unsolq_task);
 	return (sc->codecs[cad].response);
 }
 
@@ -1584,7 +1584,7 @@ hdac_suspend(device_t dev)
 	hdac_reset(sc, 0);
 	hdac_unlock(sc);
 	callout_drain(&sc->poll_callout);
-	taskqueue_drain(taskqueue_thread, &sc->unsolq_task);
+	taskqueue_drain(taskqueue_thread[mycpuid], &sc->unsolq_task);
 	HDA_BOOTHVERBOSE(
 		device_printf(dev, "Suspend done\n");
 	);
@@ -1669,7 +1669,7 @@ hdac_detach(device_t dev)
 	hdac_lock(sc);
 	hdac_reset(sc, 0);
 	hdac_unlock(sc);
-	taskqueue_drain(taskqueue_thread, &sc->unsolq_task);
+	taskqueue_drain(taskqueue_thread[mycpuid], &sc->unsolq_task);
 	hdac_irq_free(sc);
 
 	for (i = 0; i < sc->num_ss; i++)

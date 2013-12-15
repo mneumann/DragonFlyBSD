@@ -203,8 +203,7 @@ snd_clone_busy(struct snd_clone *c)
 		return (0);
 
 	TAILQ_FOREACH(ce, &c->head, link) {
-		if ((ce->flags & SND_CLONE_BUSY) ||
-		    (ce->devt != NULL && ce->devt->si_threadcount != 0))
+		if (ce->flags & SND_CLONE_BUSY)
 			return (EBUSY);
 	}
 
@@ -430,8 +429,7 @@ snd_clone_gc(struct snd_clone *c)
 		if (!(ce->flags & SND_CLONE_BUSY) &&
 		    (!(ce->flags & SND_CLONE_INVOKE) ||
 		    SND_CLONE_EXPIRED(c, &now, &ce->tsp))) {
-			if ((c->flags & SND_CLONE_GC_REVOKE) ||
-			    ce->devt->si_threadcount != 0) {
+			if (c->flags & SND_CLONE_GC_REVOKE) {
 				ce->flags &= ~SND_CLONE_INVOKE;
 				ce->pid = -1;
 			} else {

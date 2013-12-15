@@ -122,11 +122,7 @@ snd_setup_intr(device_t dev, struct resource *res, int flags, driver_intr_t hand
 	if (d != NULL && (flags & INTR_MPSAFE))
 		d->flags |= SD_F_MPSAFE;
 
-	return bus_setup_intr(dev, res, flags,
-#if __FreeBSD_version >= 700031
-			NULL,
-#endif
-			hand, param, cookiep);
+	return bus_setup_intr(dev, res, flags, hand, param, cookiep, NULL);
 }
 
 static void
