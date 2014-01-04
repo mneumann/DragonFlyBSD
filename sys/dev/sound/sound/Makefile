@@ -16,7 +16,7 @@ SRCS+=	mpu_if.h mpufoi_if.h synth_if.h
 SRCS+=	mpu_if.c mpufoi_if.c synth_if.c
 SRCS+=	ac97.c ac97_patch.c buffer.c channel.c clone.c dsp.c
 SRCS+=	mixer.c sndstat.c sound.c unit.c vchan.c
-SRCS+=	midi.c mpu401.c sequencer.c
+#SRCS+=	midi.c mpu401.c sequencer.c
 
 .if !exists(@)
 feeder_eq_gen.h:	@

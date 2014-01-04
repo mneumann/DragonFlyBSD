@@ -1214,9 +1214,9 @@ device		sound
 # For PCI sound cards:
 device		"snd_als4000"
 device		"snd_atiixp"
-device		"snd_cmi"
+#device		"snd_cmi"
 device		"snd_cs4281"
-device		"snd_emu10k1"
+#device		"snd_emu10k1"
 device		"snd_emu10kx"
 device		"snd_envy24"
 device		"snd_envy24ht"
