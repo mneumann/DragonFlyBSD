@@ -556,8 +556,6 @@ hdac_dma_alloc(struct hdac_softc *sc, struct hdac_dma *dma, bus_size_t size)
 	    1,					/* nsegments */
 	    roundsz, 				/* maxsegsz */
 	    0,					/* flags */
-	    NULL,				/* lockfunc */
-	    NULL,				/* lockfuncarg */
 	    &dma->dma_tag);			/* dmat */
 	if (result != 0) {
 		device_printf(sc->dev, "%s: bus_dma_tag_create failed (%x)\n",
@@ -1245,8 +1243,6 @@ hdac_attach(device_t dev)
 	    1,					/* nsegments */
 	    HDA_BUFSZ_MAX, 			/* maxsegsz */
 	    0,					/* flags */
-	    NULL,				/* lockfunc */
-	    NULL,				/* lockfuncarg */
 	    &sc->chan_dmat);			/* dmat */
 	if (result != 0) {
 		device_printf(dev, "%s: bus_dma_tag_create failed (%x)\n",
