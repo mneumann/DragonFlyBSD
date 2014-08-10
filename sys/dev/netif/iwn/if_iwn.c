@@ -81,8 +81,6 @@
 #include "if_iwn_chip_cfg.h"
 #include "if_iwn_debug.h"
 
-#define nitems(ary)	(sizeof(ary) / sizeof((ary)[0]))
-
 struct iwn_ident {
 	uint16_t	vendor;
 	uint16_t	device;
