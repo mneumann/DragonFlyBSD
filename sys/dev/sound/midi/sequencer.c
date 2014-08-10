@@ -522,26 +522,26 @@ seq_addunit(void)
 
 	/* Allocate the softc. */
 	ret = ENOMEM;
-	scp = kmalloc(sizeof(*scp), M_DEVBUF, M_NOWAIT | M_ZERO);
+	scp = kmalloc(sizeof(*scp), M_DEVBUF, M_WAITOK | M_ZERO);
 	if (scp == NULL) {
 		SEQ_DEBUG(1, kprintf("seq_addunit: softc allocation failed.\n"));
 		goto err;
 	}
 	kobj_init((kobj_t)scp, &sequencer_class);
 
-	buf = kmalloc(sizeof(*buf) * EV_SZ * 1024, M_TEMP, M_NOWAIT | M_ZERO);
+	buf = kmalloc(sizeof(*buf) * EV_SZ * 1024, M_TEMP, M_WAITOK | M_ZERO);
 	if (buf == NULL)
 		goto err;
 	MIDIQ_INIT(scp->in_q, buf, EV_SZ * 1024);
-	buf = kmalloc(sizeof(*buf) * EV_SZ * 1024, M_TEMP, M_NOWAIT | M_ZERO);
+	buf = kmalloc(sizeof(*buf) * EV_SZ * 1024, M_TEMP, M_WAITOK | M_ZERO);
 	if (buf == NULL)
 		goto err;
 	MIDIQ_INIT(scp->out_q, buf, EV_SZ * 1024);
 	ret = EINVAL;
 
-	scp->midis = kmalloc(sizeof(kobj_t) * 32, M_TEMP, M_NOWAIT | M_ZERO);
+	scp->midis = kmalloc(sizeof(kobj_t) * 32, M_TEMP, M_WAITOK | M_ZERO);
 	scp->midi_flags = kmalloc(sizeof(*scp->midi_flags) * 32, M_TEMP,
-	    M_NOWAIT | M_ZERO);
+				  M_WAITOK | M_ZERO);
 
 	if (scp->midis == NULL || scp->midi_flags == NULL)
 		goto err;

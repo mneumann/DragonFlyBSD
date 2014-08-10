@@ -307,11 +307,11 @@ midi_init(kobj_class_t cls, int unit, int channel, void *cookie)
 		unit = i + 1;
 
 	MIDI_DEBUG(1, kprintf("midiinit #2: unit %d/%d.\n", unit, channel));
-	m = kmalloc(sizeof(*m), M_MIDI, M_NOWAIT | M_ZERO);
+	m = kmalloc(sizeof(*m), M_MIDI, M_WAITOK | M_ZERO);
 	if (m == NULL)
 		goto err0;
 
-	m->synth = kmalloc(sizeof(*m->synth), M_MIDI, M_NOWAIT | M_ZERO);
+	m->synth = kmalloc(sizeof(*m->synth), M_MIDI, M_WAITOK | M_ZERO);
 	kobj_init((kobj_t)m->synth, &midisynth_class);
 	m->synth->m = m;
 	kobj_init((kobj_t)m, cls);
@@ -328,15 +328,18 @@ midi_init(kobj_class_t cls, int unit, int channel, void *cookie)
 	lockmgr(&m->lock, LK_EXCLUSIVE);
 	lockmgr(&m->qlock, LK_EXCLUSIVE);
 
+	/* NOTE: use M_ZERO to avoid kernel data leaks */
 	if (inqsize)
-		buf = kmalloc(sizeof(MIDI_TYPE) * inqsize, M_MIDI, M_NOWAIT);
+		buf = kmalloc(sizeof(MIDI_TYPE) * inqsize, M_MIDI,
+			      M_WAITOK | M_ZERO);
 	else
 		buf = NULL;
 
 	MIDIQ_INIT(m->inq, buf, inqsize);
 
 	if (outqsize)
-		buf = kmalloc(sizeof(MIDI_TYPE) * outqsize, M_MIDI, M_NOWAIT);
+		buf = kmalloc(sizeof(MIDI_TYPE) * outqsize, M_MIDI,
+			      M_WAITOK | M_ZERO);
 	else
 		buf = NULL;
 	m->hiwat = outqsize / 2;
