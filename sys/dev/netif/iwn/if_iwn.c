@@ -8505,7 +8505,6 @@ iwn_panicked_task(void *arg0, int pending)
 
 	iwn_stop_locked(sc);
 	iwn_init_locked(sc);
-	iwn_start_locked(sc->sc_ifp);
 	if (vap->iv_state >= IEEE80211_S_AUTH &&
 	    (error = iwn_auth(sc, vap)) != 0) {
 		device_printf(sc->sc_dev,
@@ -8517,7 +8516,9 @@ iwn_panicked_task(void *arg0, int pending)
 		    "%s: could not move to run state\n", __func__);
 	}
 
-	// XXX: mneumann: Move up right next to iwn_start() ? 
+	/* Only run start once the NIC is in a useful state, like associated */
+	iwn_start_locked(sc->sc_ifp);
+
 	wlan_serialize_exit();
 }
 
