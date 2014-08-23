@@ -338,6 +338,7 @@ static int	iwn_hw_init(struct iwn_softc *);
 static void	iwn_hw_stop(struct iwn_softc *);
 static void	iwn_radio_on_task(void *, int);
 static void	iwn_radio_off_task(void *, int);
+static void	iwn_panicked_task(void *, int);
 static void	iwn_init_locked(struct iwn_softc *);
 static void	iwn_init(void *);
 static void	iwn_stop_locked(struct iwn_softc *);
@@ -710,6 +711,16 @@ iwn_pci_attach(device_t dev)
 	TASK_INIT(&sc->sc_reinit_task, 0, iwn_hw_reset_task, sc);
 	TASK_INIT(&sc->sc_radioon_task, 0, iwn_radio_on_task, sc);
 	TASK_INIT(&sc->sc_radiooff_task, 0, iwn_radio_off_task, sc);
+	TASK_INIT(&sc->sc_panic_task, 0, iwn_panicked_task, sc);
+
+	sc->sc_tq = taskqueue_create("iwn_taskq", M_WAITOK,
+	    taskqueue_thread_enqueue, &sc->sc_tq);
+	error = taskqueue_start_threads(&sc->sc_tq, 1, TDPRI_KERN_DAEMON, -1,
+	    "iwn_taskq");
+	if (error != 0) {
+		device_printf(dev, "can't start threads, error %d\n", error);
+		goto fail;
+	}
 
 	iwn_sysctlattach(sc);
 
@@ -1385,6 +1396,14 @@ iwn_pci_detach(device_t dev)
 		ieee80211_draintask(ic, &sc->sc_radiooff_task);
 
 		iwn_stop_locked(sc);
+
+#if 0
+		// We don't need this for DragonFly as our taskqueue_free() 
+		// is running all remaining tasks before terminating.
+		taskqueue_drain_all(sc->sc_tq);
+#endif
+		taskqueue_free(sc->sc_tq);
+
 		callout_stop(&sc->watchdog_to);
 		callout_stop(&sc->calib_to);
 		ieee80211_ifdetach(ic);
@@ -3985,8 +4004,8 @@ iwn_intr(void *arg)
 #endif
 		/* Dump firmware error log and stop. */
 		iwn_fatal_intr(sc);
-		ifp->if_flags &= ~IFF_UP;
-		iwn_stop_locked(sc);
+
+		taskqueue_enqueue(sc->sc_tq, &sc->sc_panic_task);
 		goto done;
 	}
 	if ((r1 & (IWN_INT_FH_RX | IWN_INT_SW_RX | IWN_INT_RX_PERIODIC)) ||
@@ -8440,6 +8459,43 @@ iwn_radio_off_task(void *arg0, int pending)
 	/* Enable interrupts to get RF toggle notification. */
 	IWN_WRITE(sc, IWN_INT, 0xffffffff);
 	IWN_WRITE(sc, IWN_INT_MASK, sc->int_mask);
+	wlan_serialize_exit();
+}
+
+static void
+iwn_panicked_task(void *arg0, int pending)
+{
+	struct iwn_softc *sc = arg0;
+	struct ifnet *ifp = sc->sc_ifp;
+	struct ieee80211com *ic = ifp->if_l2com;
+	struct ieee80211vap *vap = TAILQ_FIRST(&ic->ic_vaps);
+	int error;
+
+	if (vap == NULL) {
+		kprintf("%s: null vap\n", __func__);
+		return;
+	}
+
+	device_printf(sc->sc_dev, "%s: controller panicked, iv_state = %d; "
+	    "resetting...\n", __func__, vap->iv_state);
+
+	wlan_serialize_enter();
+
+	iwn_stop_locked(sc);
+	iwn_init_locked(sc);
+	iwn_start_locked(sc->sc_ifp);
+	if (vap->iv_state >= IEEE80211_S_AUTH &&
+	    (error = iwn_auth(sc, vap)) != 0) {
+		device_printf(sc->sc_dev,
+		    "%s: could not move to auth state\n", __func__);
+	}
+	if (vap->iv_state >= IEEE80211_S_RUN &&
+	    (error = iwn_run(sc, vap)) != 0) {
+		device_printf(sc->sc_dev,
+		    "%s: could not move to run state\n", __func__);
+	}
+
+	// XXX: mneumann: Move up right next to iwn_start() ? 
 	wlan_serialize_exit();
 }
 
