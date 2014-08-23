@@ -84,6 +84,9 @@
 
 #define nitems(ary)	(sizeof(ary) / sizeof((ary)[0]))
 
+#define IWN_LOCK(sc)
+#define IWN_UNLOCK(sc)
+
 struct iwn_ident {
 	uint16_t	vendor;
 	uint16_t	device;
@@ -4763,12 +4766,16 @@ iwn_ioctl(struct ifnet *ifp, u_long cmd, caddr_t data, struct ucred *ucred)
 		error = ifmedia_ioctl(ifp, ifr, &ic->ic_media, cmd);
 		break;
 	case SIOCGIWNSTATS:
+		IWN_LOCK(sc);
 		/* XXX validate permissions/memory/etc? */
 		error = copyout(&sc->last_stat, ifr->ifr_data,
 		    sizeof(struct iwn_stats));
+		IWN_UNLOCK(sc);
 		break;
 	case SIOCZIWNSTATS:
+		IWN_LOCK(sc);
 		memset(&sc->last_stat, 0, sizeof(struct iwn_stats));
+		IWN_UNLOCK(sc);
 		error = 0;
 		break;
 	default:
