@@ -6417,6 +6417,9 @@ iwn_scan(struct iwn_softc *sc)
 		return (EAGAIN);
 	}
 
+	/* Assign the scan channel */
+	c = ic->ic_curchan;
+
 	sc->rxon = &sc->rx_on[IWN_RXON_BSS_CTX];
 	buf = kmalloc(IWN_SCAN_MAXSZ, M_DEVBUF, M_INTWAIT | M_ZERO);
 	hdr = (struct iwn_scan_hdr *)buf;
@@ -6448,7 +6451,7 @@ iwn_scan(struct iwn_softc *sc)
 	    IWN_RXCHAIN_VALID(sc->rxchainmask) |
 	    IWN_RXCHAIN_FORCE_MIMO_SEL(sc->rxchainmask) |
 	    IWN_RXCHAIN_DRIVER_FORCE;
-	if (IEEE80211_IS_CHAN_A(ic->ic_curchan) &&
+	if (IEEE80211_IS_CHAN_A(c) &&
 	    sc->hw_type == IWN_HW_REV_TYPE_4965) {
 		/* Ant A must be avoided in 5GHz because of an HW bug. */
 		rxchain |= IWN_RXCHAIN_FORCE_SEL(IWN_ANT_B);
@@ -6462,7 +6465,7 @@ iwn_scan(struct iwn_softc *sc)
 	tx->id = sc->broadcast_id;
 	tx->lifetime = htole32(IWN_LIFETIME_INFINITE);
 
-	if (IEEE80211_IS_CHAN_5GHZ(ic->ic_curchan)) {
+	if (IEEE80211_IS_CHAN_5GHZ(c)) {
 		/* Send probe requests at 6Mbps. */
 		tx->rate = htole32(0xd);
 		rs = &ic->ic_sup_rates[IEEE80211_MODE_11A];
@@ -6566,7 +6569,6 @@ iwn_scan(struct iwn_softc *sc)
 		hdr->crc_threshold = is_active ?
 		    IWN_GOOD_CRC_TH_DEFAULT : IWN_GOOD_CRC_TH_NEVER;
 
-	c = ic->ic_curchan;
 	chan = (struct iwn_scan_chan *)frm;
 	chan->chan = htole16(ieee80211_chan2ieee(ic, c));
 	chan->flags = 0;
