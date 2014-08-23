@@ -285,7 +285,7 @@ static int	iwn_send_advanced_btcoex(struct iwn_softc *);
 static int	iwn5000_runtime_calib(struct iwn_softc *);
 static int	iwn_config(struct iwn_softc *);
 static uint8_t	*ieee80211_add_ssid(uint8_t *, const uint8_t *, u_int);
-static int	iwn_scan(struct iwn_softc *);
+static int	iwn_scan(struct iwn_softc *, struct ieee80211_channel *);
 static int	iwn_auth(struct iwn_softc *, struct ieee80211vap *vap);
 static int	iwn_run(struct iwn_softc *, struct ieee80211vap *vap);
 static int	iwn_ampdu_rx_start(struct ieee80211_node *,
@@ -6384,7 +6384,7 @@ iwn_get_passive_dwell_time(struct iwn_softc *sc, struct ieee80211_channel *c)
 }
 
 static int
-iwn_scan(struct iwn_softc *sc)
+iwn_scan(struct iwn_softc *sc, struct ieee80211_channel *c)
 {
 	struct ifnet *ifp = sc->sc_ifp;
 	struct ieee80211com *ic = ifp->if_l2com;
@@ -6396,7 +6396,6 @@ iwn_scan(struct iwn_softc *sc)
 	struct iwn_scan_chan *chan;
 	struct ieee80211_frame *wh;
 	struct ieee80211_rateset *rs;
-	struct ieee80211_channel *c;
 	uint8_t *buf, *frm;
 	uint16_t rxchain;
 	uint8_t txant;
@@ -8504,9 +8503,10 @@ iwn_scan_curchan(struct ieee80211_scan_state *ss, unsigned long maxdwell)
 {
 	struct ieee80211vap *vap = ss->ss_vap;
 	struct iwn_softc *sc = vap->iv_ic->ic_ifp->if_softc;
+	struct ieee80211com *ic = vap->iv_ic;
 	int error;
 
-	error = iwn_scan(sc);
+	error = iwn_scan(sc, ic->ic_curchan);
 	if (error != 0)
 		ieee80211_cancel_scan(vap);
 }
