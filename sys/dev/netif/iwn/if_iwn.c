@@ -80,6 +80,7 @@
 #include "if_iwn_devid.h"
 #include "if_iwn_chip_cfg.h"
 #include "if_iwn_debug.h"
+#include "if_iwn_ioctl.h"
 
 #define nitems(ary)	(sizeof(ary) / sizeof((ary)[0]))
 
@@ -3190,6 +3191,16 @@ iwn5000_rx_calib_results(struct iwn_softc *sc, struct iwn_rx_desc *desc,
 	memcpy(sc->calibcmd[idx].buf, calib, len);
 }
 
+static void
+iwn_stats_update(struct iwn_softc *sc, struct iwn_calib_state *calib,
+    struct iwn_stats *stats)
+{
+
+	/* XXX lock assert */
+	memcpy(&sc->last_stat, stats, sizeof(struct iwn_stats));
+	sc->last_stat_valid = 1;
+}
+
 /*
  * Process an RX_STATISTICS or BEACON_STATISTICS firmware notification.
  * The latter is sent by the firmware after each received beacon.
@@ -3221,6 +3232,9 @@ iwn_rx_statistics(struct iwn_softc *sc, struct iwn_rx_desc *desc,
 	DPRINTF(sc, IWN_DEBUG_CALIBRATE, "%s: received statistics, cmd %d\n",
 	    __func__, desc->type);
 	sc->calib_cnt = 0;	/* Reset TX power calibration timeout. */
+
+	/* Collect/track general statistics for reporting */
+	iwn_stats_update(sc, calib, stats);
 
 	/* Test if temperature has changed. */
 	if (stats->general.temp != sc->rawtemp) {
@@ -4747,6 +4761,15 @@ iwn_ioctl(struct ifnet *ifp, u_long cmd, caddr_t data, struct ucred *ucred)
 		break;
 	case SIOCGIFMEDIA:
 		error = ifmedia_ioctl(ifp, ifr, &ic->ic_media, cmd);
+		break;
+	case SIOCGIWNSTATS:
+		/* XXX validate permissions/memory/etc? */
+		error = copyout(&sc->last_stat, ifr->ifr_data,
+		    sizeof(struct iwn_stats));
+		break;
+	case SIOCZIWNSTATS:
+		memset(&sc->last_stat, 0, sizeof(struct iwn_stats));
+		error = 0;
 		break;
 	default:
 		error = EINVAL;
