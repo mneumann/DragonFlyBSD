@@ -37,9 +37,9 @@ moused_start_dev()
 		echo "${ms} not enabled"
 		;;
 	*)
-		check_startmsgs && echo -n "Starting ${ms} moused: "
+		echo -n "Starting ${ms} moused: "
 		/usr/sbin/moused ${myflags} -p ${myport} -t ${mytype} -I ${mypidfile}
-		check_startmsgs && echo '.'
+		echo '.'
 		;;
 	esac
 }
@@ -55,7 +55,7 @@ moused_stop_dev()
 		echo "${ms} not enabled"
 		;;
 	*)
-		check_startmsgs && echo -n "Stopping ${ms} moused: "
+		echo -n "Stopping ${ms} moused: "
 		mypid=$(check_pidfile $mypidfile $command)
 		if [ -z "$mypid" ]; then
 			echo "moused for ${ms} not running? (check $mypidfile)." 
@@ -63,7 +63,7 @@ moused_stop_dev()
 			kill $sig_stop $mypid
 			wait_for_pids $mypid
 		fi
-		check_startmsgs && echo '.'
+		echo '.'
 		;;
 	esac
 }
