@@ -1,7 +1,8 @@
-/* $FreeBSD: src/sys/dev/sound/usb/uaudio_pcm.c,v 1.15.2.2 2007/05/13 20:53:40 ariff Exp $ */
+/* $FreeBSD: head/sys/dev/sound/usb/uaudio_pcm.c 246128 2013-01-30 18:01:20Z sbz $ */
 
 /*-
  * Copyright (c) 2000-2002 Hiroyuki Aizu <aizu@navi.org>
+ * Copyright (c) 2006 Hans Petter Selasky
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,203 +27,99 @@
  */
 
 
-#include <sys/soundcard.h>
+#ifdef HAVE_KERNEL_OPTION_HEADERS
+#include "opt_snd.h"
+#endif
+
 #include <dev/sound/pcm/sound.h>
 #include <dev/sound/chip.h>
-
 #include <dev/sound/usb/uaudio.h>
 
 #include "mixer_if.h"
-
-struct ua_info;
-
-struct ua_chinfo {
-	struct ua_info *parent;
-	struct pcm_channel *channel;
-	struct snd_dbuf *buffer;
-	u_char *buf;
-	int dir, hwch;
-	u_int32_t fmt, spd, blksz;	/* XXXXX */
-};
-
-struct ua_info {
-	device_t sc_dev;
-	u_int32_t bufsz;
-	struct ua_chinfo pch, rch;
-#define FORMAT_NUM	32
-	u_int32_t ua_playfmt[FORMAT_NUM*2+1]; /* FORMAT_NUM format * (stereo or mono) + endptr */
-	u_int32_t ua_recfmt[FORMAT_NUM*2+1]; /* FORMAT_NUM format * (stereo or mono) + endptr */
-	struct pcmchan_caps ua_playcaps;
-	struct pcmchan_caps ua_reccaps;
-};
-
-#define UAUDIO_DEFAULT_BUFSZ		16*1024
 
 /************************************************************/
 static void *
 ua_chan_init(kobj_t obj, void *devinfo, struct snd_dbuf *b, struct pcm_channel *c, int dir)
 {
-	device_t pa_dev;
-
-	struct ua_info *sc = devinfo;
-	struct ua_chinfo *ch = (dir == PCMDIR_PLAY)? &sc->pch : &sc->rch;
-
-	ch->parent = sc;
-	ch->channel = c;
-	ch->buffer = b;
-	ch->dir = dir;
-
-	pa_dev = device_get_parent(sc->sc_dev);
-
-	ch->buf = kmalloc(sc->bufsz, M_DEVBUF, M_WAITOK);
-	if (sndbuf_setup(b, ch->buf, sc->bufsz) != 0) {
-		kfree(ch->buf, M_DEVBUF);
-		return NULL;
-	}
-	uaudio_chan_set_param_pcm_dma_buff(pa_dev, ch->buf, ch->buf+sc->bufsz, ch->channel, dir);
-	if (bootverbose)
-		device_printf(pa_dev, "%s buf %p\n", (dir == PCMDIR_PLAY)?
-			      "play" : "rec", sndbuf_getbuf(ch->buffer));
-
-	ch->dir = dir;
-#ifndef NO_RECORDING
-	ch->hwch = 1;
-	if (dir == PCMDIR_PLAY)
-		ch->hwch = 2;
-#else
-	ch->hwch = 2;
-#endif
-
-	return ch;
+	return (uaudio_chan_init(devinfo, b, c, dir));
 }
 
 static int
 ua_chan_free(kobj_t obj, void *data)
 {
-	struct ua_chinfo *ua = data;
-
-	if (ua->buf != NULL)
-		kfree(ua->buf, M_DEVBUF);
-	return 0;
+	return (uaudio_chan_free(data));
 }
 
 static int
-ua_chan_setformat(kobj_t obj, void *data, u_int32_t format)
+ua_chan_setformat(kobj_t obj, void *data, uint32_t format)
 {
-	device_t pa_dev;
-	struct ua_info *ua;
-
-	struct ua_chinfo *ch = data;
-
 	/*
-	 * At this point, no need to query as we shouldn't select an unsorted format
+	 * At this point, no need to query as we
+	 * shouldn't select an unsorted format
 	 */
-	ua = ch->parent;
-	pa_dev = device_get_parent(ua->sc_dev);
-	uaudio_chan_set_param_format(pa_dev, format, ch->dir);
+	return (uaudio_chan_set_param_format(data, format));
+}
 
-	ch->fmt = format;
-	return 0;
+static uint32_t
+ua_chan_setspeed(kobj_t obj, void *data, uint32_t speed)
+{
+	return (uaudio_chan_set_param_speed(data, speed));
+}
+
+static uint32_t
+ua_chan_setblocksize(kobj_t obj, void *data, uint32_t blocksize)
+{
+	return (uaudio_chan_set_param_blocksize(data, blocksize));
 }
 
 static int
-ua_chan_setspeed(kobj_t obj, void *data, u_int32_t speed)
+ua_chan_setfragments(kobj_t obj, void *data, uint32_t blocksize, uint32_t blockcount)
 {
-	struct ua_chinfo *ch;
-	device_t pa_dev;
-	int bestspeed;
-
-	ch = data;
-	pa_dev = device_get_parent(ch->parent->sc_dev);
-
-	if ((bestspeed = uaudio_chan_set_param_speed(pa_dev, speed, ch->dir)))
-		ch->spd = bestspeed;
-
-	return ch->spd;
-}
-
-static int
-ua_chan_setblocksize(kobj_t obj, void *data, u_int32_t blocksize)
-{
-	device_t pa_dev;
-	struct ua_chinfo *ch = data;
-	struct ua_info *ua = ch->parent;
-
-	if (blocksize) {
-		RANGE(blocksize, 128, ua->bufsz / 2);
-		if (sndbuf_resize(ch->buffer, ua->bufsz/blocksize, blocksize) != 0) {
-			ch->blksz = blocksize;
-		}
-	}
-	pa_dev = device_get_parent(ua->sc_dev);
-	uaudio_chan_set_param_blocksize(pa_dev, blocksize, ch->dir);
-
-	return ch->blksz;
+	return (uaudio_chan_set_param_fragments(data, blocksize, blockcount));
 }
 
 static int
 ua_chan_trigger(kobj_t obj, void *data, int go)
 {
-	device_t pa_dev;
-	struct ua_info *ua;
-	struct ua_chinfo *ch = data;
-
-	if (go == PCMTRIG_EMLDMAWR || go == PCMTRIG_EMLDMARD)
-		return 0;
-
-	ua = ch->parent;
-	pa_dev = device_get_parent(ua->sc_dev);
-
-	/* XXXXX */
-	if (ch->dir == PCMDIR_PLAY) {
-		if (go == PCMTRIG_START) {
-			uaudio_trigger_output(pa_dev);
-		} else {
-			uaudio_halt_out_dma(pa_dev);
-		}
-	} else {
-#ifndef NO_RECORDING
-		if (go == PCMTRIG_START)
-			uaudio_trigger_input(pa_dev);
-		else
-			uaudio_halt_in_dma(pa_dev);
-#endif
+	if (!PCMTRIG_COMMON(go)) {
+		return (0);
 	}
-
-	return 0;
+	if (go == PCMTRIG_START) {
+		return (uaudio_chan_start(data));
+	} else {
+		return (uaudio_chan_stop(data));
+	}
 }
 
-static int
+static uint32_t
 ua_chan_getptr(kobj_t obj, void *data)
 {
-	device_t pa_dev;
-	struct ua_info *ua;
-	struct ua_chinfo *ch = data;
-
-	ua = ch->parent;
-	pa_dev = device_get_parent(ua->sc_dev);
-
-	return uaudio_chan_getptr(pa_dev, ch->dir);
+	return (uaudio_chan_getptr(data));
 }
 
 static struct pcmchan_caps *
 ua_chan_getcaps(kobj_t obj, void *data)
 {
-	struct ua_chinfo *ch;
+	return (uaudio_chan_getcaps(data));
+}
 
-	ch = data;
-	return (ch->dir == PCMDIR_PLAY) ? &(ch->parent->ua_playcaps) : &(ch->parent->ua_reccaps);
+static struct pcmchan_matrix *
+ua_chan_getmatrix(kobj_t obj, void *data, uint32_t format)
+{
+	return (uaudio_chan_getmatrix(data, format));
 }
 
 static kobj_method_t ua_chan_methods[] = {
-	KOBJMETHOD(channel_init,		ua_chan_init),
-	KOBJMETHOD(channel_free,                ua_chan_free),
-	KOBJMETHOD(channel_setformat,		ua_chan_setformat),
-	KOBJMETHOD(channel_setspeed,		ua_chan_setspeed),
-	KOBJMETHOD(channel_setblocksize,	ua_chan_setblocksize),
-	KOBJMETHOD(channel_trigger,		ua_chan_trigger),
-	KOBJMETHOD(channel_getptr,		ua_chan_getptr),
-	KOBJMETHOD(channel_getcaps,		ua_chan_getcaps),
+	KOBJMETHOD(channel_init, ua_chan_init),
+	KOBJMETHOD(channel_free, ua_chan_free),
+	KOBJMETHOD(channel_setformat, ua_chan_setformat),
+	KOBJMETHOD(channel_setspeed, ua_chan_setspeed),
+	KOBJMETHOD(channel_setblocksize, ua_chan_setblocksize),
+	KOBJMETHOD(channel_setfragments, ua_chan_setfragments),
+	KOBJMETHOD(channel_trigger, ua_chan_trigger),
+	KOBJMETHOD(channel_getptr, ua_chan_getptr),
+	KOBJMETHOD(channel_getcaps, ua_chan_getcaps),
+	KOBJMETHOD(channel_getmatrix, ua_chan_getmatrix),
 	KOBJMETHOD_END
 };
 
@@ -232,67 +129,62 @@ CHANNEL_DECLARE(ua_chan);
 static int
 ua_mixer_init(struct snd_mixer *m)
 {
-	u_int32_t mask;
-	device_t pa_dev;
-	struct snddev_info *d;
-	struct ua_info *ua = mix_getdevinfo(m);
-
-	pa_dev = device_get_parent(ua->sc_dev);
-	d = device_get_softc(ua->sc_dev);
-
-	mask = uaudio_query_mix_info(pa_dev);
-	if (d != NULL) {
-		if (!(mask & SOUND_MASK_PCM)) {
-			/*
-			 * Emulate missing pcm mixer controller
-			 * through FEEDER_VOLUME
-			 */
-			 d->flags |= SD_F_SOFTPCMVOL;
-		}
-		if (!(mask & SOUND_MASK_VOLUME)) {
-			mix_setparentchild(m, SOUND_MIXER_VOLUME,
-			    SOUND_MASK_PCM);
-			mix_setrealdev(m, SOUND_MIXER_VOLUME,
-			    SOUND_MIXER_NONE);
-		}
-	}
-	mix_setdevs(m,	mask);
-
-	mask = uaudio_query_recsrc_info(pa_dev);
-	mix_setrecdevs(m, mask);
-
-	return 0;
+	return (uaudio_mixer_init_sub(mix_getdevinfo(m), m));
 }
 
 static int
 ua_mixer_set(struct snd_mixer *m, unsigned type, unsigned left, unsigned right)
 {
-	device_t pa_dev;
-	struct ua_info *ua = mix_getdevinfo(m);
+	struct lock *lock = mixer_get_lock(m);
+	uint8_t do_unlock;
 
-	pa_dev = device_get_parent(ua->sc_dev);
-	uaudio_mixer_set(pa_dev, type, left, right);
+	if (lockstatus(lock, curthread)) {
+		do_unlock = 0;
+	} else {
+		do_unlock = 1;
+		lockmgr(lock, LK_EXCLUSIVE);
+	}
+	uaudio_mixer_set(mix_getdevinfo(m), type, left, right);
+	if (do_unlock) {
+		lockmgr(lock, LK_RELEASE);
+	}
+	return (left | (right << 8));
+}
 
-	return left | (right << 8);
+static uint32_t
+ua_mixer_setrecsrc(struct snd_mixer *m, uint32_t src)
+{
+	struct lock *lock = mixer_get_lock(m);
+	int retval;
+	uint8_t do_unlock;
+
+	if (lockstatus(lock, curthread)) {
+		do_unlock = 0;
+	} else {
+		do_unlock = 1;
+		lockmgr(lock, LK_EXCLUSIVE);
+	}
+	retval = uaudio_mixer_setrecsrc(mix_getdevinfo(m), src);
+	if (do_unlock) {
+		lockmgr(lock, LK_RELEASE);
+	}
+	return (retval);
 }
 
 static int
-ua_mixer_setrecsrc(struct snd_mixer *m, u_int32_t src)
+ua_mixer_uninit(struct snd_mixer *m)
 {
-	device_t pa_dev;
-	struct ua_info *ua = mix_getdevinfo(m);
-
-	pa_dev = device_get_parent(ua->sc_dev);
-	return uaudio_mixer_setrecsrc(pa_dev, src);
+	return (uaudio_mixer_uninit_sub(mix_getdevinfo(m)));
 }
 
 static kobj_method_t ua_mixer_methods[] = {
-	KOBJMETHOD(mixer_init,		ua_mixer_init),
-	KOBJMETHOD(mixer_set,		ua_mixer_set),
-	KOBJMETHOD(mixer_setrecsrc,	ua_mixer_setrecsrc),
-
+	KOBJMETHOD(mixer_init, ua_mixer_init),
+	KOBJMETHOD(mixer_uninit, ua_mixer_uninit),
+	KOBJMETHOD(mixer_set, ua_mixer_set),
+	KOBJMETHOD(mixer_setrecsrc, ua_mixer_setrecsrc),
 	KOBJMETHOD_END
 };
+
 MIXER_DECLARE(ua_mixer);
 /************************************************************/
 
@@ -300,106 +192,40 @@ MIXER_DECLARE(ua_mixer);
 static int
 ua_probe(device_t dev)
 {
-	char *s;
 	struct sndcard_func *func;
 
-	/* The parent device has already been probed. */
+	/* the parent device has already been probed */
 
 	func = device_get_ivars(dev);
-	if (func == NULL || func->func != SCF_PCM)
+
+	if ((func == NULL) ||
+	    (func->func != SCF_PCM)) {
 		return (ENXIO);
+	}
+	device_set_desc(dev, "USB audio");
 
-	s = "USB Audio";
-
-	device_set_desc(dev, s);
-	return BUS_PROBE_DEFAULT;
+	return (BUS_PROBE_DEFAULT);
 }
 
 static int
 ua_attach(device_t dev)
 {
-	struct ua_info *ua;
-	char status[SND_STATUSLEN];
-	device_t pa_dev;
-	u_int32_t nplay, nrec;
-	int i;
-
-	ua = kmalloc(sizeof *ua, M_DEVBUF, M_ZERO | M_WAITOK);
-
-	ua->sc_dev = dev;
-
-	pa_dev = device_get_parent(dev);
-
-	ua->bufsz = pcm_getbuffersize(dev, 4096, UAUDIO_DEFAULT_BUFSZ, 65536);
-	if (bootverbose)
-		device_printf(dev, "using a default buffer size of %jd\n", (intmax_t)ua->bufsz);
-
-	if (mixer_init(dev, &ua_mixer_class, ua)) {
-		goto bad;
-	}
-
-	ksnprintf(status, SND_STATUSLEN, "at ? %s", PCM_KLDSTRING(snd_uaudio));
-
-	ua->ua_playcaps.fmtlist = ua->ua_playfmt;
-	ua->ua_reccaps.fmtlist = ua->ua_recfmt;
-	nplay = uaudio_query_formats(pa_dev, PCMDIR_PLAY, FORMAT_NUM * 2, &ua->ua_playcaps);
-	nrec = uaudio_query_formats(pa_dev, PCMDIR_REC, FORMAT_NUM * 2, &ua->ua_reccaps);
-
-	if (nplay > 1)
-		nplay = 1;
-	if (nrec > 1)
-		nrec = 1;
-
-#ifndef NO_RECORDING
-	if (pcm_register(dev, ua, nplay, nrec)) {
-#else
-	if (pcm_register(dev, ua, nplay, 0)) {
-#endif
-		goto bad;
-	}
-
-	sndstat_unregister(dev);
-	uaudio_sndstat_register(dev);
-
-	for (i = 0; i < nplay; i++) {
-		pcm_addchan(dev, PCMDIR_PLAY, &ua_chan_class, ua);
-	}
-#ifndef NO_RECORDING
-	for (i = 0; i < nrec; i++) {
-		pcm_addchan(dev, PCMDIR_REC, &ua_chan_class, ua);
-	}
-#endif
-	pcm_setstatus(dev, status);
-
-	return 0;
-
-bad:	kfree(ua, M_DEVBUF);
-	return ENXIO;
+	return (uaudio_attach_sub(dev, &ua_mixer_class, &ua_chan_class));
 }
 
 static int
 ua_detach(device_t dev)
 {
-	int r;
-	struct ua_info *sc;
-
-	r = pcm_unregister(dev);
-	if (r)
-		return r;
-
-	sc = pcm_getdevinfo(dev);
-	kfree(sc, M_DEVBUF);
-
-	return 0;
+	return (uaudio_detach_sub(dev));
 }
 
 /************************************************************/
 
 static device_method_t ua_pcm_methods[] = {
 	/* Device interface */
-	DEVMETHOD(device_probe,		ua_probe),
-	DEVMETHOD(device_attach,	ua_attach),
-	DEVMETHOD(device_detach,	ua_detach),
+	DEVMETHOD(device_probe, ua_probe),
+	DEVMETHOD(device_attach, ua_attach),
+	DEVMETHOD(device_detach, ua_detach),
 
 	DEVMETHOD_END
 };
@@ -410,8 +236,7 @@ static driver_t ua_pcm_driver = {
 	PCM_SOFTC_SIZE,
 };
 
-
-DRIVER_MODULE(ua_pcm, uaudio, ua_pcm_driver, pcm_devclass, NULL, NULL);
+DRIVER_MODULE(ua_pcm, uaudio, ua_pcm_driver, pcm_devclass, 0, 0);
 MODULE_DEPEND(ua_pcm, uaudio, 1, 1, 1);
 MODULE_DEPEND(ua_pcm, sound, SOUND_MINVER, SOUND_PREFVER, SOUND_MAXVER);
 MODULE_VERSION(ua_pcm, 1);

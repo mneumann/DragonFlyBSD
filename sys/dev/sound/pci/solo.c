@@ -21,9 +21,11 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $FreeBSD: src/sys/dev/sound/pci/solo.c,v 1.35.2.4 2006/07/13 01:53:54 yongari Exp $
  */
+
+#ifdef HAVE_KERNEL_OPTION_HEADERS
+#include "opt_snd.h"
+#endif
 
 #include <dev/sound/pcm/sound.h>
 
@@ -35,7 +37,7 @@
 
 #include "mixer_if.h"
 
-SND_DECLARE_FILE("$DragonFly: src/sys/dev/sound/pci/solo.c,v 1.10 2007/06/16 20:07:19 dillon Exp $");
+SND_DECLARE_FILE("$FreeBSD: head/sys/dev/sound/pci/solo.c 254263 2013-08-12 23:30:01Z scottl $");
 
 #define SOLO_DEFAULT_BUFSZ 16384
 #define ABS(x) (((x) < 0)? -(x) : (x))
@@ -50,14 +52,14 @@ SND_DECLARE_FILE("$DragonFly: src/sys/dev/sound/pci/solo.c,v 1.10 2007/06/16 20:
 #define ESS18XX_MPSAFE	1
 
 static u_int32_t ess_playfmt[] = {
-	AFMT_U8,
-	AFMT_STEREO | AFMT_U8,
-	AFMT_S8,
-	AFMT_STEREO | AFMT_S8,
-	AFMT_S16_LE,
-	AFMT_STEREO | AFMT_S16_LE,
-	AFMT_U16_LE,
-	AFMT_STEREO | AFMT_U16_LE,
+	SND_FORMAT(AFMT_U8, 1, 0),
+	SND_FORMAT(AFMT_U8, 2, 0),
+	SND_FORMAT(AFMT_S8, 1, 0),
+	SND_FORMAT(AFMT_S8, 2, 0),
+	SND_FORMAT(AFMT_S16_LE, 1, 0),
+	SND_FORMAT(AFMT_S16_LE, 2, 0),
+	SND_FORMAT(AFMT_U16_LE, 1, 0),
+	SND_FORMAT(AFMT_U16_LE, 2, 0),
 	0
 };
 static struct pcmchan_caps ess_playcaps = {6000, 48000, ess_playfmt, 0};
@@ -66,14 +68,14 @@ static struct pcmchan_caps ess_playcaps = {6000, 48000, ess_playfmt, 0};
  * Recording output is byte-swapped
  */
 static u_int32_t ess_recfmt[] = {
-	AFMT_U8,
-	AFMT_STEREO | AFMT_U8,
-	AFMT_S8,
-	AFMT_STEREO | AFMT_S8,
-	AFMT_S16_BE,
-	AFMT_STEREO | AFMT_S16_BE,
-	AFMT_U16_BE,
-	AFMT_STEREO | AFMT_U16_BE,
+	SND_FORMAT(AFMT_U8, 1, 0),
+	SND_FORMAT(AFMT_U8, 2, 0),
+	SND_FORMAT(AFMT_S8, 1, 0),
+	SND_FORMAT(AFMT_S8, 2, 0),
+	SND_FORMAT(AFMT_S16_BE, 1, 0),
+	SND_FORMAT(AFMT_S16_BE, 2, 0),
+	SND_FORMAT(AFMT_U16_BE, 1, 0),
+	SND_FORMAT(AFMT_U16_BE, 2, 0),
 	0
 };
 static struct pcmchan_caps ess_reccaps = {6000, 48000, ess_recfmt, 0};
@@ -94,12 +96,13 @@ struct ess_info {
 	void		*ih;
     	bus_dma_tag_t parent_dmat;
 
-    	int simplex_dir, type, duplex:1, newspeed:1, dmasz[2];
+    	int simplex_dir, type, dmasz[2];
+	unsigned int duplex:1, newspeed:1;
 	unsigned int bufsz;
 
     	struct ess_chinfo pch, rch;
 #if ESS18XX_MPSAFE == 1
-	sndlock_t	lock;
+	struct lock *lock;
 #endif
 };
 
@@ -425,8 +428,8 @@ ess_setupch(struct ess_info *sc, int ch, int dir, int spd, u_int32_t fmt, int le
 {
 	int play = (dir == PCMDIR_PLAY)? 1 : 0;
 	int b16 = (fmt & AFMT_16BIT)? 1 : 0;
-	int stereo = (fmt & AFMT_STEREO)? 1 : 0;
-	int unsign = (fmt == AFMT_U8 || fmt == AFMT_U16_LE || fmt == AFMT_U16_BE)? 1 : 0;
+	int stereo = (AFMT_CHANNEL(fmt) > 1)? 1 : 0;
+	int unsign = (!(fmt & AFMT_SIGNED))? 1 : 0;
 	u_int8_t spdval, fmtval;
 
 	DEB(kprintf("ess_setupch\n"));
@@ -540,7 +543,7 @@ esschan_init(kobj_t obj, void *devinfo, struct snd_dbuf *b, struct pcm_channel *
 	ch->channel = c;
 	ch->buffer = b;
 	ch->dir = dir;
-	if (sndbuf_alloc(ch->buffer, sc->parent_dmat, sc->bufsz) != 0)
+	if (sndbuf_alloc(ch->buffer, sc->parent_dmat, 0, sc->bufsz) != 0)
 		return NULL;
 	ch->hwch = 1;
 	if ((dir == PCMDIR_PLAY) && (sc->duplex))
@@ -557,7 +560,7 @@ esschan_setformat(kobj_t obj, void *data, u_int32_t format)
 	return 0;
 }
 
-static int
+static u_int32_t
 esschan_setspeed(kobj_t obj, void *data, u_int32_t speed)
 {
 	struct ess_chinfo *ch = data;
@@ -571,7 +574,7 @@ esschan_setspeed(kobj_t obj, void *data, u_int32_t speed)
 	return ch->spd;
 }
 
-static int
+static u_int32_t
 esschan_setblocksize(kobj_t obj, void *data, u_int32_t blocksize)
 {
 	struct ess_chinfo *ch = data;
@@ -586,9 +589,10 @@ esschan_trigger(kobj_t obj, void *data, int go)
 	struct ess_chinfo *ch = data;
 	struct ess_info *sc = ch->parent;
 
-	DEB(kprintf("esschan_trigger: %d\n",go));
-	if (go == PCMTRIG_EMLDMAWR || go == PCMTRIG_EMLDMARD)
+	if (!PCMTRIG_COMMON(go))
 		return 0;
+
+	DEB(kprintf("esschan_trigger: %d\n",go));
 
 	ess_lock(sc);
 	switch (go) {
@@ -608,12 +612,12 @@ esschan_trigger(kobj_t obj, void *data, int go)
 	return 0;
 }
 
-static int
+static u_int32_t
 esschan_getptr(kobj_t obj, void *data)
 {
 	struct ess_chinfo *ch = data;
 	struct ess_info *sc = ch->parent;
-	int ret;
+	u_int32_t ret;
 
 	ess_lock(sc);
 	ret = ess_dmapos(sc, ch->hwch);
@@ -720,7 +724,7 @@ essmix_set(struct snd_mixer *m, unsigned dev, unsigned left, unsigned right)
     	return left | (right << 8);
 }
 
-static int
+static u_int32_t
 essmix_setrecsrc(struct snd_mixer *m, u_int32_t src)
 {
     	struct ess_info *sc = mix_getdevinfo(m);
@@ -832,31 +836,31 @@ ess_release_resources(struct ess_info *sc, device_t dev)
 		if (sc->ih)
 			bus_teardown_intr(dev, sc->irq, sc->ih);
 		bus_release_resource(dev, SYS_RES_IRQ, 0, sc->irq);
-		sc->irq = NULL;
+		sc->irq = 0;
     	}
     	if (sc->io) {
 		bus_release_resource(dev, SYS_RES_IOPORT, PCIR_BAR(0), sc->io);
-		sc->io = NULL;
+		sc->io = 0;
     	}
 
     	if (sc->sb) {
 		bus_release_resource(dev, SYS_RES_IOPORT, PCIR_BAR(1), sc->sb);
-		sc->sb = NULL;
+		sc->sb = 0;
     	}
 
     	if (sc->vc) {
 		bus_release_resource(dev, SYS_RES_IOPORT, PCIR_BAR(2), sc->vc);
-		sc->vc = NULL;
+		sc->vc = 0;
     	}
 
     	if (sc->mpu) {
 		bus_release_resource(dev, SYS_RES_IOPORT, PCIR_BAR(3), sc->mpu);
-		sc->mpu = NULL;
+		sc->mpu = 0;
     	}
 
     	if (sc->gp) {
 		bus_release_resource(dev, SYS_RES_IOPORT, PCIR_BAR(4), sc->gp);
-		sc->gp = NULL;
+		sc->gp = 0;
     	}
 
 	if (sc->parent_dmat) {
@@ -899,7 +903,7 @@ ess_alloc_resources(struct ess_info *sc, device_t dev)
 		RF_ACTIVE | RF_SHAREABLE);
 
 #if ESS18XX_MPSAFE == 1
-	sc->lock = snd_mtxcreate(device_get_nameunit(dev), "sound softc");
+	sc->lock = snd_mtxcreate(device_get_nameunit(dev), "snd_solo softc");
 
 	return (sc->irq && sc->io && sc->sb && sc->vc &&
 				sc->mpu && sc->gp && sc->lock)? 0 : ENXIO;
@@ -945,15 +949,9 @@ static int
 ess_resume(device_t dev)
 {
 	uint16_t ddma;
-	uint32_t data;
 	struct ess_info *sc = pcm_getdevinfo(dev);
 	
 	ess_lock(sc);
-	data = pci_read_config(dev, PCIR_COMMAND, 2);
-	data |= PCIM_CMD_PORTEN | PCIM_CMD_BUSMASTEREN;
-	pci_write_config(dev, PCIR_COMMAND, data, 2);
-	data = pci_read_config(dev, PCIR_COMMAND, 2);
-
 	ddma = rman_get_start(sc->vc) | 1;
 	pci_write_config(dev, ESS_PCI_LEGACYCONTROL, 0x805f, 2);
 	pci_write_config(dev, ESS_PCI_DDMACONTROL, ddma, 2);
@@ -984,13 +982,9 @@ ess_attach(device_t dev)
     	struct ess_info *sc;
     	char status[SND_STATUSLEN];
 	u_int16_t ddma;
-	u_int32_t data;
 
-	sc = kmalloc(sizeof *sc, M_DEVBUF, M_WAITOK | M_ZERO);
-	data = pci_read_config(dev, PCIR_COMMAND, 2);
-	data |= PCIM_CMD_PORTEN | PCIM_CMD_BUSMASTEREN;
-	pci_write_config(dev, PCIR_COMMAND, data, 2);
-	data = pci_read_config(dev, PCIR_COMMAND, 2);
+	sc = kmalloc(sizeof(*sc), M_DEVBUF, M_WAITOK | M_ZERO);
+	pci_enable_busmaster(dev);
 
     	if (ess_alloc_resources(sc, dev))
 		goto no;
@@ -1029,9 +1023,9 @@ ess_attach(device_t dev)
 		pcm_setflags(dev, pcm_getflags(dev) | SD_F_SIMPLEX);
 
 #if 0
-    	if (bus_dma_tag_create(/*parent*/NULL, /*alignment*/65536, /*boundary*/0,
+    	if (bus_dma_tag_create(/*parent*/bus_get_dma_tag(dev), /*alignment*/65536, /*boundary*/0,
 #endif
-    	if (bus_dma_tag_create(/*parent*/NULL, /*alignment*/2, /*boundary*/0,
+    	if (bus_dma_tag_create(/*parent*/bus_get_dma_tag(dev), /*alignment*/2, /*boundary*/0,
 			/*lowaddr*/BUS_SPACE_MAXADDR_24BIT,
 			/*highaddr*/BUS_SPACE_MAXADDR,
 			/*filter*/NULL, /*filterarg*/NULL,
@@ -1092,7 +1086,7 @@ static device_method_t ess_methods[] = {
 	DEVMETHOD(device_resume,	ess_resume),
 	DEVMETHOD(device_suspend,	ess_suspend),
 
-	DEVMETHOD_END
+	{ 0, 0 }
 };
 
 static driver_t ess_driver = {
@@ -1101,7 +1095,7 @@ static driver_t ess_driver = {
 	PCM_SOFTC_SIZE,
 };
 
-DRIVER_MODULE(snd_solo, pci, ess_driver, pcm_devclass, NULL, NULL);
+DRIVER_MODULE(snd_solo, pci, ess_driver, pcm_devclass, 0, 0);
 MODULE_DEPEND(snd_solo, sound, SOUND_MINVER, SOUND_PREFVER, SOUND_MAXVER);
 MODULE_VERSION(snd_solo, 1);
 

@@ -22,13 +22,17 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
+ */
+
+/*
  * This card has the annoying habit of "clicking" when attached and
  * detached, haven't been able to remedy this with any combination of
  * muting.
- * 
- * $FreeBSD: src/sys/dev/sound/pci/vibes.c,v 1.19.2.1 2006/01/24 18:54:22 joel Exp $
  */
+
+#ifdef HAVE_KERNEL_OPTION_HEADERS
+#include "opt_snd.h"
+#endif
 
 #include <dev/sound/pcm/sound.h>
 #include <dev/sound/pci/vibes.h>
@@ -38,7 +42,7 @@
 
 #include "mixer_if.h"
 
-SND_DECLARE_FILE("$DragonFly: src/sys/dev/sound/pci/vibes.c,v 1.10 2007/01/04 21:47:02 corecode Exp $");
+SND_DECLARE_FILE("$FreeBSD: head/sys/dev/sound/pci/vibes.c 254263 2013-08-12 23:30:01Z scottl $");
 
 /* ------------------------------------------------------------------------- */
 /* Constants */
@@ -99,10 +103,10 @@ struct sc_info {
 };
 
 static u_int32_t sc_fmt[] = {
-	AFMT_U8,
-	AFMT_U8 | AFMT_STEREO,
-	AFMT_S16_LE,
-	AFMT_S16_LE | AFMT_STEREO,
+	SND_FORMAT(AFMT_U8, 1, 0),
+	SND_FORMAT(AFMT_U8, 2, 0),
+	SND_FORMAT(AFMT_S16_LE, 1, 0),
+	SND_FORMAT(AFMT_S16_LE, 2, 0),
 	0
 };
 
@@ -194,12 +198,12 @@ svchan_init(kobj_t obj, void *devinfo, struct snd_dbuf *b, struct pcm_channel *c
 	ch->channel = c;
 	ch->dir = dir;
 
-	if (sndbuf_alloc(b, sc->parent_dmat, sc->bufsz) != 0) {
+	if (sndbuf_alloc(b, sc->parent_dmat, 0, sc->bufsz) != 0) {
 		DEB(kprintf("svchan_init failed\n"));
 		return NULL;
 	}
 	ch->buffer = b;
-	ch->fmt = AFMT_U8;
+	ch->fmt = SND_FORMAT(AFMT_U8, 1, 0);
 	ch->spd = DSP_DEFAULT_SPEED;
 	ch->dma_active = ch->dma_was_active = 0;
 
@@ -212,7 +216,7 @@ svchan_getcaps(kobj_t obj, void *data)
         return &sc_caps;
 }
 
-static int
+static u_int32_t
 svchan_setblocksize(kobj_t obj, void *data, u_int32_t blocksize)
 {
 	struct sc_chinfo *ch = data;
@@ -231,12 +235,12 @@ svchan_setformat(kobj_t obj, void *data, u_int32_t format)
 	struct sc_chinfo *ch = data;
 	/* NB Just note format here as setting format register
 	 * generates noise if dma channel is inactive. */
-	ch->fmt  = (format & AFMT_STEREO) ? SV_AFMT_STEREO : SV_AFMT_MONO;
+	ch->fmt  = (AFMT_CHANNEL(format) > 1) ? SV_AFMT_STEREO : SV_AFMT_MONO;
 	ch->fmt |= (format & AFMT_16BIT) ? SV_AFMT_S16 : SV_AFMT_U8;
 	return 0;
 }
 
-static int
+static u_int32_t
 svchan_setspeed(kobj_t obj, void *data, u_int32_t speed)
 {
 	struct sc_chinfo *ch = data;
@@ -338,6 +342,7 @@ svrchan_trigger(kobj_t obj, void *data, int go)
 		sv_indirect_set(sc, SV_REG_ENABLE, enable);
 		ch->dma_active = 1;
 		break;
+	case PCMTRIG_STOP:
 	case PCMTRIG_ABORT:
 		enable = sv_indirect_get(sc, SV_REG_ENABLE) & ~SV_RECORD_ENABLE;
 		sv_indirect_set(sc, SV_REG_ENABLE, enable);
@@ -348,7 +353,7 @@ svrchan_trigger(kobj_t obj, void *data, int go)
 	return 0;
 }
 
-static int
+static u_int32_t
 svrchan_getptr(kobj_t obj, void *data)
 {
 	struct sc_chinfo	*ch = data;
@@ -369,7 +374,7 @@ static kobj_method_t svrchan_methods[] = {
         KOBJMETHOD(channel_trigger,             svrchan_trigger),
         KOBJMETHOD(channel_getptr,              svrchan_getptr),
         KOBJMETHOD(channel_getcaps,             svchan_getcaps),
-        KOBJMETHOD_END
+	KOBJMETHOD_END
 };
 CHANNEL_DECLARE(svrchan);
 
@@ -414,6 +419,7 @@ svpchan_trigger(kobj_t obj, void *data, int go)
 		sv_indirect_set(sc, SV_REG_ENABLE, enable);
 		ch->dma_active = 1;
 		break;
+	case PCMTRIG_STOP:
 	case PCMTRIG_ABORT:
 		enable = sv_indirect_get(sc, SV_REG_ENABLE) & ~SV_PLAY_ENABLE;
 		sv_indirect_set(sc, SV_REG_ENABLE, enable);
@@ -424,7 +430,7 @@ svpchan_trigger(kobj_t obj, void *data, int go)
 	return 0;
 }
 
-static int
+static u_int32_t
 svpchan_getptr(kobj_t obj, void *data)
 {
 	struct sc_chinfo	*ch = data;
@@ -445,21 +451,23 @@ static kobj_method_t svpchan_methods[] = {
         KOBJMETHOD(channel_trigger,             svpchan_trigger),
         KOBJMETHOD(channel_getptr,              svpchan_getptr),
         KOBJMETHOD(channel_getcaps,             svchan_getcaps),
-        KOBJMETHOD_END
+	KOBJMETHOD_END
 };
 CHANNEL_DECLARE(svpchan);
 
 /* ------------------------------------------------------------------------- */
 /* Mixer support */
 
-static const struct sv_mix_props {
+struct sv_mix_props {
 	u_int8_t	reg;		/* Register */
 	u_int8_t	stereo:1;	/* Supports 2 channels */
 	u_int8_t	mute:1;		/* Supports muting */
 	u_int8_t	neg:1;		/* Negative gain */
 	u_int8_t	max;		/* Max gain */
 	u_int8_t	iselect;	/* Input selector */
-} mt [SOUND_MIXER_NRDEVICES] = {
+};
+
+static const struct sv_mix_props mt [SOUND_MIXER_NRDEVICES] = {
 	[SOUND_MIXER_LINE1]  = {SV_REG_AUX1,      1, 1, 1, SV_DEFAULT_MAX, SV_INPUT_AUX1},
 	[SOUND_MIXER_CD]     = {SV_REG_CD,        1, 1, 1, SV_DEFAULT_MAX, SV_INPUT_CD},
 	[SOUND_MIXER_LINE]   = {SV_REG_LINE,      1, 1, 1, SV_DEFAULT_MAX, SV_INPUT_LINE},
@@ -536,7 +544,7 @@ sv_mix_set(struct snd_mixer *m, u_int32_t dev, u_int32_t left, u_int32_t right)
 	return sv_gain(sc, dev, left, right);
 }
 
-static int
+static u_int32_t
 sv_mix_setrecsrc(struct snd_mixer *m, u_int32_t mask)
 {
 	struct sc_info	*sc = mix_getdevinfo(m);
@@ -557,7 +565,7 @@ static kobj_method_t sv_mixer_methods[] = {
         KOBJMETHOD(mixer_init,		sv_mix_init),
         KOBJMETHOD(mixer_set,		sv_mix_set),
         KOBJMETHOD(mixer_setrecsrc,	sv_mix_setrecsrc),
-        KOBJMETHOD_END
+	KOBJMETHOD_END
 };
 MIXER_DECLARE(sv_mixer);
 
@@ -719,13 +727,10 @@ sv_attach(device_t dev) {
 	char		status[SND_STATUSLEN];
 	u_long		midi_start, games_start, count, sdmaa, sdmac, ml, mu;
 
-	sc = kmalloc(sizeof(struct sc_info), M_DEVBUF, M_WAITOK | M_ZERO);
+	sc = kmalloc(sizeof(*sc), M_DEVBUF, M_WAITOK | M_ZERO);
 	sc->dev = dev;
 
-	data = pci_read_config(dev, PCIR_COMMAND, 2);
-	data |= (PCIM_CMD_PORTEN|PCIM_CMD_BUSMASTEREN);
-	pci_write_config(dev, PCIR_COMMAND, data, 2);
-	data = pci_read_config(dev, PCIR_COMMAND, 2);
+	pci_enable_busmaster(dev);
 
         if (pci_get_powerstate(dev) != PCI_POWERSTATE_D0) {
                 device_printf(dev, "chip is in D%d power mode "
@@ -758,13 +763,14 @@ sv_attach(device_t dev) {
         sc->irq   = bus_alloc_resource(dev, SYS_RES_IRQ, &sc->irqid,
 				       0, ~0, 1, RF_ACTIVE | RF_SHAREABLE);
         if (!sc->irq ||
-	    bus_setup_intr(dev, sc->irq, INTR_TYPE_AV, sv_intr, sc, &sc->ih, NULL)) {
+	    snd_setup_intr(dev, sc->irq, 0, sv_intr, sc, &sc->ih)) {
                 device_printf(dev, "sv_attach: Unable to map interrupt\n");
                 goto fail;
         }
 
 	sc->bufsz = pcm_getbuffersize(dev, 4096, SV_DEFAULT_BUFSZ, 65536);
-        if (bus_dma_tag_create(/*parent*/NULL, /*alignment*/2, /*boundary*/0,
+        if (bus_dma_tag_create(/*parent*/bus_get_dma_tag(dev), /*alignment*/2,
+			       /*boundary*/0,
                                /*lowaddr*/BUS_SPACE_MAXADDR_24BIT,
                                /*highaddr*/BUS_SPACE_MAXADDR,
                                /*filter*/NULL, /*filterarg*/NULL,
@@ -819,10 +825,8 @@ sv_attach(device_t dev) {
 
 	/* Add resources to list of pci resources for this device - from here on
 	 * they look like normal pci resources. */
-	bus_set_resource(dev, SYS_RES_IOPORT, SV_PCI_DMAA,
-	    sdmaa, SV_PCI_DMAA_SIZE, -1);
-	bus_set_resource(dev, SYS_RES_IOPORT, SV_PCI_DMAC,
-	    sdmac, SV_PCI_DMAC_SIZE, -1);
+	bus_set_resource(dev, SYS_RES_IOPORT, SV_PCI_DMAA, sdmaa, SV_PCI_DMAA_SIZE, -1);
+	bus_set_resource(dev, SYS_RES_IOPORT, SV_PCI_DMAC, sdmac, SV_PCI_DMAC_SIZE, -1);
 
 	/* Cache resource short-cuts for dma_a */
 	sc->dmaa_rid = SV_PCI_DMAA;
@@ -927,7 +931,7 @@ static device_method_t sc_methods[] = {
         DEVMETHOD(device_detach,        sv_detach),
         DEVMETHOD(device_resume,        sv_resume),
         DEVMETHOD(device_suspend,       sv_suspend),
-        DEVMETHOD_END
+        { 0, 0 }
 };
 
 static driver_t sonicvibes_driver = {
@@ -936,6 +940,6 @@ static driver_t sonicvibes_driver = {
         PCM_SOFTC_SIZE
 };
 
-DRIVER_MODULE(snd_vibes, pci, sonicvibes_driver, pcm_devclass, NULL, NULL);
+DRIVER_MODULE(snd_vibes, pci, sonicvibes_driver, pcm_devclass, 0, 0);
 MODULE_DEPEND(snd_vibes, sound, SOUND_MINVER, SOUND_PREFVER, SOUND_MAXVER);
 MODULE_VERSION(snd_vibes, 1);
