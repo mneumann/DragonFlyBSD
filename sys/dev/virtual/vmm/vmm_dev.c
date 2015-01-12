@@ -474,7 +474,7 @@ vmmdev_ioctl(struct cdev *cdev, u_long cmd, caddr_t data, int fflag,
 			error = EINVAL;
 		if (error == 0)
 			error = copyout(cpuset, vm_cpuset->cpus, size);
-		free(cpuset, M_TEMP);
+		kfree(cpuset, M_TEMP);
 		break;
 	case VM_SET_INTINFO:
 		vmii = (struct vm_intinfo *)data;
@@ -556,7 +556,7 @@ vmmdev_destroy(void *arg)
 		mtx_unlock(&vmmdev_mtx);
 	}
 
-	free(sc, M_VMMDEV);
+	kfree(sc, M_VMMDEV);
 }
 
 static int

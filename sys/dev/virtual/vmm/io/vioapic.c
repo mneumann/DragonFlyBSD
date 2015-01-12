@@ -489,7 +489,7 @@ void
 vioapic_cleanup(struct vioapic *vioapic)
 {
 
-	free(vioapic, M_VIOAPIC);
+	kfree(vioapic, M_VIOAPIC);
 }
 
 int

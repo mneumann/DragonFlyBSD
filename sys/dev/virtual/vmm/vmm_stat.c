@@ -122,7 +122,7 @@ vmm_stat_init(void *vp)
 void
 vmm_stat_free(void *vp)
 {
-	free(vp, M_VMM_STAT);
+	kfree(vp, M_VMM_STAT);
 }
 
 int

@@ -1985,7 +1985,7 @@ svm_vmcleanup(void *arg)
 {
 	struct svm_softc *sc = arg;
 
-	free(sc, M_SVM);
+	kfree(sc, M_SVM);
 }
 
 static register_t *
@@ -2165,7 +2165,7 @@ svm_vlapic_cleanup(void *arg, struct vlapic *vlapic)
 {
 
         vlapic_cleanup(vlapic);
-        free(vlapic, M_SVM_VLAPIC);
+        kfree(vlapic, M_SVM_VLAPIC);
 }
 
 struct vmm_ops vmm_ops_amd = {

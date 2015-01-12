@@ -948,5 +948,5 @@ vrtc_cleanup(struct vrtc *vrtc)
 {
 
 	callout_drain(&vrtc->callout);
-	free(vrtc, M_VRTC);
+	kfree(vrtc, M_VRTC);
 }

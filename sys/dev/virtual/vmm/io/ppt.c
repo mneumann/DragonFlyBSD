@@ -278,9 +278,9 @@ ppt_teardown_msix(struct pptdev *ppt)
 		ppt->msix.msix_table_rid = 0;
 	}
 
-	free(ppt->msix.res, M_PPTMSIX);
-	free(ppt->msix.cookie, M_PPTMSIX);
-	free(ppt->msix.arg, M_PPTMSIX);
+	kfree(ppt->msix.res, M_PPTMSIX);
+	kfree(ppt->msix.cookie, M_PPTMSIX);
+	kfree(ppt->msix.arg, M_PPTMSIX);
 
 	pci_release_msi(ppt->dev);
 

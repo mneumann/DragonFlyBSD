@@ -658,7 +658,7 @@ vtd_free_ptp(uint64_t *ptp, int level)
 	}
 
 	bzero(ptp, PAGE_SIZE);
-	free(ptp, M_VTD);
+	kfree(ptp, M_VTD);
 }
 
 static void
@@ -670,7 +670,7 @@ vtd_destroy_domain(void *arg)
 
 	SLIST_REMOVE(&domhead, dom, domain, next);
 	vtd_free_ptp(dom->ptp, dom->pt_levels);
-	free(dom, M_VTD);
+	kfree(dom, M_VTD);
 }
 
 struct iommu_ops iommu_ops_intel = {

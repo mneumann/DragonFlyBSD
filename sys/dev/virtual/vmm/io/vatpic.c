@@ -804,5 +804,5 @@ vatpic_init(struct vm *vm)
 void
 vatpic_cleanup(struct vatpic *vatpic)
 {
-	free(vatpic, M_VATPIC);
+	kfree(vatpic, M_VATPIC);
 }

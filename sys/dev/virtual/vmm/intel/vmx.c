@@ -2702,7 +2702,7 @@ vmx_vmcleanup(void *arg)
 	for (i = 0; i < VM_MAXCPU; i++)
 		vpid_free(vmx->state[i].vpid);
 
-	free(vmx, M_VMX);
+	kfree(vmx, M_VMX);
 
 	return;
 }
@@ -3394,7 +3394,7 @@ vmx_vlapic_cleanup(void *arg, struct vlapic *vlapic)
 {
 
 	vlapic_cleanup(vlapic);
-	free(vlapic, M_VLAPIC);
+	kfree(vlapic, M_VLAPIC);
 }
 
 struct vmm_ops vmm_ops_intel = {

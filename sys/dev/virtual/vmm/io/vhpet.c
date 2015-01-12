@@ -748,7 +748,7 @@ vhpet_cleanup(struct vhpet *vhpet)
 	for (i = 0; i < VHPET_NUM_TIMERS; i++)
 		callout_drain(&vhpet->timer[i].callout);
 
-	free(vhpet, M_VHPET);
+	kfree(vhpet, M_VHPET);
 }
 
 int

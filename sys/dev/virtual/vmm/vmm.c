@@ -471,7 +471,7 @@ void
 vm_destroy(struct vm *vm)
 {
 	vm_cleanup(vm, true);
-	free(vm, M_VM);
+	kfree(vm, M_VM);
 }
 
 int
