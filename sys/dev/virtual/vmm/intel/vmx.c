@@ -312,7 +312,7 @@ exit_reason_to_str(int reason)
 	case EXIT_REASON_APIC_WRITE:
 		return "apic-write";
 	default:
-		snprintf(reasonbuf, sizeof(reasonbuf), "%d", reason);
+		ksnprintf(reasonbuf, sizeof(reasonbuf), "%d", reason);
 		return (reasonbuf);
 	}
 }
@@ -539,7 +539,7 @@ vmx_init(int ipinum)
 
 	/* CPUID.1:ECX[bit 5] must be 1 for processor to support VMX */
 	if (!(cpu_feature2 & CPUID2_VMX)) {
-		printf("vmx_init: processor does not support VMX operation\n");
+		kprintf("vmx_init: processor does not support VMX operation\n");
 		return (ENXIO);
 	}
 
@@ -550,7 +550,7 @@ vmx_init(int ipinum)
 	feature_control = rdmsr(MSR_IA32_FEATURE_CONTROL);
 	if ((feature_control & IA32_FEATURE_CONTROL_LOCK) == 1 &&
 	    (feature_control & IA32_FEATURE_CONTROL_VMX_EN) == 0) {
-		printf("vmx_init: VMX operation disabled by BIOS\n");
+		kprintf("vmx_init: VMX operation disabled by BIOS\n");
 		return (ENXIO);
 	}
 
@@ -560,7 +560,7 @@ vmx_init(int ipinum)
 	 */
 	basic = rdmsr(MSR_VMX_BASIC);
 	if ((basic & (1UL << 54)) == 0) {
-		printf("vmx_init: processor does not support desired basic "
+		kprintf("vmx_init: processor does not support desired basic "
 		    "capabilities\n");
 		return (EINVAL);
 	}
@@ -571,7 +571,7 @@ vmx_init(int ipinum)
 			       PROCBASED_CTLS_ONE_SETTING,
 			       PROCBASED_CTLS_ZERO_SETTING, &procbased_ctls);
 	if (error) {
-		printf("vmx_init: processor does not support desired primary "
+		kprintf("vmx_init: processor does not support desired primary "
 		       "processor-based controls\n");
 		return (error);
 	}
@@ -585,7 +585,7 @@ vmx_init(int ipinum)
 			       PROCBASED_CTLS2_ONE_SETTING,
 			       PROCBASED_CTLS2_ZERO_SETTING, &procbased_ctls2);
 	if (error) {
-		printf("vmx_init: processor does not support desired secondary "
+		kprintf("vmx_init: processor does not support desired secondary "
 		       "processor-based controls\n");
 		return (error);
 	}
@@ -602,7 +602,7 @@ vmx_init(int ipinum)
 			       PINBASED_CTLS_ONE_SETTING,
 			       PINBASED_CTLS_ZERO_SETTING, &pinbased_ctls);
 	if (error) {
-		printf("vmx_init: processor does not support desired "
+		kprintf("vmx_init: processor does not support desired "
 		       "pin-based controls\n");
 		return (error);
 	}
@@ -613,7 +613,7 @@ vmx_init(int ipinum)
 			       VM_EXIT_CTLS_ZERO_SETTING,
 			       &exit_ctls);
 	if (error) {
-		printf("vmx_init: processor does not support desired "
+		kprintf("vmx_init: processor does not support desired "
 		    "exit controls\n");
 		return (error);
 	}
@@ -623,7 +623,7 @@ vmx_init(int ipinum)
 	    VM_ENTRY_CTLS_ONE_SETTING, VM_ENTRY_CTLS_ZERO_SETTING,
 	    &entry_ctls);
 	if (error) {
-		printf("vmx_init: processor does not support desired "
+		kprintf("vmx_init: processor does not support desired "
 		    "entry controls\n");
 		return (error);
 	}
@@ -699,7 +699,7 @@ vmx_init(int ipinum)
 			pirvec = vmm_ipi_alloc();
 			if (pirvec == 0) {
 				if (bootverbose) {
-					printf("vmx_init: unable to allocate "
+					kprintf("vmx_init: unable to allocate "
 					    "posted interrupt vector\n");
 				}
 			} else {
@@ -716,7 +716,7 @@ vmx_init(int ipinum)
 	/* Initialize EPT */
 	error = ept_init(ipinum);
 	if (error) {
-		printf("vmx_init: ept initialization failed (%d)\n", error);
+		kprintf("vmx_init: ept initialization failed (%d)\n", error);
 		return (error);
 	}
 

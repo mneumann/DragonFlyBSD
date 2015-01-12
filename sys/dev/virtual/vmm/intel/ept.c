@@ -132,8 +132,8 @@ ept_dump(uint64_t *ptp, int nlevels)
 
 	tabs = 3 - nlevels;
 	for (t = 0; t < tabs; t++)
-		printf("\t");
-	printf("PTP = %p\n", ptp);
+		kprintf("\t");
+	kprintf("PTP = %p\n", ptp);
 
 	for (i = 0; i < 512; i++) {
 		ptpval = ptp[i];
@@ -142,8 +142,8 @@ ept_dump(uint64_t *ptp, int nlevels)
 			continue;
 		
 		for (t = 0; t < tabs; t++)
-			printf("\t");
-		printf("%3d 0x%016lx\n", i, ptpval);
+			kprintf("\t");
+		kprintf("%3d 0x%016lx\n", i, ptpval);
 
 		if (nlevels != 0 && (ptpval & EPT_PG_SUPERPAGE) == 0) {
 			ptpnext = (uint64_t *)

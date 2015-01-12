@@ -70,7 +70,7 @@ vmm_stat_register(void *arg)
 		return;
 
 	if (vst_num_elems + vst->nelems >= MAX_VMM_STAT_ELEMS) {
-		printf("Cannot accomodate vmm stat type \"%s\"!\n", vst->desc);
+		kprintf("Cannot accomodate vmm stat type \"%s\"!\n", vst->desc);
 		return;
 	}
 
@@ -135,7 +135,7 @@ vmm_stat_desc_copy(int index, char *buf, int bufsize)
 		vst = vsttab[i];
 		if (index >= vst->index && index < vst->index + vst->nelems) {
 			if (vst->nelems > 1) {
-				snprintf(buf, bufsize, "%s[%d]",
+				ksnprintf(buf, bufsize, "%s[%d]",
 					 vst->desc, index - vst->index);
 			} else {
 				strlcpy(buf, vst->desc, bufsize);

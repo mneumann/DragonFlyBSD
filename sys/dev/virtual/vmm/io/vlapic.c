@@ -183,7 +183,7 @@ vlapic_timer_divisor(uint32_t dcr)
 static inline void
 vlapic_dump_lvt(uint32_t offset, uint32_t *lvt)
 {
-	printf("Offset %x: lvt %08x (V:%02x DS:%x M:%x)\n", offset,
+	kprintf("Offset %x: lvt %08x (V:%02x DS:%x M:%x)\n", offset,
 	    *lvt, *lvt & APIC_LVTT_VECTOR, *lvt & APIC_LVTT_DS,
 	    *lvt & APIC_LVTT_M);
 }
@@ -472,10 +472,10 @@ dump_isrvec_stk(struct vlapic *vlapic)
 
 	isrptr = &vlapic->apic_page->isr0;
 	for (i = 0; i < 8; i++)
-		printf("ISR%d 0x%08x\n", i, isrptr[i * 4]);
+		kprintf("ISR%d 0x%08x\n", i, isrptr[i * 4]);
 
 	for (i = 0; i <= vlapic->isrvec_stk_top; i++)
-		printf("isrvec_stk[%d] = %d\n", i, vlapic->isrvec_stk[i]);
+		kprintf("isrvec_stk[%d] = %d\n", i, vlapic->isrvec_stk[i]);
 }
 #endif
 

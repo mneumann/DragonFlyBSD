@@ -41,7 +41,7 @@ static int
 amd_iommu_init(void)
 {
 
-	printf("amd_iommu_init: not implemented\n");
+	kprintf("amd_iommu_init: not implemented\n");
 	return (ENXIO);
 }
 
@@ -49,28 +49,28 @@ static void
 amd_iommu_cleanup(void)
 {
 
-	printf("amd_iommu_cleanup: not implemented\n");
+	kprintf("amd_iommu_cleanup: not implemented\n");
 }
 
 static void
 amd_iommu_enable(void)
 {
 
-	printf("amd_iommu_enable: not implemented\n");
+	kprintf("amd_iommu_enable: not implemented\n");
 }
 
 static void
 amd_iommu_disable(void)
 {
 
-	printf("amd_iommu_disable: not implemented\n");
+	kprintf("amd_iommu_disable: not implemented\n");
 }
 
 static void *
 amd_iommu_create_domain(vm_paddr_t maxaddr)
 {
 
-	printf("amd_iommu_create_domain: not implemented\n");
+	kprintf("amd_iommu_create_domain: not implemented\n");
 	return (NULL);
 }
 
@@ -78,7 +78,7 @@ static void
 amd_iommu_destroy_domain(void *domain)
 {
 
-	printf("amd_iommu_destroy_domain: not implemented\n");
+	kprintf("amd_iommu_destroy_domain: not implemented\n");
 }
 
 static uint64_t
@@ -86,7 +86,7 @@ amd_iommu_create_mapping(void *domain, vm_paddr_t gpa, vm_paddr_t hpa,
 			 uint64_t len)
 {
 
-	printf("amd_iommu_create_mapping: not implemented\n");
+	kprintf("amd_iommu_create_mapping: not implemented\n");
 	return (0);
 }
 
@@ -94,7 +94,7 @@ static uint64_t
 amd_iommu_remove_mapping(void *domain, vm_paddr_t gpa, uint64_t len)
 {
 
-	printf("amd_iommu_remove_mapping: not implemented\n");
+	kprintf("amd_iommu_remove_mapping: not implemented\n");
 	return (0);
 }
 
@@ -102,21 +102,21 @@ static void
 amd_iommu_add_device(void *domain, uint16_t rid)
 {
 
-	printf("amd_iommu_add_device: not implemented\n");
+	kprintf("amd_iommu_add_device: not implemented\n");
 }
 
 static void
 amd_iommu_remove_device(void *domain, uint16_t rid)
 {
 
-	printf("amd_iommu_remove_device: not implemented\n");
+	kprintf("amd_iommu_remove_device: not implemented\n");
 }
 
 static void
 amd_iommu_invalidate_tlb(void *domain)
 {
 
-	printf("amd_iommu_invalidate_tlb: not implemented\n");
+	kprintf("amd_iommu_invalidate_tlb: not implemented\n");
 }
 
 struct iommu_ops iommu_ops_amd = {

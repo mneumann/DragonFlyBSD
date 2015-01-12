@@ -138,7 +138,7 @@ ppt_attach(device_t dev)
 	int n;
 
 	if (num_pptdevs >= MAX_PPTDEVS) {
-		printf("ppt_attach: maximum number of pci passthrough devices "
+		kprintf("ppt_attach: maximum number of pci passthrough devices "
 		       "exceeded\n");
 		return (ENXIO);
 	}

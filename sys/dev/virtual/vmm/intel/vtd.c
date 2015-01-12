@@ -258,7 +258,7 @@ vtd_init(void)
 	 * set vtd.regmap.1.addr=0xfeda0000
 	 */
 	for (units = 0; units < DRHD_MAX_UNITS; units++) {
-		snprintf(envname, sizeof(envname), "vtd.regmap.%d.addr", units);
+		ksnprintf(envname, sizeof(envname), "vtd.regmap.%d.addr", units);
 		if (getenv_ulong(envname, &mapaddr) == 0)
 			break;
 		vtdmaps[units] = (struct vtdmap *)PHYS_TO_DMAP(mapaddr);

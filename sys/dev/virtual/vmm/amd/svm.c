@@ -180,13 +180,13 @@ check_svm_features(void)
 
 	/* bhyve requires the Nested Paging feature */
 	if (!(svm_feature & AMD_CPUID_SVM_NP)) {
-		printf("SVM: Nested Paging feature not available.\n");
+		kprintf("SVM: Nested Paging feature not available.\n");
 		return (ENXIO);
 	}
 
 	/* bhyve requires the NRIP Save feature */
 	if (!(svm_feature & AMD_CPUID_SVM_NRIP_SAVE)) {
-		printf("SVM: NRIP Save feature not available.\n");
+		kprintf("SVM: NRIP Save feature not available.\n");
 		return (ENXIO);
 	}
 
@@ -215,13 +215,13 @@ svm_available(void)
 
 	/* Section 15.4 Enabling SVM from APM2. */
 	if ((amd_feature2 & AMDID2_SVM) == 0) {
-		printf("SVM: not available.\n");
+		kprintf("SVM: not available.\n");
 		return (0);
 	}
 
 	msr = rdmsr(MSR_VM_CR);
 	if ((msr & VM_CR_SVMDIS) != 0) {
-		printf("SVM: disabled by BIOS.\n");
+		kprintf("SVM: disabled by BIOS.\n");
 		return (0);
 	}
 
@@ -1149,7 +1149,7 @@ exit_reason_to_str(uint64_t reason)
 	case VMCB_EXIT_MWAIT:
 		return ("mwait");
 	default:
-		snprintf(reasonbuf, sizeof(reasonbuf), "%#lx", reason);
+		ksnprintf(reasonbuf, sizeof(reasonbuf), "%#lx", reason);
 		return (reasonbuf);
 	}
 }
