@@ -454,5 +454,5 @@ vatpit_cleanup(struct vatpit *vatpit)
 	for (i = 0; i < 3; i++)
 		callout_drain(&vatpit->channel[i].callout);
 
-	free(vatpit, M_VATPIT);
+	kfree(vatpit, M_VATPIT);
 }

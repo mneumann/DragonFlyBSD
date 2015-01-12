@@ -75,7 +75,7 @@ void
 vpmtmr_cleanup(struct vpmtmr *vpmtmr)
 {
 
-	free(vpmtmr, M_VPMTMR);
+	kfree(vpmtmr, M_VPMTMR);
 }
 
 int
