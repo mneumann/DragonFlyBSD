@@ -109,7 +109,7 @@ void *
 vmm_stat_alloc(void)
 {
 
-	return (malloc(vst_size, M_VMM_STAT, M_WAITOK));
+	return (kmalloc(vst_size, M_VMM_STAT, M_WAITOK));
 }
 
 void

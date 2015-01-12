@@ -409,7 +409,7 @@ vm_create(const char *name, struct vm **retvm)
 	if (vmspace == NULL)
 		return (ENOMEM);
 
-	vm = malloc(sizeof(struct vm), M_VM, M_WAITOK | M_ZERO);
+	vm = kmalloc(sizeof(struct vm), M_VM, M_WAITOK | M_ZERO);
 	strcpy(vm->name, name);
 	vm->num_mem_segs = 0;
 	vm->vmspace = vmspace;

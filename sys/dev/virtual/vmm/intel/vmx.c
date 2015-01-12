@@ -823,7 +823,7 @@ vmx_vminit(struct vm *vm, pmap_t pmap)
 	struct vmcs *vmcs;
 	uint32_t exc_bitmap;
 
-	vmx = malloc(sizeof(struct vmx), M_VMX, M_WAITOK | M_ZERO);
+	vmx = kmalloc(sizeof(struct vmx), M_VMX, M_WAITOK | M_ZERO);
 	if ((uintptr_t)vmx & PAGE_MASK) {
 		panic("malloc of struct vmx not aligned on %d byte boundary",
 		      PAGE_SIZE);
@@ -3364,7 +3364,7 @@ vmx_vlapic_init(void *arg, int vcpuid)
 	
 	vmx = arg;
 
-	vlapic = malloc(sizeof(struct vlapic_vtx), M_VLAPIC, M_WAITOK | M_ZERO);
+	vlapic = kmalloc(sizeof(struct vlapic_vtx), M_VLAPIC, M_WAITOK | M_ZERO);
 	vlapic->vm = vmx->vm;
 	vlapic->vcpuid = vcpuid;
 	vlapic->apic_page = (struct LAPIC *)&vmx->apic_page[vcpuid];

@@ -793,7 +793,7 @@ vatpic_init(struct vm *vm)
 {
 	struct vatpic *vatpic;
 
-	vatpic = malloc(sizeof(struct vatpic), M_VATPIC, M_WAITOK | M_ZERO);
+	vatpic = kmalloc(sizeof(struct vatpic), M_VATPIC, M_WAITOK | M_ZERO);
 	vatpic->vm = vm;
 
 	mtx_init(&vatpic->mtx, "vatpic lock", NULL, MTX_SPIN);

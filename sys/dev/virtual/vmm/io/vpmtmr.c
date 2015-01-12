@@ -61,7 +61,7 @@ vpmtmr_init(struct vm *vm)
 	struct vpmtmr *vpmtmr;
 	struct bintime bt;
 
-	vpmtmr = malloc(sizeof(struct vpmtmr), M_VPMTMR, M_WAITOK | M_ZERO);
+	vpmtmr = kmalloc(sizeof(struct vpmtmr), M_VPMTMR, M_WAITOK | M_ZERO);
 	vpmtmr->baseuptime = sbinuptime();
 	vpmtmr->baseval = 0;
 

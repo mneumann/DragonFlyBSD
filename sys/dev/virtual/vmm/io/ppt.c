@@ -578,10 +578,10 @@ ppt_setup_msix(struct vm *vm, int vcpu, int bus, int slot, int func,
 		cookie_size = numvec * sizeof(ppt->msix.cookie[0]);
 		arg_size = numvec * sizeof(ppt->msix.arg[0]);
 
-		ppt->msix.res = malloc(res_size, M_PPTMSIX, M_WAITOK | M_ZERO);
-		ppt->msix.cookie = malloc(cookie_size, M_PPTMSIX,
+		ppt->msix.res = kmalloc(res_size, M_PPTMSIX, M_WAITOK | M_ZERO);
+		ppt->msix.cookie = kmalloc(cookie_size, M_PPTMSIX,
 					  M_WAITOK | M_ZERO);
-		ppt->msix.arg = malloc(arg_size, M_PPTMSIX, M_WAITOK | M_ZERO);
+		ppt->msix.arg = kmalloc(arg_size, M_PPTMSIX, M_WAITOK | M_ZERO);
 
 		rid = dinfo->cfg.msix.msix_table_bar;
 		ppt->msix.msix_table_res = bus_alloc_resource_any(ppt->dev,

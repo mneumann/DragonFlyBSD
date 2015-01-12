@@ -512,7 +512,7 @@ svm_vminit(struct vm *vm, pmap_t pmap)
 	vm_paddr_t msrpm_pa, iopm_pa, pml4_pa;	
 	int i;
 
-	svm_sc = malloc(sizeof (struct svm_softc), M_SVM, M_WAITOK | M_ZERO);
+	svm_sc = kmalloc(sizeof (struct svm_softc), M_SVM, M_WAITOK | M_ZERO);
 	svm_sc->vm = vm;
 	svm_sc->nptp = (vm_offset_t)vtophys(pmap->pm_pml4);
 
@@ -2150,7 +2150,7 @@ svm_vlapic_init(void *arg, int vcpuid)
 	struct vlapic *vlapic;
 
 	svm_sc = arg;
-	vlapic = malloc(sizeof(struct vlapic), M_SVM_VLAPIC, M_WAITOK | M_ZERO);
+	vlapic = kmalloc(sizeof(struct vlapic), M_SVM_VLAPIC, M_WAITOK | M_ZERO);
 	vlapic->vm = svm_sc->vm;
 	vlapic->vcpuid = vcpuid;
 	vlapic->apic_page = (struct LAPIC *)&svm_sc->apic_page[vcpuid];

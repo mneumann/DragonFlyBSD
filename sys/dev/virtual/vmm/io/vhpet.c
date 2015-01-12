@@ -708,7 +708,7 @@ vhpet_init(struct vm *vm)
 	struct vhpet_callout_arg *arg;
 	struct bintime bt;
 
-	vhpet = malloc(sizeof(struct vhpet), M_VHPET, M_WAITOK | M_ZERO);
+	vhpet = kmalloc(sizeof(struct vhpet), M_VHPET, M_WAITOK | M_ZERO);
         vhpet->vm = vm;
 	mtx_init(&vhpet->mtx, "vhpet lock", NULL, MTX_DEF);
 

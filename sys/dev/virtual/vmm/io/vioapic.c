@@ -473,7 +473,7 @@ vioapic_init(struct vm *vm)
 	int i;
 	struct vioapic *vioapic;
 
-	vioapic = malloc(sizeof(struct vioapic), M_VIOAPIC, M_WAITOK | M_ZERO);
+	vioapic = kmalloc(sizeof(struct vioapic), M_VIOAPIC, M_WAITOK | M_ZERO);
 
 	vioapic->vm = vm;
 	mtx_init(&vioapic->mtx, "vioapic lock", NULL, MTX_SPIN);
