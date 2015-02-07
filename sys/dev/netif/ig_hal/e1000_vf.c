@@ -343,7 +343,7 @@ static int e1000_rar_set_vf(struct e1000_hw *hw, u8 *addr,
 	    (msgbuf[0] == (E1000_VF_SET_MAC_ADDR | E1000_VT_MSGTYPE_NACK)))
 		e1000_read_mac_addr_vf(hw);
 
-	return ret_val;
+	return E1000_SUCCESS;
 }
 
 /**
