@@ -237,10 +237,10 @@ static const struct em_vendor_info em_vendor_info_array[] = {
 	EM_EMX_DEVICE(PCH_LPT_I217_V),
 	EM_EMX_DEVICE(PCH_LPTLP_I218_LM),
 	EM_EMX_DEVICE(PCH_LPTLP_I218_V),
-	EM_EMX_DEVICE(PCH_LPTLP_I218_LM2),
-	EM_EMX_DEVICE(PCH_LPTLP_I218_V2),
-	EM_EMX_DEVICE(PCH_LPTLP_I218_LM3),
-	EM_EMX_DEVICE(PCH_LPTLP_I218_V3),
+	EM_EMX_DEVICE(PCH_I218_LM2),
+	EM_EMX_DEVICE(PCH_I218_V2),
+	EM_EMX_DEVICE(PCH_I218_LM3),
+	EM_EMX_DEVICE(PCH_I218_V3),
 
 	/* required last entry */
 	EM_DEVICE_NULL
@@ -676,7 +676,7 @@ em_attach(device_t dev)
 	}
 
 	/* Disable ULP support */
-	e1000_disable_ulp_lpt_lp(adapter->hw, TRUE);
+	e1000_disable_ulp_lpt_lp(&adapter->hw, TRUE);
 
 	/* Allocate transmit descriptors and buffers */
 	error = em_create_tx_ring(adapter);

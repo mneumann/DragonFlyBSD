@@ -165,10 +165,10 @@ static const struct emx_device {
 	EMX_DEVICE(PCH_LPT_I217_V),
 	EMX_DEVICE(PCH_LPTLP_I218_LM),
 	EMX_DEVICE(PCH_LPTLP_I218_V),
-	EMX_DEVICE(PCH_LPTLP_I218_LM2),
-	EMX_DEVICE(PCH_LPTLP_I218_V2),
-	EMX_DEVICE(PCH_LPTLP_I218_LM3),
-	EMX_DEVICE(PCH_LPTLP_I218_V3),
+	EMX_DEVICE(PCH_I218_LM2),
+	EMX_DEVICE(PCH_I218_V2),
+	EMX_DEVICE(PCH_I218_LM3),
+	EMX_DEVICE(PCH_I218_V3),
 
 	/* required last entry */
 	EMX_DEVICE_NULL
@@ -718,7 +718,7 @@ emx_attach(device_t dev)
 	}
 
 	/* Disable ULP support */
-	e1000_disable_ulp_lpt_lp(sc->hw, TRUE);
+	e1000_disable_ulp_lpt_lp(&sc->hw, TRUE);
 
 	/* Determine if we have to control management hardware */
 	if (e1000_enable_mng_pass_thru(&sc->hw))
