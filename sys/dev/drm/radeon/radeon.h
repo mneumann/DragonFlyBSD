@@ -2041,6 +2041,10 @@ void	radeon_ttm_fini(struct radeon_device *rdev);
 int r600_ih_ring_alloc(struct radeon_device *rdev);
 void r600_ih_ring_fini(struct radeon_device *rdev);
 
+int radeon_cs_packet_parse(struct radeon_cs_parser *p,
+			   struct radeon_cs_packet *pkt,
+			   unsigned idx);
+
 #include "radeon_object.h"
 
 #endif
