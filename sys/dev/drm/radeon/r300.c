@@ -617,7 +617,7 @@ static int r300_packet0_check(struct radeon_cs_parser *p,
 		if (r) {
 			DRM_ERROR("No reloc for ib[%d]=0x%04X\n",
 					idx, reg);
-			r100_cs_dump_packet(p, pkt);
+			radeon_cs_dump_packet(p, pkt);
 			return r;
 		}
 		break;
@@ -636,7 +636,7 @@ static int r300_packet0_check(struct radeon_cs_parser *p,
 		if (r) {
 			DRM_ERROR("No reloc for ib[%d]=0x%04X\n",
 					idx, reg);
-			r100_cs_dump_packet(p, pkt);
+			radeon_cs_dump_packet(p, pkt);
 			return r;
 		}
 		track->cb[i].robj = reloc->robj;
@@ -649,7 +649,7 @@ static int r300_packet0_check(struct radeon_cs_parser *p,
 		if (r) {
 			DRM_ERROR("No reloc for ib[%d]=0x%04X\n",
 					idx, reg);
-			r100_cs_dump_packet(p, pkt);
+			radeon_cs_dump_packet(p, pkt);
 			return r;
 		}
 		track->zb.robj = reloc->robj;
@@ -678,7 +678,7 @@ static int r300_packet0_check(struct radeon_cs_parser *p,
 		if (r) {
 			DRM_ERROR("No reloc for ib[%d]=0x%04X\n",
 					idx, reg);
-			r100_cs_dump_packet(p, pkt);
+			radeon_cs_dump_packet(p, pkt);
 			return r;
 		}
 
@@ -751,7 +751,7 @@ static int r300_packet0_check(struct radeon_cs_parser *p,
 			if (r) {
 				DRM_ERROR("No reloc for ib[%d]=0x%04X\n",
 					  idx, reg);
-				r100_cs_dump_packet(p, pkt);
+				radeon_cs_dump_packet(p, pkt);
 				return r;
 			}
 
@@ -836,7 +836,7 @@ static int r300_packet0_check(struct radeon_cs_parser *p,
 			if (r) {
 				DRM_ERROR("No reloc for ib[%d]=0x%04X\n",
 					  idx, reg);
-				r100_cs_dump_packet(p, pkt);
+				radeon_cs_dump_packet(p, pkt);
 				return r;
 			}
 
@@ -1051,7 +1051,7 @@ static int r300_packet0_check(struct radeon_cs_parser *p,
 		if (r) {
 			DRM_ERROR("No reloc for ib[%d]=0x%04X\n",
 					idx, reg);
-			r100_cs_dump_packet(p, pkt);
+			radeon_cs_dump_packet(p, pkt);
 			return r;
 		}
 		ib[idx] = idx_value + ((u32)reloc->lobj.gpu_offset);
@@ -1093,7 +1093,7 @@ static int r300_packet0_check(struct radeon_cs_parser *p,
 		if (r) {
 			DRM_ERROR("No reloc for ib[%d]=0x%04X\n",
 				  idx, reg);
-			r100_cs_dump_packet(p, pkt);
+			radeon_cs_dump_packet(p, pkt);
 			return r;
 		}
 		track->aa.robj = reloc->robj;
@@ -1161,7 +1161,7 @@ static int r300_packet3_check(struct radeon_cs_parser *p,
 		r = r100_cs_packet_next_reloc(p, &reloc);
 		if (r) {
 			DRM_ERROR("No reloc for packet3 %d\n", pkt->opcode);
-			r100_cs_dump_packet(p, pkt);
+			radeon_cs_dump_packet(p, pkt);
 			return r;
 		}
 		ib[idx+1] = radeon_get_ib_value(p, idx + 1) + ((u32)reloc->lobj.gpu_offset);
