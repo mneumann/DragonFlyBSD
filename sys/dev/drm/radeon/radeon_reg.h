@@ -3722,4 +3722,6 @@
 
 #define RADEON_PACKET3_NOP 0x10
 
+#define RADEON_VLINE_STAT (1 << 12)
+
 #endif
