@@ -92,6 +92,11 @@ MODULE_FIRMWARE("radeon/SUMO_pfp.bin");
 MODULE_FIRMWARE("radeon/SUMO_me.bin");
 MODULE_FIRMWARE("radeon/SUMO2_pfp.bin");
 MODULE_FIRMWARE("radeon/SUMO2_me.bin");
+MODULE_FIRMWARE("radeon/OLAND_pfp.bin");
+MODULE_FIRMWARE("radeon/OLAND_me.bin");
+MODULE_FIRMWARE("radeon/OLAND_ce.bin");
+MODULE_FIRMWARE("radeon/OLAND_mc.bin");
+MODULE_FIRMWARE("radeon/OLAND_rlc.bin");
 #endif /* DUMBBELL_WIP */
 
 static const u32 crtc_offsets[2] =
