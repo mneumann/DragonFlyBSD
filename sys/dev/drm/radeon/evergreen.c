@@ -2434,6 +2434,8 @@ static int evergreen_gpu_soft_reset(struct radeon_device *rdev, u32 reset_mask)
 
 	dev_info(rdev->dev, "GPU softreset: 0x%08X\n", reset_mask);
 
+	r600_set_bios_scratch_engine_hung(rdev, true);
+
 	evergreen_mc_stop(rdev, &save);
 	if (evergreen_mc_wait_for_idle(rdev)) {
 		dev_warn(rdev->dev, "Wait for MC idle timedout !\n");
@@ -2449,6 +2451,9 @@ static int evergreen_gpu_soft_reset(struct radeon_device *rdev, u32 reset_mask)
 	DRM_UDELAY(50);
 
 	evergreen_mc_resume(rdev, &save);
+
+	r600_set_bios_scratch_engine_hung(rdev, false);
+
 	return 0;
 }
 

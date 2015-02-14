@@ -2256,6 +2256,8 @@ static int si_gpu_soft_reset(struct radeon_device *rdev, u32 reset_mask)
 	dev_info(rdev->dev, "  VM_CONTEXT1_PROTECTION_FAULT_STATUS 0x%08X\n",
 		 RREG32(VM_CONTEXT1_PROTECTION_FAULT_STATUS));
 
+	r600_set_bios_scratch_engine_hung(rdev, true);
+
 	evergreen_mc_stop(rdev, &save);
 	if (radeon_mc_wait_for_idle(rdev)) {
 		dev_warn(rdev->dev, "Wait for MC idle timedout !\n");
@@ -2271,6 +2273,9 @@ static int si_gpu_soft_reset(struct radeon_device *rdev, u32 reset_mask)
 	DRM_UDELAY(50);
 
 	evergreen_mc_resume(rdev, &save);
+
+	r600_set_bios_scratch_engine_hung(rdev, false);
+
 	return 0;
 }
 
