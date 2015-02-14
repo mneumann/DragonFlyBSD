@@ -19,6 +19,9 @@
 #include "radeon_acpi.h"
 #include "radeon_drv.h"
 
+void radeon_register_atpx_handler(void);
+void radeon_unregister_atpx_handler(void);
+
 #ifdef DUMBBELL_WIP
 struct radeon_atpx_functions {
 	bool px_params;
