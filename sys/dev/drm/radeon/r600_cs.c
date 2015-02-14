@@ -2317,18 +2317,7 @@ int r600_cs_parse(struct radeon_cs_parser *p)
 	return 0;
 }
 
-static int r600_cs_parser_relocs_legacy(struct radeon_cs_parser *p)
-{
-	if (p->chunk_relocs_idx == -1) {
-		return 0;
-	}
-	p->relocs = kmalloc(sizeof(struct radeon_cs_reloc), M_DRM,
-			    M_ZERO | M_WAITOK);
-	if (p->relocs == NULL) {
-		return -ENOMEM;
-	}
-	return 0;
-}
+#ifdef CONFIG_DRM_RADEON_UMS
 
 /**
  * cs_parser_fini() - clean parser states
@@ -2353,6 +2342,18 @@ static void r600_cs_parser_fini(struct radeon_cs_parser *parser, int error)
 	drm_free(parser->chunks, M_DRM);
 	drm_free(parser->chunks_array, M_DRM);
 	drm_free(parser->track, M_DRM);
+}
+
+static int r600_cs_parser_relocs_legacy(struct radeon_cs_parser *p)
+{
+	if (p->chunk_relocs_idx == -1) {
+		return 0;
+	}
+	p->relocs = kzalloc(sizeof(struct radeon_cs_reloc), GFP_KERNEL);
+	if (p->relocs == NULL) {
+		return -ENOMEM;
+	}
+	return 0;
 }
 
 int r600_cs_legacy(struct drm_device *dev, void *data, struct drm_file *filp,
@@ -2415,6 +2416,8 @@ void r600_cs_legacy_init(void)
 {
 	r600_nomm = 1;
 }
+
+#endif
 
 /*
  *  DMA
