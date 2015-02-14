@@ -1127,6 +1127,15 @@ static struct radeon_asic rv770_asic = {
 			.ring_test = &r600_dma_ring_test,
 			.ib_test = &r600_dma_ib_test,
 			.is_lockup = &r600_dma_is_lockup,
+		},
+		[R600_RING_TYPE_UVD_INDEX] = {
+			.ib_execute = &r600_uvd_ib_execute,
+			.emit_fence = &r600_uvd_fence_emit,
+			.emit_semaphore = &r600_uvd_semaphore_emit,
+			.cs_parse = &radeon_uvd_cs_parse,
+			.ring_test = &r600_uvd_ring_test,
+			.ib_test = &r600_uvd_ib_test,
+			.is_lockup = &radeon_ring_test_lockup,
 		}
 	},
 	.irq = {
@@ -1213,6 +1222,15 @@ static struct radeon_asic evergreen_asic = {
 			.ring_test = &r600_dma_ring_test,
 			.ib_test = &r600_dma_ib_test,
 			.is_lockup = &evergreen_dma_is_lockup,
+		},
+		[R600_RING_TYPE_UVD_INDEX] = {
+			.ib_execute = &r600_uvd_ib_execute,
+			.emit_fence = &r600_uvd_fence_emit,
+			.emit_semaphore = &r600_uvd_semaphore_emit,
+			.cs_parse = &radeon_uvd_cs_parse,
+			.ring_test = &r600_uvd_ring_test,
+			.ib_test = &r600_uvd_ib_test,
+			.is_lockup = &radeon_ring_test_lockup,
 		}
 	},
 	.irq = {
@@ -1299,6 +1317,15 @@ static struct radeon_asic sumo_asic = {
 			.ring_test = &r600_dma_ring_test,
 			.ib_test = &r600_dma_ib_test,
 			.is_lockup = &evergreen_dma_is_lockup,
+		},
+		[R600_RING_TYPE_UVD_INDEX] = {
+			.ib_execute = &r600_uvd_ib_execute,
+			.emit_fence = &r600_uvd_fence_emit,
+			.emit_semaphore = &r600_uvd_semaphore_emit,
+			.cs_parse = &radeon_uvd_cs_parse,
+			.ring_test = &r600_uvd_ring_test,
+			.ib_test = &r600_uvd_ib_test,
+			.is_lockup = &radeon_ring_test_lockup,
 		}
 	},
 	.irq = {
@@ -1385,6 +1412,15 @@ static struct radeon_asic btc_asic = {
 			.ring_test = &r600_dma_ring_test,
 			.ib_test = &r600_dma_ib_test,
 			.is_lockup = &evergreen_dma_is_lockup,
+		},
+		[R600_RING_TYPE_UVD_INDEX] = {
+			.ib_execute = &r600_uvd_ib_execute,
+			.emit_fence = &r600_uvd_fence_emit,
+			.emit_semaphore = &r600_uvd_semaphore_emit,
+			.cs_parse = &radeon_uvd_cs_parse,
+			.ring_test = &r600_uvd_ring_test,
+			.ib_test = &r600_uvd_ib_test,
+			.is_lockup = &radeon_ring_test_lockup,
 		}
 	},
 	.irq = {
@@ -1514,6 +1550,15 @@ static struct radeon_asic cayman_asic = {
 			.ib_test = &r600_dma_ib_test,
 			.is_lockup = &cayman_dma_is_lockup,
 			.vm_flush = &cayman_dma_vm_flush,
+		},
+		[R600_RING_TYPE_UVD_INDEX] = {
+			.ib_execute = &r600_uvd_ib_execute,
+			.emit_fence = &r600_uvd_fence_emit,
+			.emit_semaphore = &cayman_uvd_semaphore_emit,
+			.cs_parse = &radeon_uvd_cs_parse,
+			.ring_test = &r600_uvd_ring_test,
+			.ib_test = &r600_uvd_ib_test,
+			.is_lockup = &radeon_ring_test_lockup,
 		}
 	},
 	.irq = {
@@ -1643,6 +1688,15 @@ static struct radeon_asic trinity_asic = {
 			.ib_test = &r600_dma_ib_test,
 			.is_lockup = &cayman_dma_is_lockup,
 			.vm_flush = &cayman_dma_vm_flush,
+		},
+		[R600_RING_TYPE_UVD_INDEX] = {
+			.ib_execute = &r600_uvd_ib_execute,
+			.emit_fence = &r600_uvd_fence_emit,
+			.emit_semaphore = &cayman_uvd_semaphore_emit,
+			.cs_parse = &radeon_uvd_cs_parse,
+			.ring_test = &r600_uvd_ring_test,
+			.ib_test = &r600_uvd_ib_test,
+			.is_lockup = &radeon_ring_test_lockup,
 		}
 	},
 	.irq = {
@@ -1772,6 +1826,15 @@ static struct radeon_asic si_asic = {
 			.ib_test = &r600_dma_ib_test,
 			.is_lockup = &si_dma_is_lockup,
 			.vm_flush = &si_dma_vm_flush,
+		},
+		[R600_RING_TYPE_UVD_INDEX] = {
+			.ib_execute = &r600_uvd_ib_execute,
+			.emit_fence = &r600_uvd_fence_emit,
+			.emit_semaphore = &cayman_uvd_semaphore_emit,
+			.cs_parse = &radeon_uvd_cs_parse,
+			.ring_test = &r600_uvd_ring_test,
+			.ib_test = &r600_uvd_ib_test,
+			.is_lockup = &radeon_ring_test_lockup,
 		}
 	},
 	.irq = {
