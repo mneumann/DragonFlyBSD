@@ -27,6 +27,7 @@
  * $FreeBSD: head/sys/dev/drm2/radeon/evergreen_hdmi.c 254885 2013-08-25 19:37:15Z dumbbell $
  */
 
+#include <linux/hdmi.h>
 #include <drm/drmP.h>
 #include <uapi_drm/radeon_drm.h>
 #include "radeon.h"
@@ -67,7 +68,7 @@ static void evergreen_hdmi_update_avi_infoframe(struct drm_encoder *encoder,
 	struct radeon_encoder *radeon_encoder = to_radeon_encoder(encoder);
 	struct radeon_encoder_atom_dig *dig = radeon_encoder->enc_priv;
 	uint32_t offset = dig->afmt->offset;
-	uint8_t *frame = buffer + 3;
+	uint8_t *frame = (uint8_t*)buffer + 3;
 
 	/* Our header values (type, version, length) should be alright, Intel
 	 * is using the same. Checksum function also seems to be OK, it works
