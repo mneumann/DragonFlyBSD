@@ -94,11 +94,13 @@ int radeon_mode_dumb_create(struct drm_file *file_priv,
 int radeon_mode_dumb_destroy(struct drm_file *file_priv,
 			     struct drm_device *dev,
 			     uint32_t handle);
-struct dma_buf *radeon_gem_prime_export(struct drm_device *dev,
-					struct drm_gem_object *obj,
-					int flags);
-struct drm_gem_object *radeon_gem_prime_import(struct drm_device *dev,
-					       struct dma_buf *dma_buf);
+struct sg_table *radeon_gem_prime_get_sg_table(struct drm_gem_object *obj);
+struct drm_gem_object *radeon_gem_prime_import_sg_table(struct drm_device *dev,
+							size_t size,
+							struct sg_table *sg);
+int radeon_gem_prime_pin(struct drm_gem_object *obj);
+void *radeon_gem_prime_vmap(struct drm_gem_object *obj);
+void radeon_gem_prime_vunmap(struct drm_gem_object *obj, void *vaddr);
 
 #if defined(CONFIG_DEBUG_FS)
 int radeon_debugfs_init(struct drm_minor *minor);
@@ -393,8 +395,13 @@ static struct drm_driver kms_driver = {
 #ifdef DUMBBELL_WIP
 	.prime_handle_to_fd = drm_gem_prime_handle_to_fd,
 	.prime_fd_to_handle = drm_gem_prime_fd_to_handle,
-	.gem_prime_export = radeon_gem_prime_export,
-	.gem_prime_import = radeon_gem_prime_import,
+	.gem_prime_export = drm_gem_prime_export,
+	.gem_prime_import = drm_gem_prime_import,
+	.gem_prime_pin = radeon_gem_prime_pin,
+	.gem_prime_get_sg_table = radeon_gem_prime_get_sg_table,
+	.gem_prime_import_sg_table = radeon_gem_prime_import_sg_table,
+	.gem_prime_vmap = radeon_gem_prime_vmap,
+	.gem_prime_vunmap = radeon_gem_prime_vunmap,
 #endif /* DUMBBELL_WIP */
 
 	.name = DRIVER_NAME,
