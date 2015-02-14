@@ -943,7 +943,7 @@ static struct radeon_asic r600_asic = {
 			.cs_parse = &r600_cs_parse,
 			.ring_test = &r600_ring_test,
 			.ib_test = &r600_ib_test,
-			.is_lockup = &r600_gpu_is_lockup,
+			.is_lockup = &r600_gfx_is_lockup,
 		},
 		[R600_RING_TYPE_DMA_INDEX] = {
 			.ib_execute = &r600_dma_ring_ib_execute,
@@ -1027,7 +1027,7 @@ static struct radeon_asic rs780_asic = {
 			.cs_parse = &r600_cs_parse,
 			.ring_test = &r600_ring_test,
 			.ib_test = &r600_ib_test,
-			.is_lockup = &r600_gpu_is_lockup,
+			.is_lockup = &r600_gfx_is_lockup,
 		},
 		[R600_RING_TYPE_DMA_INDEX] = {
 			.ib_execute = &r600_dma_ring_ib_execute,
@@ -1111,7 +1111,7 @@ static struct radeon_asic rv770_asic = {
 			.cs_parse = &r600_cs_parse,
 			.ring_test = &r600_ring_test,
 			.ib_test = &r600_ib_test,
-			.is_lockup = &r600_gpu_is_lockup,
+			.is_lockup = &r600_gfx_is_lockup,
 		},
 		[R600_RING_TYPE_DMA_INDEX] = {
 			.ib_execute = &r600_dma_ring_ib_execute,
@@ -1195,7 +1195,7 @@ static struct radeon_asic evergreen_asic = {
 			.cs_parse = &evergreen_cs_parse,
 			.ring_test = &r600_ring_test,
 			.ib_test = &r600_ib_test,
-			.is_lockup = &evergreen_gpu_is_lockup,
+			.is_lockup = &evergreen_gfx_is_lockup,
 		},
 		[R600_RING_TYPE_DMA_INDEX] = {
 			.ib_execute = &evergreen_dma_ring_ib_execute,
@@ -1204,7 +1204,7 @@ static struct radeon_asic evergreen_asic = {
 			.cs_parse = &evergreen_dma_cs_parse,
 			.ring_test = &r600_dma_ring_test,
 			.ib_test = &r600_dma_ib_test,
-			.is_lockup = &r600_dma_is_lockup,
+			.is_lockup = &evergreen_dma_is_lockup,
 		}
 	},
 	.irq = {
@@ -1279,7 +1279,7 @@ static struct radeon_asic sumo_asic = {
 			.cs_parse = &evergreen_cs_parse,
 			.ring_test = &r600_ring_test,
 			.ib_test = &r600_ib_test,
-			.is_lockup = &evergreen_gpu_is_lockup,
+			.is_lockup = &evergreen_gfx_is_lockup,
 		},
 		[R600_RING_TYPE_DMA_INDEX] = {
 			.ib_execute = &evergreen_dma_ring_ib_execute,
@@ -1288,7 +1288,7 @@ static struct radeon_asic sumo_asic = {
 			.cs_parse = &evergreen_dma_cs_parse,
 			.ring_test = &r600_dma_ring_test,
 			.ib_test = &r600_dma_ib_test,
-			.is_lockup = &r600_dma_is_lockup,
+			.is_lockup = &evergreen_dma_is_lockup,
 		}
 	},
 	.irq = {
@@ -1363,7 +1363,7 @@ static struct radeon_asic btc_asic = {
 			.cs_parse = &evergreen_cs_parse,
 			.ring_test = &r600_ring_test,
 			.ib_test = &r600_ib_test,
-			.is_lockup = &evergreen_gpu_is_lockup,
+			.is_lockup = &evergreen_gfx_is_lockup,
 		},
 		[R600_RING_TYPE_DMA_INDEX] = {
 			.ib_execute = &evergreen_dma_ring_ib_execute,
@@ -1372,7 +1372,7 @@ static struct radeon_asic btc_asic = {
 			.cs_parse = &evergreen_dma_cs_parse,
 			.ring_test = &r600_dma_ring_test,
 			.ib_test = &r600_dma_ib_test,
-			.is_lockup = &r600_dma_is_lockup,
+			.is_lockup = &evergreen_dma_is_lockup,
 		}
 	},
 	.irq = {
@@ -1454,7 +1454,7 @@ static struct radeon_asic cayman_asic = {
 			.cs_parse = &evergreen_cs_parse,
 			.ring_test = &r600_ring_test,
 			.ib_test = &r600_ib_test,
-			.is_lockup = &evergreen_gpu_is_lockup,
+			.is_lockup = &cayman_gfx_is_lockup,
 			.vm_flush = &cayman_vm_flush,
 		},
 		[CAYMAN_RING_TYPE_CP1_INDEX] = {
@@ -1465,7 +1465,7 @@ static struct radeon_asic cayman_asic = {
 			.cs_parse = &evergreen_cs_parse,
 			.ring_test = &r600_ring_test,
 			.ib_test = &r600_ib_test,
-			.is_lockup = &evergreen_gpu_is_lockup,
+			.is_lockup = &cayman_gfx_is_lockup,
 			.vm_flush = &cayman_vm_flush,
 		},
 		[CAYMAN_RING_TYPE_CP2_INDEX] = {
@@ -1476,7 +1476,7 @@ static struct radeon_asic cayman_asic = {
 			.cs_parse = &evergreen_cs_parse,
 			.ring_test = &r600_ring_test,
 			.ib_test = &r600_ib_test,
-			.is_lockup = &evergreen_gpu_is_lockup,
+			.is_lockup = &cayman_gfx_is_lockup,
 			.vm_flush = &cayman_vm_flush,
 		},
 		[R600_RING_TYPE_DMA_INDEX] = {
@@ -1581,7 +1581,7 @@ static struct radeon_asic trinity_asic = {
 			.cs_parse = &evergreen_cs_parse,
 			.ring_test = &r600_ring_test,
 			.ib_test = &r600_ib_test,
-			.is_lockup = &evergreen_gpu_is_lockup,
+			.is_lockup = &cayman_gfx_is_lockup,
 			.vm_flush = &cayman_vm_flush,
 		},
 		[CAYMAN_RING_TYPE_CP1_INDEX] = {
@@ -1592,7 +1592,7 @@ static struct radeon_asic trinity_asic = {
 			.cs_parse = &evergreen_cs_parse,
 			.ring_test = &r600_ring_test,
 			.ib_test = &r600_ib_test,
-			.is_lockup = &evergreen_gpu_is_lockup,
+			.is_lockup = &cayman_gfx_is_lockup,
 			.vm_flush = &cayman_vm_flush,
 		},
 		[CAYMAN_RING_TYPE_CP2_INDEX] = {
@@ -1603,7 +1603,7 @@ static struct radeon_asic trinity_asic = {
 			.cs_parse = &evergreen_cs_parse,
 			.ring_test = &r600_ring_test,
 			.ib_test = &r600_ib_test,
-			.is_lockup = &evergreen_gpu_is_lockup,
+			.is_lockup = &cayman_gfx_is_lockup,
 			.vm_flush = &cayman_vm_flush,
 		},
 		[R600_RING_TYPE_DMA_INDEX] = {
@@ -1708,7 +1708,7 @@ static struct radeon_asic si_asic = {
 			.cs_parse = NULL,
 			.ring_test = &r600_ring_test,
 			.ib_test = &r600_ib_test,
-			.is_lockup = &si_gpu_is_lockup,
+			.is_lockup = &si_gfx_is_lockup,
 			.vm_flush = &si_vm_flush,
 		},
 		[CAYMAN_RING_TYPE_CP1_INDEX] = {
@@ -1719,7 +1719,7 @@ static struct radeon_asic si_asic = {
 			.cs_parse = NULL,
 			.ring_test = &r600_ring_test,
 			.ib_test = &r600_ib_test,
-			.is_lockup = &si_gpu_is_lockup,
+			.is_lockup = &si_gfx_is_lockup,
 			.vm_flush = &si_vm_flush,
 		},
 		[CAYMAN_RING_TYPE_CP2_INDEX] = {
@@ -1730,7 +1730,7 @@ static struct radeon_asic si_asic = {
 			.cs_parse = NULL,
 			.ring_test = &r600_ring_test,
 			.ib_test = &r600_ib_test,
-			.is_lockup = &si_gpu_is_lockup,
+			.is_lockup = &si_gfx_is_lockup,
 			.vm_flush = &si_vm_flush,
 		},
 		[R600_RING_TYPE_DMA_INDEX] = {
@@ -1741,7 +1741,7 @@ static struct radeon_asic si_asic = {
 			.cs_parse = NULL,
 			.ring_test = &r600_dma_ring_test,
 			.ib_test = &r600_dma_ib_test,
-			.is_lockup = &cayman_dma_is_lockup,
+			.is_lockup = &si_dma_is_lockup,
 			.vm_flush = &si_dma_vm_flush,
 		},
 		[CAYMAN_RING_TYPE_DMA1_INDEX] = {
@@ -1752,7 +1752,7 @@ static struct radeon_asic si_asic = {
 			.cs_parse = NULL,
 			.ring_test = &r600_dma_ring_test,
 			.ib_test = &r600_dma_ib_test,
-			.is_lockup = &cayman_dma_is_lockup,
+			.is_lockup = &si_dma_is_lockup,
 			.vm_flush = &si_dma_vm_flush,
 		}
 	},
