@@ -132,6 +132,12 @@ int radeon_pcie_gen2 = -1;
 int radeon_msi = -1;
 int radeon_lockup_timeout = 10000;
 
+static drm_pci_id_list_t pciidlist[] = {
+	radeon_PCI_IDS
+};
+
+#ifdef CONFIG_DRM_RADEON_UMS
+
 #ifdef DUMBBELL_WIP
 MODULE_PARM_DESC(no_wb, "Disable AGP writeback for scratch registers");
 module_param_named(no_wb, radeon_no_wb, int, 0444);
@@ -184,8 +190,6 @@ module_param_named(msi, radeon_msi, int, 0444);
 MODULE_PARM_DESC(lockup_timeout, "GPU lockup timeout in ms (defaul 10000 = 10 seconds, 0 = disable)");
 module_param_named(lockup_timeout, radeon_lockup_timeout, int, 0444);
 
-#ifdef CONFIG_DRM_RADEON_UMS
-
 static int radeon_suspend(struct drm_device *dev, pm_message_t state)
 {
 	drm_radeon_private_t *dev_priv = dev->dev_private;
@@ -214,10 +218,6 @@ static int radeon_resume(struct drm_device *dev)
 	return 0;
 }
 #endif /* DUMBBELL_WIP */
-
-static drm_pci_id_list_t pciidlist[] = {
-	radeon_PCI_IDS
-};
 
 #ifdef DUMBBELL_WIP
 static const struct file_operations radeon_driver_old_fops = {
