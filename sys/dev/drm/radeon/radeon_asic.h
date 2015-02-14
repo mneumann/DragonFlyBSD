@@ -391,8 +391,8 @@ void r600_kms_blit_copy(struct radeon_device *rdev,
 			u64 src_gpu_addr, u64 dst_gpu_addr,
 			unsigned num_gpu_pages,
 			struct radeon_sa_bo *vb);
-uint64_t r600_get_gpu_clock(struct radeon_device *rdev);
 u32 r600_get_xclk(struct radeon_device *rdev);
+uint64_t r600_get_gpu_clock_counter(struct radeon_device *rdev);
 
 /*
  * rv770,rv730,rv710,rv740
@@ -528,13 +528,13 @@ void si_vm_set_page(struct radeon_device *rdev,
 		    uint32_t incr, uint32_t flags);
 void si_vm_flush(struct radeon_device *rdev, int ridx, struct radeon_vm *vm);
 int si_ib_parse(struct radeon_device *rdev, struct radeon_ib *ib);
-uint64_t si_get_gpu_clock(struct radeon_device *rdev);
 int si_copy_dma(struct radeon_device *rdev,
 		uint64_t src_offset, uint64_t dst_offset,
 		unsigned num_gpu_pages,
 		struct radeon_fence **fence);
 void si_dma_vm_flush(struct radeon_device *rdev, int ridx, struct radeon_vm *vm);
 u32 si_get_xclk(struct radeon_device *rdev);
+uint64_t si_get_gpu_clock_counter(struct radeon_device *rdev);
 void si_rlc_fini(struct radeon_device *rdev);
 int si_rlc_init(struct radeon_device *rdev);
 
