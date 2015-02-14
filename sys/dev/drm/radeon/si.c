@@ -2559,46 +2559,6 @@ static void si_mc_program(struct radeon_device *rdev)
 	rv515_vga_render_disable(rdev);
 }
 
-/* SI MC address space is 40 bits */
-static void si_vram_location(struct radeon_device *rdev,
-			     struct radeon_mc *mc, u64 base)
-{
-	mc->vram_start = base;
-	if (mc->mc_vram_size > (0xFFFFFFFFFFULL - base + 1)) {
-		dev_warn(rdev->dev, "limiting VRAM to PCI aperture size\n");
-		mc->real_vram_size = mc->aper_size;
-		mc->mc_vram_size = mc->aper_size;
-	}
-	mc->vram_end = mc->vram_start + mc->mc_vram_size - 1;
-	dev_info(rdev->dev, "VRAM: %juM 0x%016jX - 0x%016jX (%juM used)\n",
-			(uintmax_t)mc->mc_vram_size >> 20, (uintmax_t)mc->vram_start,
-			(uintmax_t)mc->vram_end, (uintmax_t)mc->real_vram_size >> 20);
-}
-
-static void si_gtt_location(struct radeon_device *rdev, struct radeon_mc *mc)
-{
-	u64 size_af, size_bf;
-
-	size_af = ((0xFFFFFFFFFFULL - mc->vram_end) + mc->gtt_base_align) & ~mc->gtt_base_align;
-	size_bf = mc->vram_start & ~mc->gtt_base_align;
-	if (size_bf > size_af) {
-		if (mc->gtt_size > size_bf) {
-			dev_warn(rdev->dev, "limiting GTT\n");
-			mc->gtt_size = size_bf;
-		}
-		mc->gtt_start = (mc->vram_start & ~mc->gtt_base_align) - mc->gtt_size;
-	} else {
-		if (mc->gtt_size > size_af) {
-			dev_warn(rdev->dev, "limiting GTT\n");
-			mc->gtt_size = size_af;
-		}
-		mc->gtt_start = (mc->vram_end + 1 + mc->gtt_base_align) & ~mc->gtt_base_align;
-	}
-	mc->gtt_end = mc->gtt_start + mc->gtt_size - 1;
-	dev_info(rdev->dev, "GTT: %juM 0x%016jX - 0x%016jX\n",
-			(uintmax_t)mc->gtt_size >> 20, (uintmax_t)mc->gtt_start, (uintmax_t)mc->gtt_end);
-}
-
 static void si_vram_gtt_location(struct radeon_device *rdev,
 				 struct radeon_mc *mc)
 {
@@ -2608,9 +2568,9 @@ static void si_vram_gtt_location(struct radeon_device *rdev,
 		mc->real_vram_size = 0xFFC0000000ULL;
 		mc->mc_vram_size = 0xFFC0000000ULL;
 	}
-	si_vram_location(rdev, &rdev->mc, 0);
+	radeon_vram_location(rdev, &rdev->mc, 0);
 	rdev->mc.gtt_base_align = 0;
-	si_gtt_location(rdev, mc);
+	radeon_gtt_location(rdev, mc);
 }
 
 static int si_mc_init(struct radeon_device *rdev)
