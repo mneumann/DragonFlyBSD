@@ -547,7 +547,6 @@ void r600_hdmi_disable(struct drm_encoder *encoder)
 
 	/* Called for ATOM_ENCODER_MODE_HDMI only */
 	if (!dig || !dig->afmt) {
-		DRM_ERROR("%s: !dig || !dig->afmt", __func__);
 		return;
 	}
 	if (!dig->afmt->enabled)
