@@ -1275,6 +1275,7 @@ static struct radeon_asic evergreen_asic = {
 		.get_pcie_lanes = &r600_get_pcie_lanes,
 		.set_pcie_lanes = &r600_set_pcie_lanes,
 		.set_clock_gating = NULL,
+		.set_uvd_clocks = &evergreen_set_uvd_clocks,
 	},
 	.pflip = {
 		.pre_page_flip = &evergreen_pre_page_flip,
@@ -1466,6 +1467,7 @@ static struct radeon_asic btc_asic = {
 		.get_pcie_lanes = NULL,
 		.set_pcie_lanes = NULL,
 		.set_clock_gating = NULL,
+		.set_uvd_clocks = &evergreen_set_uvd_clocks,
 	},
 	.pflip = {
 		.pre_page_flip = &evergreen_pre_page_flip,
@@ -1604,6 +1606,7 @@ static struct radeon_asic cayman_asic = {
 		.get_pcie_lanes = NULL,
 		.set_pcie_lanes = NULL,
 		.set_clock_gating = NULL,
+		.set_uvd_clocks = &evergreen_set_uvd_clocks,
 	},
 	.pflip = {
 		.pre_page_flip = &evergreen_pre_page_flip,
