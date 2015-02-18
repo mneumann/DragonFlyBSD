@@ -28,10 +28,8 @@
  *    Christian König <deathsimple@vodafone.de>
  */
 
-#include <linux/firmware.h>
 #include <linux/module.h>
 #include <drm/drmP.h>
-#include <drm/drm.h>
 
 #include "radeon.h"
 #include "r600d.h"
@@ -42,24 +40,18 @@
 #define FIRMWARE_SUMO		"radeon/SUMO_uvd.bin"
 #define FIRMWARE_TAHITI		"radeon/TAHITI_uvd.bin"
 
+#if 0
 MODULE_FIRMWARE(FIRMWARE_RV710);
 MODULE_FIRMWARE(FIRMWARE_CYPRESS);
 MODULE_FIRMWARE(FIRMWARE_SUMO);
 MODULE_FIRMWARE(FIRMWARE_TAHITI);
+#endif
 
 int radeon_uvd_init(struct radeon_device *rdev)
 {
-	struct platform_device *pdev;
 	unsigned long bo_size;
 	const char *fw_name;
 	int i, r;
-
-	pdev = platform_device_register_simple("radeon_uvd", 0, NULL, 0);
-	r = IS_ERR(pdev);
-	if (r) {
-		dev_err(rdev->dev, "radeon_uvd: Failed to register firmware\n");
-		return -EINVAL;
-	}
 
 	switch (rdev->family) {
 	case CHIP_RV710:
@@ -97,17 +89,14 @@ int radeon_uvd_init(struct radeon_device *rdev)
 		return -EINVAL;
 	}
 
-	r = request_firmware(&rdev->uvd_fw, fw_name, &pdev->dev);
-	if (r) {
+	rdev->uvd_fw = firmware_get(fw_name);
+	if (!rdev->uvd_fw) {
 		dev_err(rdev->dev, "radeon_uvd: Can't load firmware \"%s\"\n",
 			fw_name);
-		platform_device_unregister(pdev);
-		return r;
+		return -EINVAL;
 	}
 
-	platform_device_unregister(pdev);
-
-	bo_size = RADEON_GPU_PAGE_ALIGN(rdev->uvd_fw->size + 4) +
+	bo_size = RADEON_GPU_PAGE_ALIGN(rdev->uvd_fw->datasize + 4) +
 		  RADEON_UVD_STACK_SIZE + RADEON_UVD_HEAP_SIZE;
 	r = radeon_bo_create(rdev, bo_size, PAGE_SIZE, true,
 			     RADEON_GEM_DOMAIN_VRAM, NULL, &rdev->uvd.vcpu_bo);
@@ -121,7 +110,7 @@ int radeon_uvd_init(struct radeon_device *rdev)
 		return r;
 
 	memset(rdev->uvd.cpu_addr, 0, bo_size);
-	memcpy(rdev->uvd.cpu_addr, rdev->uvd_fw->data, rdev->uvd_fw->size);
+	memcpy(rdev->uvd.cpu_addr, rdev->uvd_fw->data, rdev->uvd_fw->datasize);
 
 	r = radeon_uvd_suspend(rdev);
 	if (r)
@@ -326,7 +315,7 @@ static int radeon_uvd_cs_msg(struct radeon_cs_parser *p, struct radeon_bo *bo,
 	if (r)
 		return r;
 
-	msg = ptr + offset;
+	msg = (uint32_t*)((uint8_t*)ptr + offset);
 
 	msg_type = msg[1];
 	handle = msg[2];
@@ -346,7 +335,7 @@ static int radeon_uvd_cs_msg(struct radeon_cs_parser *p, struct radeon_bo *bo,
 	} else if (msg_type == 2) {
 		/* it's a destroy msg, free the handle */
 		for (i = 0; i < RADEON_MAX_UVD_HANDLES; ++i)
-			atomic_cmpxchg(&p->rdev->uvd.handles[i], handle, 0);
+			atomic_cmpset(&p->rdev->uvd.handles[i], handle, 0);
 		radeon_bo_kunmap(bo);
 		return 0;
 	} else {
@@ -362,7 +351,10 @@ static int radeon_uvd_cs_msg(struct radeon_cs_parser *p, struct radeon_bo *bo,
 
 	/* handle not found try to alloc a new one */
 	for (i = 0; i < RADEON_MAX_UVD_HANDLES; ++i) {
+#if 0
 		if (!atomic_cmpxchg(&p->rdev->uvd.handles[i], 0, handle)) {
+#endif
+		if (atomic_cmpset(&p->rdev->uvd.handles[i], 0, handle) == 1) {
 			p->rdev->uvd.filp[i] = p->filp;
 			return 0;
 		}
@@ -415,7 +407,7 @@ static int radeon_uvd_cs_reloc(struct radeon_cs_parser *p,
 
 	if (cmd == 0) {
 		if (end & 0xFFFFFFFFF0000000) {
-			DRM_ERROR("msg buffer %LX-%LX out of 256MB segment!\n",
+			DRM_ERROR("msg buffer %lX-%lX out of 256MB segment!\n",
 				  start, end);
 			return -EINVAL;
 		}
@@ -426,7 +418,7 @@ static int radeon_uvd_cs_reloc(struct radeon_cs_parser *p,
 	}
 
 	if ((start & 0xFFFFFFFFF0000000) != (end & 0xFFFFFFFFF0000000)) {
-		DRM_ERROR("reloc %LX-%LX crossing 256MB boundary!\n",
+		DRM_ERROR("reloc %lX-%lX crossing 256MB boundary!\n",
 			  start, end);
 		return -EINVAL;
 	}
