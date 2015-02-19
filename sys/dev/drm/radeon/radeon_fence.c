@@ -771,10 +771,9 @@ int radeon_fence_driver_start_ring(struct radeon_device *rdev, int ring)
 
 		} else {
 			/* put fence directly behind firmware */
-			rdev->fence_drv[ring].cpu_addr = (void*)((uint8_t*)rdev->uvd.cpu_addr +
-							 rdev->uvd_fw->datasize);
-			rdev->fence_drv[ring].gpu_addr = rdev->uvd.gpu_addr +
-							 rdev->uvd_fw->datasize;
+			index = ALIGN(rdev->uvd_fw->datasize, 8);
+			rdev->fence_drv[ring].cpu_addr = (void*)((uint8_t*)rdev->uvd.cpu_addr + index);
+			rdev->fence_drv[ring].gpu_addr = rdev->uvd.gpu_addr + index;
 		}
 
 	} else {
