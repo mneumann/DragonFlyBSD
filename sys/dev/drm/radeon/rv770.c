@@ -41,7 +41,6 @@
 
 static void rv770_gpu_init(struct radeon_device *rdev);
 static void rv770_pcie_gen2_enable(struct radeon_device *rdev);
-int evergreen_set_uvd_clocks(struct radeon_device *rdev, u32 vclk, u32 dclk);
 
 static int rv770_uvd_calc_post_div(unsigned target_freq,
 				   unsigned vco_freq,
