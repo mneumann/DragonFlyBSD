@@ -75,9 +75,10 @@
  *   2.30.0 - fix for FMASK texturing
  *   2.31.0 - Add fastfb support for rs690
  *   2.32.0 - new info request for rings working
+ *   2.33.0 - Add SI tiling mode array query
  */
 #define KMS_DRIVER_MAJOR	2
-#define KMS_DRIVER_MINOR	32
+#define KMS_DRIVER_MINOR	33
 #define KMS_DRIVER_PATCHLEVEL	0
 int radeon_suspend_kms(struct drm_device *dev);
 int radeon_resume_kms(struct drm_device *dev);
