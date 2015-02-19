@@ -379,6 +379,7 @@ void r600_rlc_stop(struct radeon_device *rdev);
 int r600_audio_init(struct radeon_device *rdev);
 struct r600_audio r600_audio_status(struct radeon_device *rdev);
 void r600_audio_fini(struct radeon_device *rdev);
+void r600_audio_set_dto(struct drm_encoder *encoder, u32 clock);
 int r600_hdmi_buffer_status_changed(struct drm_encoder *encoder);
 void r600_hdmi_update_audio_settings(struct drm_encoder *encoder);
 /* r600 blit */
