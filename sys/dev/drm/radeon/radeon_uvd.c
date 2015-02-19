@@ -96,7 +96,7 @@ int radeon_uvd_init(struct radeon_device *rdev)
 		return -EINVAL;
 	}
 
-	bo_size = RADEON_GPU_PAGE_ALIGN(rdev->uvd_fw->datasize + 4) +
+	bo_size = RADEON_GPU_PAGE_ALIGN(rdev->uvd_fw->datasize + 8) +
 		  RADEON_UVD_STACK_SIZE + RADEON_UVD_HEAP_SIZE;
 	r = radeon_bo_create(rdev, bo_size, PAGE_SIZE, true,
 			     RADEON_GEM_DOMAIN_VRAM, NULL, &rdev->uvd.vcpu_bo);
