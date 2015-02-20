@@ -382,6 +382,8 @@ void r600_audio_fini(struct radeon_device *rdev);
 void r600_audio_set_dto(struct drm_encoder *encoder, u32 clock);
 int r600_hdmi_buffer_status_changed(struct drm_encoder *encoder);
 void r600_hdmi_update_audio_settings(struct drm_encoder *encoder);
+void r600_hdmi_enable(struct drm_encoder *encoder, bool enable);
+void r600_hdmi_setmode(struct drm_encoder *encoder, struct drm_display_mode *mode);
 /* r600 blit */
 int r600_blit_prepare_copy(struct radeon_device *rdev, unsigned num_gpu_pages,
 			   struct radeon_fence **fence, struct radeon_sa_bo **vb,
@@ -479,6 +481,8 @@ int evergreen_copy_dma(struct radeon_device *rdev,
 		       uint64_t src_offset, uint64_t dst_offset,
 		       unsigned num_gpu_pages,
 		       struct radeon_fence **fence);
+void evergreen_hdmi_enable(struct drm_encoder *encoder, bool enable);
+void evergreen_hdmi_setmode(struct drm_encoder *encoder, struct drm_display_mode *mode);
 void evergreen_fix_pci_max_read_req_size(struct radeon_device *rdev);
 u32 evergreen_get_number_of_dram_channels(struct radeon_device *rdev);
 void evergreen_mc_stop(struct radeon_device *rdev, struct evergreen_mc_save *save);
