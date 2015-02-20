@@ -721,7 +721,7 @@ static void rv770_init_golden_registers(struct radeon_device *rdev)
 		radeon_program_register_sequence(rdev,
 						 r7xx_golden_dyn_gpr_registers,
 						 (const u32)ARRAY_SIZE(r7xx_golden_dyn_gpr_registers));
-		if (rdev->pdev->device == 0x994e)
+		if (rdev->ddev->pci_device == 0x994e)
 			radeon_program_register_sequence(rdev,
 							 rv770ce_golden_registers,
 							 (const u32)ARRAY_SIZE(rv770ce_golden_registers));

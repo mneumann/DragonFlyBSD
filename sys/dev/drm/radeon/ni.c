@@ -285,25 +285,25 @@ static void ni_init_golden_registers(struct radeon_device *rdev)
 						 (const u32)ARRAY_SIZE(cayman_golden_registers2));
 		break;
 	case CHIP_ARUBA:
-		if ((rdev->pdev->device == 0x9900) ||
-		    (rdev->pdev->device == 0x9901) ||
-		    (rdev->pdev->device == 0x9903) ||
-		    (rdev->pdev->device == 0x9904) ||
-		    (rdev->pdev->device == 0x9905) ||
-		    (rdev->pdev->device == 0x9906) ||
-		    (rdev->pdev->device == 0x9907) ||
-		    (rdev->pdev->device == 0x9908) ||
-		    (rdev->pdev->device == 0x9909) ||
-		    (rdev->pdev->device == 0x990A) ||
-		    (rdev->pdev->device == 0x990B) ||
-		    (rdev->pdev->device == 0x990C) ||
-		    (rdev->pdev->device == 0x990D) ||
-		    (rdev->pdev->device == 0x990E) ||
-		    (rdev->pdev->device == 0x990F) ||
-		    (rdev->pdev->device == 0x9910) ||
-		    (rdev->pdev->device == 0x9913) ||
-		    (rdev->pdev->device == 0x9917) ||
-		    (rdev->pdev->device == 0x9918)) {
+		if ((rdev->ddev->pci_device == 0x9900) ||
+		    (rdev->ddev->pci_device == 0x9901) ||
+		    (rdev->ddev->pci_device == 0x9903) ||
+		    (rdev->ddev->pci_device == 0x9904) ||
+		    (rdev->ddev->pci_device == 0x9905) ||
+		    (rdev->ddev->pci_device == 0x9906) ||
+		    (rdev->ddev->pci_device == 0x9907) ||
+		    (rdev->ddev->pci_device == 0x9908) ||
+		    (rdev->ddev->pci_device == 0x9909) ||
+		    (rdev->ddev->pci_device == 0x990A) ||
+		    (rdev->ddev->pci_device == 0x990B) ||
+		    (rdev->ddev->pci_device == 0x990C) ||
+		    (rdev->ddev->pci_device == 0x990D) ||
+		    (rdev->ddev->pci_device == 0x990E) ||
+		    (rdev->ddev->pci_device == 0x990F) ||
+		    (rdev->ddev->pci_device == 0x9910) ||
+		    (rdev->ddev->pci_device == 0x9913) ||
+		    (rdev->ddev->pci_device == 0x9917) ||
+		    (rdev->ddev->pci_device == 0x9918)) {
 			radeon_program_register_sequence(rdev,
 							 dvst_golden_registers,
 							 (const u32)ARRAY_SIZE(dvst_golden_registers));
