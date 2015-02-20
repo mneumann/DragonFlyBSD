@@ -310,10 +310,10 @@ int radeon_wb_init(struct radeon_device *rdev)
 			radeon_wb_fini(rdev);
 			return r;
 		}
+		/* clear wb memory */
+		memset(*(void **)wb_ptr, 0, RADEON_GPU_PAGE_SIZE);
 	}
 
-	/* clear wb memory */
-	memset(*(void **)wb_ptr, 0, RADEON_GPU_PAGE_SIZE);
 	/* disable event_write fences */
 	rdev->wb.use_event = false;
 	/* disabled via module param */
