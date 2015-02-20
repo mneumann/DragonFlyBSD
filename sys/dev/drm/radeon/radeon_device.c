@@ -468,8 +468,10 @@ bool radeon_card_posted(struct radeon_device *rdev)
 	uint32_t reg;
 
 #ifdef DUMBBELL_WIP
+	/* required for EFI mode on macbook2,1 which uses an r5xx asic */
 	if (efi_enabled(EFI_BOOT) &&
-	    rdev->dev->pci_subvendor == PCI_VENDOR_ID_APPLE)
+	    (rdev->dev->pci_subvendor == PCI_VENDOR_ID_APPLE) &&
+	    (rdev->family < CHIP_R600))
 		return false;
 #endif /* DUMBBELL_WIP */
 
