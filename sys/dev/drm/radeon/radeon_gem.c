@@ -90,7 +90,7 @@ retry:
 		return r;
 	}
 	*obj = &robj->gem_base;
-	robj->pid = task_pid_nr(current);
+	robj->pid = curproc ? curproc->p_pid : 0;
 
 	spin_lock(&rdev->gem.mutex);
 	list_add_tail(&robj->list, &rdev->gem.objects);
