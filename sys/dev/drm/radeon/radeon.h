@@ -1706,6 +1706,7 @@ struct radeon_device {
 	struct taskqueue *tq;
 	struct task hotplug_work;
 	struct task audio_work;
+	struct task reset_work;
 	int num_crtc; /* number of crtcs */
 	struct lock dc_hw_i2c_mutex; /* display controller hw i2c mutex */
 	bool audio_enabled;

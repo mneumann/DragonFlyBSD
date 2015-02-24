@@ -85,6 +85,22 @@ static void radeon_hotplug_work_func(void *arg, int pending)
 }
 
 /**
+ * radeon_irq_reset_work_func - execute gpu reset
+ *
+ * @work: work struct
+ *
+ * Execute scheduled gpu reset (cayman+).
+ * This function is called when the irq handler
+ * thinks we need a gpu reset.
+ */
+static void radeon_irq_reset_work_func(void *arg, int pending)
+{
+	struct radeon_device *rdev = arg;
+
+	radeon_gpu_reset(rdev);
+}
+
+/**
  * radeon_driver_irq_preinstall_kms - drm irq preinstall callback
  *
  * @dev: drm dev pointer
@@ -248,6 +264,7 @@ int radeon_irq_kms_init(struct radeon_device *rdev)
 
 	TASK_INIT(&rdev->hotplug_work, 0, radeon_hotplug_work_func, rdev);
 	TASK_INIT(&rdev->audio_work, 0, r600_audio_update_hdmi, rdev);
+	TASK_INIT(&rdev->reset_work, 0, radeon_irq_reset_work_func, rdev);
 
 	lockinit(&rdev->irq.lock, "drm__radeon_device__irq__lock", 0, LK_CANRECURSE);
 	r = drm_vblank_init(rdev->ddev, rdev->num_crtc);
