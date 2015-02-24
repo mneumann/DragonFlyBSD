@@ -1160,7 +1160,11 @@ int radeon_device_init(struct radeon_device *rdev,
 	/* Registers mapping */
 	/* TODO: block userspace mapping of io register */
 	spin_init(&rdev->mmio_idx_lock, "radeon_mpio");
-	rdev->rmmio_rid = PCIR_BAR(2);
+	if (rdev->family >= CHIP_BONAIRE) {
+		rdev->rmmio_rid = PCIR_BAR(5);
+	} else {
+		rdev->rmmio_rid = PCIR_BAR(2);
+	}
 	rdev->rmmio = bus_alloc_resource_any(rdev->dev, SYS_RES_MEMORY,
 	    &rdev->rmmio_rid, RF_ACTIVE | RF_SHAREABLE);
 	if (rdev->rmmio == NULL) {
