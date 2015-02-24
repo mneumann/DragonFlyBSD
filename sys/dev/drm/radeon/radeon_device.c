@@ -93,6 +93,9 @@ static const char radeon_family_name[][16] = {
 	"VERDE",
 	"OLAND",
 	"HAINAN",
+	"BONAIRE",
+	"KAVERI",
+	"KABINI",
 	"LAST",
 };
 
