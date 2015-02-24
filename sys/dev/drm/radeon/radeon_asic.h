@@ -566,5 +566,17 @@ uint64_t si_get_gpu_clock_counter(struct radeon_device *rdev);
 int si_set_uvd_clocks(struct radeon_device *rdev, u32 vclk, u32 dclk);
 void si_rlc_fini(struct radeon_device *rdev);
 int si_rlc_init(struct radeon_device *rdev);
+void si_vram_gtt_location(struct radeon_device *rdev,
+			  struct radeon_mc *mc);
+
+/*
+ * cik
+ */
+bool cik_gpu_is_lockup(struct radeon_device *rdev, struct radeon_ring *ring);
+int cik_asic_reset(struct radeon_device *rdev);
+void cik_pcie_gart_tlb_flush(struct radeon_device *rdev);
+int cik_ib_parse(struct radeon_device *rdev, struct radeon_ib *ib);
+int cik_vm_init(struct radeon_device *rdev);
+void cik_vm_fini(struct radeon_device *rdev);
 
 #endif
