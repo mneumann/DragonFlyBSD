@@ -28,6 +28,204 @@
 #include "cikd.h"
 #include "atom.h"
 
+/* GFX */
+#define CIK_PFP_UCODE_SIZE 2144
+#define CIK_ME_UCODE_SIZE 2144
+#define CIK_CE_UCODE_SIZE 2144
+/* compute */
+#define CIK_MEC_UCODE_SIZE 4192
+/* interrupts */
+#define BONAIRE_RLC_UCODE_SIZE 2048
+#define KB_RLC_UCODE_SIZE 2560
+#define KV_RLC_UCODE_SIZE 2560
+/* gddr controller */
+#define CIK_MC_UCODE_SIZE 7866
+
+#if 0
+MODULE_FIRMWARE("radeon/BONAIRE_pfp.bin");
+MODULE_FIRMWARE("radeon/BONAIRE_me.bin");
+MODULE_FIRMWARE("radeon/BONAIRE_ce.bin");
+MODULE_FIRMWARE("radeon/BONAIRE_mec.bin");
+MODULE_FIRMWARE("radeon/BONAIRE_mc.bin");
+MODULE_FIRMWARE("radeon/BONAIRE_rlc.bin");
+MODULE_FIRMWARE("radeon/KAVERI_pfp.bin");
+MODULE_FIRMWARE("radeon/KAVERI_me.bin");
+MODULE_FIRMWARE("radeon/KAVERI_ce.bin");
+MODULE_FIRMWARE("radeon/KAVERI_mec.bin");
+MODULE_FIRMWARE("radeon/KAVERI_rlc.bin");
+MODULE_FIRMWARE("radeon/KABINI_pfp.bin");
+MODULE_FIRMWARE("radeon/KABINI_me.bin");
+MODULE_FIRMWARE("radeon/KABINI_ce.bin");
+MODULE_FIRMWARE("radeon/KABINI_mec.bin");
+MODULE_FIRMWARE("radeon/KABINI_rlc.bin");
+#endif
+
+/**
+ * cik_init_microcode - load ucode images from disk
+ *
+ * @rdev: radeon_device pointer
+ *
+ * Use the firmware interface to load the ucode images into
+ * the driver (not loaded into hw).
+ * Returns 0 on success, error on failure.
+ */
+static __unused int cik_init_microcode(struct radeon_device *rdev)
+{
+	const char *chip_name;
+	size_t pfp_req_size, me_req_size, ce_req_size,
+		mec_req_size, rlc_req_size, mc_req_size;
+	char fw_name[30];
+	int err;
+
+	DRM_DEBUG("\n");
+
+	switch (rdev->family) {
+	case CHIP_BONAIRE:
+		chip_name = "BONAIRE";
+		pfp_req_size = CIK_PFP_UCODE_SIZE * 4;
+		me_req_size = CIK_ME_UCODE_SIZE * 4;
+		ce_req_size = CIK_CE_UCODE_SIZE * 4;
+		mec_req_size = CIK_MEC_UCODE_SIZE * 4;
+		rlc_req_size = BONAIRE_RLC_UCODE_SIZE * 4;
+		mc_req_size = CIK_MC_UCODE_SIZE * 4;
+		break;
+	case CHIP_KAVERI:
+		chip_name = "KAVERI";
+		pfp_req_size = CIK_PFP_UCODE_SIZE * 4;
+		me_req_size = CIK_ME_UCODE_SIZE * 4;
+		ce_req_size = CIK_CE_UCODE_SIZE * 4;
+		mec_req_size = CIK_MEC_UCODE_SIZE * 4;
+		rlc_req_size = KV_RLC_UCODE_SIZE * 4;
+		break;
+	case CHIP_KABINI:
+		chip_name = "KABINI";
+		pfp_req_size = CIK_PFP_UCODE_SIZE * 4;
+		me_req_size = CIK_ME_UCODE_SIZE * 4;
+		ce_req_size = CIK_CE_UCODE_SIZE * 4;
+		mec_req_size = CIK_MEC_UCODE_SIZE * 4;
+		rlc_req_size = KB_RLC_UCODE_SIZE * 4;
+		break;
+	default: BUG();
+	}
+
+	DRM_INFO("Loading %s Microcode\n", chip_name);
+	err = 0;
+
+	ksnprintf(fw_name, sizeof(fw_name), "radeon/%s_pfp.bin", chip_name);
+	rdev->pfp_fw = firmware_get(fw_name);
+	if (rdev->pfp_fw == NULL) {
+		err = -ENOENT;
+		goto out;
+	}
+	if (rdev->pfp_fw->datasize != pfp_req_size) {
+		printk(KERN_ERR
+		       "cik_cp: Bogus length %zu in firmware \"%s\"\n",
+		       rdev->pfp_fw->datasize, fw_name);
+		err = -EINVAL;
+		goto out;
+	}
+
+	ksnprintf(fw_name, sizeof(fw_name), "radeon/%s_me.bin", chip_name);
+	rdev->me_fw = firmware_get(fw_name);
+	if (rdev->me_fw == NULL) {
+		err = -ENOENT;
+		goto out;
+	}
+	if (rdev->me_fw->datasize != me_req_size) {
+		printk(KERN_ERR
+		       "cik_cp: Bogus length %zu in firmware \"%s\"\n",
+		       rdev->me_fw->datasize, fw_name);
+		err = -EINVAL;
+	}
+
+	ksnprintf(fw_name, sizeof(fw_name), "radeon/%s_ce.bin", chip_name);
+	rdev->ce_fw = firmware_get(fw_name);
+	if (rdev->ce_fw == NULL) {
+		err = -ENOENT;
+		goto out;
+	}
+	if (rdev->ce_fw->datasize != ce_req_size) {
+		printk(KERN_ERR
+		       "cik_cp: Bogus length %zu in firmware \"%s\"\n",
+		       rdev->ce_fw->datasize, fw_name);
+		err = -EINVAL;
+	}
+
+	ksnprintf(fw_name, sizeof(fw_name), "radeon/%s_mec.bin", chip_name);
+	rdev->mec_fw = firmware_get(fw_name);
+	if (rdev->mec_fw == NULL) {
+		err = -ENOENT;
+		goto out;
+	}
+	if (rdev->mec_fw->datasize != mec_req_size) {
+		printk(KERN_ERR
+		       "cik_cp: Bogus length %zu in firmware \"%s\"\n",
+		       rdev->mec_fw->datasize, fw_name);
+		err = -EINVAL;
+	}
+
+	ksnprintf(fw_name, sizeof(fw_name), "radeon/%s_rlc.bin", chip_name);
+	rdev->rlc_fw = firmware_get(fw_name);
+	if (rdev->rlc_fw == NULL) {
+		err = -ENOENT;
+		goto out;
+	}
+	if (rdev->rlc_fw->datasize != rlc_req_size) {
+		printk(KERN_ERR
+		       "cik_rlc: Bogus length %zu in firmware \"%s\"\n",
+		       rdev->rlc_fw->datasize, fw_name);
+		err = -EINVAL;
+	}
+
+	/* No MC ucode on APUs */
+	if (!(rdev->flags & RADEON_IS_IGP)) {
+		ksnprintf(fw_name, sizeof(fw_name), "radeon/%s_mc.bin", chip_name);
+		rdev->mc_fw = firmware_get(fw_name);
+		if (rdev->mc_fw == NULL) {
+			err = -ENOENT;
+			goto out;
+		}
+		if (rdev->mc_fw->datasize != mc_req_size) {
+			printk(KERN_ERR
+			       "cik_mc: Bogus length %zu in firmware \"%s\"\n",
+			       rdev->mc_fw->datasize, fw_name);
+			err = -EINVAL;
+		}
+	}
+
+out:
+	if (err) {
+		if (err != -EINVAL)
+			printk(KERN_ERR
+			       "cik_cp: Failed to load firmware \"%s\"\n",
+			       fw_name);
+		if (rdev->pfp_fw != NULL) {
+			firmware_put(rdev->pfp_fw, FIRMWARE_UNLOAD);
+			rdev->pfp_fw = NULL;
+		}
+		if (rdev->me_fw != NULL) {
+			firmware_put(rdev->me_fw, FIRMWARE_UNLOAD);
+			rdev->me_fw = NULL;
+		}
+		if (rdev->ce_fw != NULL) {
+			firmware_put(rdev->ce_fw, FIRMWARE_UNLOAD);
+			rdev->ce_fw = NULL;
+		}
+		if (rdev->mec_fw != NULL) {
+			firmware_put(rdev->mec_fw, FIRMWARE_UNLOAD);
+			rdev->mec_fw = NULL;
+		}
+		if (rdev->rlc_fw != NULL) {
+			firmware_put(rdev->rlc_fw, FIRMWARE_UNLOAD);
+			rdev->rlc_fw = NULL;
+		}
+		if (rdev->mc_fw != NULL) {
+			firmware_put(rdev->mc_fw, FIRMWARE_UNLOAD);
+			rdev->mc_fw = NULL;
+		}
+	}
+	return err;
+}
 
 /*
  * Core functions
