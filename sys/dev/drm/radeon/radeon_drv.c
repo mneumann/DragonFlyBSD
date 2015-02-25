@@ -139,6 +139,7 @@ int radeon_pcie_gen2 = -1;
 int radeon_msi = -1;
 int radeon_lockup_timeout = 10000;
 int radeon_fastfb = 0;
+int radeon_dpm = -1;
 
 static drm_pci_id_list_t pciidlist[] = {
 	radeon_PCI_IDS
@@ -200,6 +201,9 @@ module_param_named(lockup_timeout, radeon_lockup_timeout, int, 0444);
 
 MODULE_PARM_DESC(fastfb, "Direct FB access for IGP chips (0 = disable, 1 = enable)");
 module_param_named(fastfb, radeon_fastfb, int, 0444);
+
+MODULE_PARM_DESC(dpm, "DPM support (1 = enable, 0 = disable, -1 = auto)");
+module_param_named(dpm, radeon_dpm, int, 0444);
 
 static int radeon_suspend(struct drm_device *dev, pm_message_t state)
 {
