@@ -484,10 +484,6 @@ int evergreen_copy_dma(struct radeon_device *rdev,
 		       uint64_t src_offset, uint64_t dst_offset,
 		       unsigned num_gpu_pages,
 		       struct radeon_fence **fence);
-void evergreen_hdmi_enable(struct drm_encoder *encoder, bool enable);
-void evergreen_hdmi_setmode(struct drm_encoder *encoder, struct drm_display_mode *mode);
-int evergreen_get_temp(struct radeon_device *rdev);
-int sumo_get_temp(struct radeon_device *rdev);
 void evergreen_fix_pci_max_read_req_size(struct radeon_device *rdev);
 u32 evergreen_get_number_of_dram_channels(struct radeon_device *rdev);
 void evergreen_mc_stop(struct radeon_device *rdev, struct evergreen_mc_save *save);
@@ -496,6 +492,11 @@ void evergreen_mc_program(struct radeon_device *rdev);
 int evergreen_mc_init(struct radeon_device *rdev);
 void evergreen_irq_suspend(struct radeon_device *rdev);
 bool evergreen_is_display_hung(struct radeon_device *rdev);
+void evergreen_hdmi_enable(struct drm_encoder *encoder, bool enable);
+void evergreen_hdmi_setmode(struct drm_encoder *encoder, struct drm_display_mode *mode);
+int evergreen_get_temp(struct radeon_device *rdev);
+int sumo_get_temp(struct radeon_device *rdev);
+int tn_get_temp(struct radeon_device *rdev);
 
 /*
  * cayman
