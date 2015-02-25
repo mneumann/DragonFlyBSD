@@ -492,6 +492,7 @@ void evergreen_mc_resume(struct radeon_device *rdev, struct evergreen_mc_save *s
 void evergreen_mc_program(struct radeon_device *rdev);
 int evergreen_mc_init(struct radeon_device *rdev);
 void evergreen_irq_suspend(struct radeon_device *rdev);
+bool evergreen_is_display_hung(struct radeon_device *rdev);
 
 /*
  * cayman
@@ -617,4 +618,5 @@ int cik_resume(struct radeon_device *rdev);
 int cik_suspend(struct radeon_device *rdev);
 int cik_init(struct radeon_device *rdev);
 void cik_fini(struct radeon_device *rdev);
+bool cik_gfx_is_lockup(struct radeon_device *rdev, struct radeon_ring *ring);
 #endif
