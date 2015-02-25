@@ -592,6 +592,10 @@ void cik_semaphore_ring_emit(struct radeon_device *rdev,
 			     bool emit_wait);
 void cik_ring_ib_execute(struct radeon_device *rdev, struct radeon_ib *ib);
 int cik_ring_test(struct radeon_device *rdev, struct radeon_ring *ring);
+void cik_fence_gfx_ring_emit(struct radeon_device *rdev,
+			     struct radeon_fence *fence);
+void cik_fence_compute_ring_emit(struct radeon_device *rdev,
+				 struct radeon_fence *fence);
 int cik_ib_test(struct radeon_device *rdev, struct radeon_ring *ring);
 void cik_vm_flush(struct radeon_device *rdev, int ridx, struct radeon_vm *vm);
 int cik_irq_set(struct radeon_device *rdev);
