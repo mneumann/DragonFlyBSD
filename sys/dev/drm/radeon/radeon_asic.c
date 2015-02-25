@@ -1049,6 +1049,7 @@ static struct radeon_asic r600_asic = {
 		.get_pcie_lanes = &r600_get_pcie_lanes,
 		.set_pcie_lanes = &r600_set_pcie_lanes,
 		.set_clock_gating = NULL,
+		.get_temperature = &rv6xx_get_temp,
 	},
 	.pflip = {
 		.pre_page_flip = &rs600_pre_page_flip,
@@ -1143,6 +1144,7 @@ static struct radeon_asic rs780_asic = {
 		.get_pcie_lanes = NULL,
 		.set_pcie_lanes = NULL,
 		.set_clock_gating = NULL,
+		.get_temperature = &rv6xx_get_temp,
 	},
 	.pflip = {
 		.pre_page_flip = &rs600_pre_page_flip,
@@ -1250,6 +1252,7 @@ static struct radeon_asic rv770_asic = {
 		.set_pcie_lanes = &r600_set_pcie_lanes,
 		.set_clock_gating = &radeon_atom_set_clock_gating,
 		.set_uvd_clocks = &rv770_set_uvd_clocks,
+		.get_temperature = &rv770_get_temp,
 	},
 	.pflip = {
 		.pre_page_flip = &rs600_pre_page_flip,
@@ -1357,6 +1360,7 @@ static struct radeon_asic evergreen_asic = {
 		.set_pcie_lanes = &r600_set_pcie_lanes,
 		.set_clock_gating = NULL,
 		.set_uvd_clocks = &evergreen_set_uvd_clocks,
+		.get_temperature = &evergreen_get_temp,
 	},
 	.pflip = {
 		.pre_page_flip = &evergreen_pre_page_flip,
@@ -1464,6 +1468,7 @@ static struct radeon_asic sumo_asic = {
 		.set_pcie_lanes = NULL,
 		.set_clock_gating = NULL,
 		.set_uvd_clocks = &sumo_set_uvd_clocks,
+		.get_temperature = &sumo_get_temp,
 	},
 	.pflip = {
 		.pre_page_flip = &evergreen_pre_page_flip,
@@ -1571,6 +1576,7 @@ static struct radeon_asic btc_asic = {
 		.set_pcie_lanes = &r600_set_pcie_lanes,
 		.set_clock_gating = NULL,
 		.set_uvd_clocks = &evergreen_set_uvd_clocks,
+		.get_temperature = &evergreen_get_temp,
 	},
 	.pflip = {
 		.pre_page_flip = &evergreen_pre_page_flip,
@@ -1730,6 +1736,7 @@ static struct radeon_asic cayman_asic = {
 		.set_pcie_lanes = &r600_set_pcie_lanes,
 		.set_clock_gating = NULL,
 		.set_uvd_clocks = &evergreen_set_uvd_clocks,
+		.get_temperature = &evergreen_get_temp,
 	},
 	.pflip = {
 		.pre_page_flip = &evergreen_pre_page_flip,
@@ -2044,6 +2051,7 @@ static struct radeon_asic si_asic = {
 		.set_pcie_lanes = &r600_set_pcie_lanes,
 		.set_clock_gating = NULL,
 		.set_uvd_clocks = &si_set_uvd_clocks,
+		.get_temperature = &si_get_temp,
 	},
 	.pflip = {
 		.pre_page_flip = &evergreen_pre_page_flip,

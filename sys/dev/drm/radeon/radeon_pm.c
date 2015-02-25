@@ -443,27 +443,10 @@ static ssize_t radeon_hwmon_show_temp(struct device *dev,
 	struct radeon_device *rdev = ddev->dev_private;
 	int temp;
 
-	switch (rdev->pm.int_thermal_type) {
-	case THERMAL_TYPE_RV6XX:
-		temp = rv6xx_get_temp(rdev);
-		break;
-	case THERMAL_TYPE_RV770:
-		temp = rv770_get_temp(rdev);
-		break;
-	case THERMAL_TYPE_EVERGREEN:
-	case THERMAL_TYPE_NI:
-		temp = evergreen_get_temp(rdev);
-		break;
-	case THERMAL_TYPE_SUMO:
-		temp = sumo_get_temp(rdev);
-		break;
-	case THERMAL_TYPE_SI:
-		temp = si_get_temp(rdev);
-		break;
-	default:
+	if (rdev->asic->pm.get_temperature)
+		temp = radeon_get_temperature(rdev);
+	else
 		temp = 0;
-		break;
-	}
 
 	return ksnprintf(buf, PAGE_SIZE, "%d\n", temp);
 }
@@ -504,8 +487,7 @@ static int radeon_hwmon_init(struct radeon_device *rdev)
 	case THERMAL_TYPE_NI:
 	case THERMAL_TYPE_SUMO:
 	case THERMAL_TYPE_SI:
-		/* No support for TN yet */
-		if (rdev->family == CHIP_ARUBA)
+		if (rdev->asic->pm.get_temperature == NULL)
 			return err;
 #ifdef DUMBBELL_WIP
 		rdev->pm.int_hwmon_dev = hwmon_device_register(rdev->dev);

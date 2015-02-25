@@ -397,6 +397,7 @@ void r600_kms_blit_copy(struct radeon_device *rdev,
 			struct radeon_sa_bo *vb);
 u32 r600_get_xclk(struct radeon_device *rdev);
 uint64_t r600_get_gpu_clock_counter(struct radeon_device *rdev);
+int rv6xx_get_temp(struct radeon_device *rdev);
 
 /* uvd */
 int r600_uvd_init(struct radeon_device *rdev);
@@ -430,6 +431,7 @@ int rv770_copy_dma(struct radeon_device *rdev,
 u32 rv770_get_xclk(struct radeon_device *rdev);
 int rv770_uvd_resume(struct radeon_device *rdev);
 int rv770_set_uvd_clocks(struct radeon_device *rdev, u32 vclk, u32 dclk);
+int rv770_get_temp(struct radeon_device *rdev);
 
 /*
  * evergreen
@@ -484,6 +486,8 @@ int evergreen_copy_dma(struct radeon_device *rdev,
 		       struct radeon_fence **fence);
 void evergreen_hdmi_enable(struct drm_encoder *encoder, bool enable);
 void evergreen_hdmi_setmode(struct drm_encoder *encoder, struct drm_display_mode *mode);
+int evergreen_get_temp(struct radeon_device *rdev);
+int sumo_get_temp(struct radeon_device *rdev);
 void evergreen_fix_pci_max_read_req_size(struct radeon_device *rdev);
 u32 evergreen_get_number_of_dram_channels(struct radeon_device *rdev);
 void evergreen_mc_stop(struct radeon_device *rdev, struct evergreen_mc_save *save);
@@ -564,6 +568,7 @@ void si_dma_vm_flush(struct radeon_device *rdev, int ridx, struct radeon_vm *vm)
 u32 si_get_xclk(struct radeon_device *rdev);
 uint64_t si_get_gpu_clock_counter(struct radeon_device *rdev);
 int si_set_uvd_clocks(struct radeon_device *rdev, u32 vclk, u32 dclk);
+int si_get_temp(struct radeon_device *rdev);
 void si_rlc_fini(struct radeon_device *rdev);
 int si_rlc_init(struct radeon_device *rdev);
 void si_vram_gtt_location(struct radeon_device *rdev,
