@@ -612,4 +612,8 @@ void cik_vm_set_page(struct radeon_device *rdev,
 		     uint64_t pe,
 		     uint64_t addr, unsigned count,
 		     uint32_t incr, uint32_t flags);
+int cik_resume(struct radeon_device *rdev);
+int cik_suspend(struct radeon_device *rdev);
+int cik_init(struct radeon_device *rdev);
+void cik_fini(struct radeon_device *rdev);
 #endif
