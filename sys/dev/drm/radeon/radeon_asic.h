@@ -578,5 +578,11 @@ void cik_pcie_gart_tlb_flush(struct radeon_device *rdev);
 int cik_ib_parse(struct radeon_device *rdev, struct radeon_ib *ib);
 int cik_vm_init(struct radeon_device *rdev);
 void cik_vm_fini(struct radeon_device *rdev);
-
+void cik_fence_ring_emit(struct radeon_device *rdev,
+			 struct radeon_fence *fence);
+void cik_semaphore_ring_emit(struct radeon_device *rdev,
+			     struct radeon_ring *ring,
+			     struct radeon_semaphore *semaphore,
+			     bool emit_wait);
+void cik_ring_ib_execute(struct radeon_device *rdev, struct radeon_ib *ib);
 #endif
