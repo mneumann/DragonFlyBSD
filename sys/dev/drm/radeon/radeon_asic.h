@@ -588,4 +588,6 @@ void cik_ring_ib_execute(struct radeon_device *rdev, struct radeon_ib *ib);
 int cik_ring_test(struct radeon_device *rdev, struct radeon_ring *ring);
 int cik_ib_test(struct radeon_device *rdev, struct radeon_ring *ring);
 void cik_vm_flush(struct radeon_device *rdev, int ridx, struct radeon_vm *vm);
+int cik_irq_set(struct radeon_device *rdev);
+irqreturn_t cik_irq_process(struct radeon_device *rdev);
 #endif
