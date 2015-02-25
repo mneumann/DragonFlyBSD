@@ -623,4 +623,10 @@ int cik_suspend(struct radeon_device *rdev);
 int cik_init(struct radeon_device *rdev);
 void cik_fini(struct radeon_device *rdev);
 bool cik_gfx_is_lockup(struct radeon_device *rdev, struct radeon_ring *ring);
+u32 cik_compute_ring_get_rptr(struct radeon_device *rdev,
+			      struct radeon_ring *ring);
+u32 cik_compute_ring_get_wptr(struct radeon_device *rdev,
+			      struct radeon_ring *ring);
+void cik_compute_ring_set_wptr(struct radeon_device *rdev,
+			       struct radeon_ring *ring);
 #endif
