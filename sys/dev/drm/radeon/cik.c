@@ -6878,7 +6878,7 @@ static void dce8_program_watermarks(struct radeon_device *rdev,
  * Calculate and program the display watermarks and line
  * buffer allocation (CIK).
  */
-static __unused void dce8_bandwidth_update(struct radeon_device *rdev)
+void dce8_bandwidth_update(struct radeon_device *rdev)
 {
 	struct drm_display_mode *mode = NULL;
 	u32 num_heads = 0, lb_size;
