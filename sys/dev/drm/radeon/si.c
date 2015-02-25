@@ -40,7 +40,6 @@
 #define OLAND_MC_UCODE_SIZE 7863
 
 extern void evergreen_print_gpu_status_regs(struct radeon_device *rdev);
-extern bool evergreen_is_display_hung(struct radeon_device *rdev);
 
 static const u32 tahiti_golden_rlc_registers[] =
 {

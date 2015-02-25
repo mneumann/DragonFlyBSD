@@ -32,7 +32,6 @@
 #include "ni_reg.h"
 #include "cayman_blit_shaders.h"
 
-extern bool evergreen_is_display_hung(struct radeon_device *rdev);
 extern void evergreen_print_gpu_status_regs(struct radeon_device *rdev);
 extern void evergreen_pcie_gen2_enable(struct radeon_device *rdev);
 
