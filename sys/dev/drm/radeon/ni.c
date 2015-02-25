@@ -31,21 +31,10 @@
 #include "atom.h"
 #include "ni_reg.h"
 #include "cayman_blit_shaders.h"
+#include "radeon_ucode.h"
 
 extern void evergreen_print_gpu_status_regs(struct radeon_device *rdev);
 extern void evergreen_pcie_gen2_enable(struct radeon_device *rdev);
-
-#define EVERGREEN_PFP_UCODE_SIZE 1120
-#define EVERGREEN_PM4_UCODE_SIZE 1376
-#define EVERGREEN_RLC_UCODE_SIZE 768
-#define BTC_MC_UCODE_SIZE 6024
-
-#define CAYMAN_PFP_UCODE_SIZE 2176
-#define CAYMAN_PM4_UCODE_SIZE 2176
-#define CAYMAN_RLC_UCODE_SIZE 1024
-#define CAYMAN_MC_UCODE_SIZE 6037
-
-#define ARUBA_RLC_UCODE_SIZE 1536
 
 
 static const u32 cayman_golden_registers2[] =
