@@ -606,4 +606,5 @@ int cik_sdma_ring_test(struct radeon_device *rdev,
 		       struct radeon_ring *ring);
 int cik_sdma_ib_test(struct radeon_device *rdev, struct radeon_ring *ring);
 bool cik_sdma_is_lockup(struct radeon_device *rdev, struct radeon_ring *ring);
+void cik_dma_vm_flush(struct radeon_device *rdev, int ridx, struct radeon_vm *vm);
 #endif
