@@ -497,6 +497,9 @@ void evergreen_hdmi_setmode(struct drm_encoder *encoder, struct drm_display_mode
 int evergreen_get_temp(struct radeon_device *rdev);
 int sumo_get_temp(struct radeon_device *rdev);
 int tn_get_temp(struct radeon_device *rdev);
+void sumo_rlc_fini(struct radeon_device *rdev);
+int sumo_rlc_init(struct radeon_device *rdev);
+int evergreen_rlc_resume(struct radeon_device *rdev);
 
 /*
  * cayman
