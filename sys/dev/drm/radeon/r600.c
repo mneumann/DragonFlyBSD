@@ -56,10 +56,14 @@ MODULE_FIRMWARE("radeon/RS780_pfp.bin");
 MODULE_FIRMWARE("radeon/RS780_me.bin");
 MODULE_FIRMWARE("radeon/RV770_pfp.bin");
 MODULE_FIRMWARE("radeon/RV770_me.bin");
+MODULE_FIRMWARE("radeon/RV770_smc.bin");
 MODULE_FIRMWARE("radeon/RV730_pfp.bin");
 MODULE_FIRMWARE("radeon/RV730_me.bin");
+MODULE_FIRMWARE("radeon/RV730_smc.bin");
+MODULE_FIRMWARE("radeon/RV740_smc.bin");
 MODULE_FIRMWARE("radeon/RV710_pfp.bin");
 MODULE_FIRMWARE("radeon/RV710_me.bin");
+MODULE_FIRMWARE("radeon/RV710_smc.bin");
 MODULE_FIRMWARE("radeon/R600_rlc.bin");
 MODULE_FIRMWARE("radeon/R700_rlc.bin");
 MODULE_FIRMWARE("radeon/CEDAR_pfp.bin");
@@ -2147,7 +2151,8 @@ int r600_init_microcode(struct radeon_device *rdev)
 {
 	const char *chip_name;
 	const char *rlc_chip_name;
-	size_t pfp_req_size, me_req_size, rlc_req_size;
+	const char *smc_chip_name = "RV770";
+	size_t pfp_req_size, me_req_size, rlc_req_size, smc_req_size = 0;
 	char fw_name[30];
 	int err;
 
@@ -2186,15 +2191,26 @@ int r600_init_microcode(struct radeon_device *rdev)
 	case CHIP_RV770:
 		chip_name = "RV770";
 		rlc_chip_name = "R700";
+		smc_chip_name = "RV770";
+		smc_req_size = ALIGN(RV770_SMC_UCODE_SIZE, 4);
 		break;
 	case CHIP_RV730:
-	case CHIP_RV740:
 		chip_name = "RV730";
 		rlc_chip_name = "R700";
+		smc_chip_name = "RV730";
+		smc_req_size = ALIGN(RV730_SMC_UCODE_SIZE, 4);
 		break;
 	case CHIP_RV710:
 		chip_name = "RV710";
 		rlc_chip_name = "R700";
+		smc_chip_name = "RV710";
+		smc_req_size = ALIGN(RV710_SMC_UCODE_SIZE, 4);
+		break;
+	case CHIP_RV740:
+		chip_name = "RV730";
+		rlc_chip_name = "R700";
+		smc_chip_name = "RV740";
+		smc_req_size = ALIGN(RV740_SMC_UCODE_SIZE, 4);
 		break;
 	case CHIP_CEDAR:
 		chip_name = "CEDAR";
@@ -2286,6 +2302,21 @@ int r600_init_microcode(struct radeon_device *rdev)
 		err = -EINVAL;
 	}
 
+	if ((rdev->family >= CHIP_RV770) && (rdev->family <= CHIP_RV740)) {
+		ksnprintf(fw_name, sizeof(fw_name), "radeon/%s_smc.bin", smc_chip_name);
+		rdev->smc_fw = firmware_get(fw_name);
+		if (rdev->smc_fw == NULL) {
+			err = -ENOENT;
+			goto out;
+		}
+		if (rdev->smc_fw->datasize != smc_req_size) {
+			printk(KERN_ERR
+			       "smc: Bogus length %zu in firmware \"%s\"\n",
+			       rdev->smc_fw->datasize, fw_name);
+			err = -EINVAL;
+		}
+	}
+
 out:
 	if (err) {
 		if (err != -EINVAL)
@@ -2332,6 +2363,8 @@ void r600_fini_microcode(struct radeon_device *rdev)
 	if (rdev->rlc_fw != NULL) {
 		firmware_put(rdev->rlc_fw, FIRMWARE_UNLOAD);
 		rdev->rlc_fw = NULL;
+		firmware_put(rdev->smc_fw, FIRMWARE_UNLOAD);
+		rdev->smc_fw = NULL;
 	}
 }
 
@@ -4089,10 +4122,13 @@ int r600_irq_set(struct radeon_device *rdev)
 	if ((rdev->family > CHIP_R600) && (rdev->family < CHIP_RV770)) {
 		thermal_int = RREG32(CG_THERMAL_INT) &
 			~(THERM_INT_MASK_HIGH | THERM_INT_MASK_LOW);
-		if (rdev->irq.dpm_thermal) {
-			DRM_DEBUG("dpm thermal\n");
-			thermal_int |= THERM_INT_MASK_HIGH | THERM_INT_MASK_LOW;
-		}
+	} else if (rdev->family >= CHIP_RV770) {
+		thermal_int = RREG32(RV770_CG_THERMAL_INT) &
+			~(THERM_INT_MASK_HIGH | THERM_INT_MASK_LOW);
+	}
+	if (rdev->irq.dpm_thermal) {
+		DRM_DEBUG("dpm thermal\n");
+		thermal_int |= THERM_INT_MASK_HIGH | THERM_INT_MASK_LOW;
 	}
 
 	if (atomic_read(&rdev->irq.ring_int[RADEON_RING_TYPE_GFX_INDEX])) {
@@ -4178,6 +4214,8 @@ int r600_irq_set(struct radeon_device *rdev)
 	}
 	if ((rdev->family > CHIP_R600) && (rdev->family < CHIP_RV770)) {
 		WREG32(CG_THERMAL_INT, thermal_int);
+	} else if (rdev->family >= CHIP_RV770) {
+		WREG32(RV770_CG_THERMAL_INT, thermal_int);
 	}
 
 	return 0;
