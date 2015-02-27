@@ -1326,6 +1326,7 @@ struct radeon_dpm {
 	u32 tdp_adjustment;
 	u16 load_line_slope;
 	bool power_control;
+	bool ac_power;
 	/* special states active */
 	bool                    thermal_active;
 	bool                    uvd_active;

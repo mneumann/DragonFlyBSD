@@ -23,6 +23,7 @@
  * $FreeBSD: head/sys/dev/drm2/radeon/radeon_pm.c 254885 2013-08-25 19:37:15Z dumbbell $
  */
 
+#include <sys/power.h>
 #include <drm/drmP.h>
 #include "radeon.h"
 #include "avivod.h"
@@ -1263,6 +1264,7 @@ static void radeon_pm_compute_clocks_dpm(struct radeon_device *rdev)
 
 	lockmgr(&rdev->pm.mutex, LK_EXCLUSIVE);
 
+	/* update active crtc counts */
 	rdev->pm.dpm.new_active_crtcs = 0;
 	rdev->pm.dpm.new_active_crtc_count = 0;
 	list_for_each_entry(crtc,
@@ -1273,6 +1275,12 @@ static void radeon_pm_compute_clocks_dpm(struct radeon_device *rdev)
 			rdev->pm.dpm.new_active_crtc_count++;
 		}
 	}
+
+	/* update battery/ac status */
+	if (power_profile_get_state() == POWER_PROFILE_PERFORMANCE)
+		rdev->pm.dpm.ac_power = true;
+	else
+		rdev->pm.dpm.ac_power = false;
 
 	radeon_dpm_change_power_state_locked(rdev);
 
