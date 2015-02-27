@@ -79,7 +79,8 @@ SRCS	+=								\
 	radeon_uvd.c							\
 	cik.c								\
 	cik_blit_shaders.c						\
-	r600_dpm.c
+	r600_dpm.c							\
+	rs780_dpm.c
 
 
 # UMS driver
