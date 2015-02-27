@@ -87,8 +87,7 @@ static void radeon_pm_update_profile(struct radeon_device *rdev)
 		rdev->pm.profile_index = PM_PROFILE_DEFAULT_IDX;
 		break;
 	case PM_PROFILE_AUTO:
-#ifdef DUMBBELL_WIP
-		if (power_supply_is_system_supplied() > 0) {
+		if (power_profile_get_state() == POWER_PROFILE_PERFORMANCE) {
 			if (rdev->pm.active_crtc_count > 1)
 				rdev->pm.profile_index = PM_PROFILE_HIGH_MH_IDX;
 			else
@@ -99,7 +98,6 @@ static void radeon_pm_update_profile(struct radeon_device *rdev)
 			else
 				rdev->pm.profile_index = PM_PROFILE_MID_SH_IDX;
 		}
-#endif /* DUMBBELL_WIP */
 		break;
 	case PM_PROFILE_LOW:
 		if (rdev->pm.active_crtc_count > 1)
