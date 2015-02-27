@@ -89,7 +89,9 @@ SRCS	+=								\
 	cypress_dpm.c							\
 	btc_dpm.c							\
 	sumo_dpm.c							\
-	sumo_smc.c
+	sumo_smc.c							\
+	trinity_dpm.c							\
+	trinity_smc.c
 
 
 # UMS driver
