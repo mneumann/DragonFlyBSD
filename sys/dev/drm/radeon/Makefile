@@ -91,7 +91,8 @@ SRCS	+=								\
 	sumo_dpm.c							\
 	sumo_smc.c							\
 	trinity_dpm.c							\
-	trinity_smc.c
+	trinity_smc.c							\
+	ni_dpm.c
 
 
 # UMS driver
