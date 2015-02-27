@@ -697,17 +697,6 @@ restart_search:
 	return NULL;
 }
 
-static void radeon_dpm_update_requested_ps(struct radeon_device *rdev,
-					   struct radeon_ps *ps)
-{
-	/* copy the ps to the hw ps and point the requested ps
-	 * at the hw state in case the driver wants to modify
-	 * the state dynamically.
-	 */
-	rdev->pm.dpm.hw_ps = *ps;
-	rdev->pm.dpm.requested_ps = &rdev->pm.dpm.hw_ps;
-}
-
 static void radeon_dpm_change_power_state_locked(struct radeon_device *rdev)
 {
 	int i;
@@ -729,7 +718,7 @@ static void radeon_dpm_change_power_state_locked(struct radeon_device *rdev)
 
 	ps = radeon_dpm_pick_power_state(rdev, dpm_state);
 	if (ps)
-		radeon_dpm_update_requested_ps(rdev, ps);
+		rdev->pm.dpm.requested_ps = ps;
 	else
 		return;
 
@@ -780,11 +769,9 @@ static void radeon_dpm_change_power_state_locked(struct radeon_device *rdev)
 	lockmgr(&rdev->pm.mclk_lock, LK_EXCLUSIVE); // down_write
 	lockmgr(&rdev->ring_lock, LK_EXCLUSIVE);
 
-	if (rdev->asic->dpm.pre_set_power_state) {
-		ret = radeon_dpm_pre_set_power_state(rdev);
-		if (ret)
-			goto done;
-	}
+	ret = radeon_dpm_pre_set_power_state(rdev);
+	if (ret)
+		goto done;
 
 	/* update display watermarks based on new power state */
 	radeon_bandwidth_update(rdev);
@@ -807,8 +794,7 @@ static void radeon_dpm_change_power_state_locked(struct radeon_device *rdev)
 	/* update current power state */
 	rdev->pm.dpm.current_ps = rdev->pm.dpm.requested_ps;
 
-	if (rdev->asic->dpm.post_set_power_state)
-		radeon_dpm_post_set_power_state(rdev);
+	radeon_dpm_post_set_power_state(rdev);
 
 done:
 	lockmgr(&rdev->ring_lock, LK_RELEASE);
