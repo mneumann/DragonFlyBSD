@@ -80,7 +80,8 @@ SRCS	+=								\
 	cik.c								\
 	cik_blit_shaders.c						\
 	r600_dpm.c							\
-	rs780_dpm.c
+	rs780_dpm.c							\
+	rv6xx_dpm.c
 
 
 # UMS driver

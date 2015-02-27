@@ -570,11 +570,9 @@ static void radeon_hwmon_fini(struct radeon_device *rdev)
 #endif /* DUMBBELL_WIP */
 }
 
-static void radeon_dpm_thermal_work_handler(struct work_struct *work)
+static void radeon_dpm_thermal_work_handler(void *arg, int pending)
 {
-	struct radeon_device *rdev =
-		container_of(work, struct radeon_device,
-			     pm.dpm.thermal.work);
+	struct radeon_device *rdev = arg;
 	/* switch to the thermal state */
 	enum radeon_pm_state_type dpm_state = POWER_STATE_TYPE_INTERNAL_THERMAL;
 
@@ -1005,7 +1003,7 @@ static int radeon_pm_init_dpm(struct radeon_device *rdev)
 	if (ret)
 		return ret;
 
-	INIT_WORK(&rdev->pm.dpm.thermal.work, radeon_dpm_thermal_work_handler);
+	TASK_INIT(&rdev->pm.dpm.thermal.work, 0, radeon_dpm_thermal_work_handler, rdev);
 	lockmgr(&rdev->pm.mutex, LK_EXCLUSIVE);
 	radeon_dpm_init(rdev);
 	rdev->pm.dpm.current_ps = rdev->pm.dpm.requested_ps = rdev->pm.dpm.boot_ps;
@@ -1058,6 +1056,11 @@ int radeon_pm_init(struct radeon_device *rdev)
 {
 	/* enable dpm on rv6xx+ */
 	switch (rdev->family) {
+	case CHIP_RV610:
+	case CHIP_RV630:
+	case CHIP_RV620:
+	case CHIP_RV635:
+	case CHIP_RV670:
 	case CHIP_RS780:
 	case CHIP_RS880:
 		if (radeon_dpm == 1)
@@ -1156,6 +1159,7 @@ static void radeon_pm_compute_clocks_old(struct radeon_device *rdev)
 	if (rdev->pm.num_power_states < 2)
 		return;
 
+	TASK_INIT(&rdev->pm.dpm.thermal.work, 0, radeon_dpm_thermal_work_handler, rdev);
 	lockmgr(&rdev->pm.mutex, LK_EXCLUSIVE);
 
 	rdev->pm.active_crtcs = 0;
