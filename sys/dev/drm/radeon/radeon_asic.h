@@ -522,6 +522,9 @@ int evergreen_copy_dma(struct radeon_device *rdev,
 		       struct radeon_fence **fence);
 void evergreen_fix_pci_max_read_req_size(struct radeon_device *rdev);
 u32 evergreen_get_number_of_dram_channels(struct radeon_device *rdev);
+void sumo_rlc_fini(struct radeon_device *rdev);
+int sumo_rlc_init(struct radeon_device *rdev);
+int evergreen_rlc_resume(struct radeon_device *rdev);
 void evergreen_mc_stop(struct radeon_device *rdev, struct evergreen_mc_save *save);
 void evergreen_mc_resume(struct radeon_device *rdev, struct evergreen_mc_save *save);
 void evergreen_mc_program(struct radeon_device *rdev);
@@ -540,9 +543,12 @@ void cypress_dpm_disable(struct radeon_device *rdev);
 int cypress_dpm_set_power_state(struct radeon_device *rdev);
 void cypress_dpm_display_configuration_changed(struct radeon_device *rdev);
 void cypress_dpm_fini(struct radeon_device *rdev);
-void sumo_rlc_fini(struct radeon_device *rdev);
-int sumo_rlc_init(struct radeon_device *rdev);
-int evergreen_rlc_resume(struct radeon_device *rdev);
+int btc_dpm_init(struct radeon_device *rdev);
+void btc_dpm_setup_asic(struct radeon_device *rdev);
+int btc_dpm_enable(struct radeon_device *rdev);
+void btc_dpm_disable(struct radeon_device *rdev);
+int btc_dpm_set_power_state(struct radeon_device *rdev);
+void btc_dpm_fini(struct radeon_device *rdev);
 
 /*
  * cayman
