@@ -85,7 +85,8 @@ SRCS	+=								\
 	rv770_dpm.c							\
 	rv730_dpm.c							\
 	rv740_dpm.c							\
-	rv770_smc.c
+	rv770_smc.c							\
+	cypress_dpm.c
 
 
 # UMS driver

@@ -78,6 +78,8 @@
 #include <drm/ttm/ttm_module.h>
 #include <drm/ttm/ttm_execbuf_util.h>
 
+#define CONFIG_ACPI 1
+
 #include "radeon_family.h"
 #include "radeon_mode.h"
 #include "radeon_reg.h"
@@ -2154,6 +2156,15 @@ void r100_pll_errata_after_index(struct radeon_device *rdev);
 #define ASIC_IS_NODCE(rdev) ((rdev->family == CHIP_HAINAN))
 #define ASIC_IS_DCE8(rdev) ((rdev->family >= CHIP_BONAIRE))
 
+#define ASIC_IS_LOMBOK(rdev) ((rdev->ddev->pci_device == 0x6849) || \
+			      (rdev->ddev->pci_device == 0x6850) || \
+			      (rdev->ddev->pci_device == 0x6858) || \
+			      (rdev->ddev->pci_device == 0x6859) || \
+			      (rdev->ddev->pci_device == 0x6840) || \
+			      (rdev->ddev->pci_device == 0x6841) || \
+			      (rdev->ddev->pci_device == 0x6842) || \
+			      (rdev->ddev->pci_device == 0x6843))
+
 /*
  * BIOS helpers.
  */
@@ -2379,6 +2390,10 @@ extern void ni_fini_microcode(struct radeon_device *rdev);
 /* radeon_acpi.c */
 extern int radeon_acpi_init(struct radeon_device *rdev);
 extern void radeon_acpi_fini(struct radeon_device *rdev);
+extern bool radeon_acpi_is_pcie_performance_request_supported(struct radeon_device *rdev);
+extern int radeon_acpi_pcie_performance_request(struct radeon_device *rdev,
+						u8 ref_req, bool advertise);
+extern int radeon_acpi_pcie_notify_device_ready(struct radeon_device *rdev);
 
 /* Prototypes added by @dumbbell. */
 
