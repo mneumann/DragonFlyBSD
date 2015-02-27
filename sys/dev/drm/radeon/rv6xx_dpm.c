@@ -962,9 +962,11 @@ static void rv6xx_program_voltage_gpio_pins(struct radeon_device *rdev)
 					 rv6xx_get_master_voltage_mask(rdev));
 }
 
-static void rv6xx_enable_static_voltage_control(struct radeon_device *rdev, bool enable)
+static void rv6xx_enable_static_voltage_control(struct radeon_device *rdev,
+						struct radeon_ps *new_ps,
+						bool enable)
 {
-	struct rv6xx_ps *new_state = rv6xx_get_ps(rdev->pm.dpm.requested_ps);
+	struct rv6xx_ps *new_state = rv6xx_get_ps(new_ps);
 
 	if (enable)
 		radeon_atom_set_voltage(rdev,
@@ -1040,9 +1042,10 @@ static void rv6xx_calculate_ap(struct radeon_device *rdev,
 
 }
 
-static void rv6xx_calculate_stepping_parameters(struct radeon_device *rdev)
+static void rv6xx_calculate_stepping_parameters(struct radeon_device *rdev,
+						struct radeon_ps *new_ps)
 {
-	struct rv6xx_ps *new_state = rv6xx_get_ps(rdev->pm.dpm.requested_ps);
+	struct rv6xx_ps *new_state = rv6xx_get_ps(new_ps);
 
 	rv6xx_calculate_engine_speed_stepping_parameters(rdev, new_state);
 	rv6xx_calculate_memory_clock_stepping_parameters(rdev, new_state);
@@ -1192,10 +1195,12 @@ static void rv6xx_program_display_gap(struct radeon_device *rdev)
 	WREG32(CG_DISPLAY_GAP_CNTL, tmp);
 }
 
-static void rv6xx_set_sw_voltage_to_safe(struct radeon_device *rdev)
+static void rv6xx_set_sw_voltage_to_safe(struct radeon_device *rdev,
+					 struct radeon_ps *new_ps,
+					 struct radeon_ps *old_ps)
 {
-	struct rv6xx_ps *new_state = rv6xx_get_ps(rdev->pm.dpm.requested_ps);
-	struct rv6xx_ps *old_state = rv6xx_get_ps(rdev->pm.dpm.current_ps);
+	struct rv6xx_ps *new_state = rv6xx_get_ps(new_ps);
+	struct rv6xx_ps *old_state = rv6xx_get_ps(old_ps);
 	u16 safe_voltage;
 
 	safe_voltage = (new_state->low.vddc >= old_state->low.vddc) ?
@@ -1208,9 +1213,10 @@ static void rv6xx_set_sw_voltage_to_safe(struct radeon_device *rdev)
 		 ~SW_GPIO_INDEX_MASK);
 }
 
-static void rv6xx_set_sw_voltage_to_low(struct radeon_device *rdev)
+static void rv6xx_set_sw_voltage_to_low(struct radeon_device *rdev,
+					struct radeon_ps *old_ps)
 {
-	struct rv6xx_ps *old_state = rv6xx_get_ps(rdev->pm.dpm.current_ps);
+	struct rv6xx_ps *old_state = rv6xx_get_ps(old_ps);
 
 	rv6xx_program_voltage_stepping_entry(rdev, R600_POWER_LEVEL_CTXSW,
 					     old_state->low.vddc);
@@ -1219,10 +1225,12 @@ static void rv6xx_set_sw_voltage_to_low(struct radeon_device *rdev)
 		~SW_GPIO_INDEX_MASK);
 }
 
-static void rv6xx_set_safe_backbias(struct radeon_device *rdev)
+static void rv6xx_set_safe_backbias(struct radeon_device *rdev,
+				    struct radeon_ps *new_ps,
+				    struct radeon_ps *old_ps)
 {
-	struct rv6xx_ps *new_state = rv6xx_get_ps(rdev->pm.dpm.requested_ps);
-	struct rv6xx_ps *old_state = rv6xx_get_ps(rdev->pm.dpm.current_ps);
+	struct rv6xx_ps *new_state = rv6xx_get_ps(new_ps);
+	struct rv6xx_ps *old_state = rv6xx_get_ps(old_ps);
 
 	if ((new_state->low.flags & ATOM_PPLIB_R600_FLAGS_BACKBIASENABLE) &&
 	    (old_state->low.flags & ATOM_PPLIB_R600_FLAGS_BACKBIASENABLE))
@@ -1231,10 +1239,12 @@ static void rv6xx_set_safe_backbias(struct radeon_device *rdev)
 		WREG32_P(GENERAL_PWRMGT, 0, ~BACKBIAS_VALUE);
 }
 
-static void rv6xx_set_safe_pcie_gen2(struct radeon_device *rdev)
+static void rv6xx_set_safe_pcie_gen2(struct radeon_device *rdev,
+				     struct radeon_ps *new_ps,
+				     struct radeon_ps *old_ps)
 {
-	struct rv6xx_ps *new_state = rv6xx_get_ps(rdev->pm.dpm.requested_ps);
-	struct rv6xx_ps *old_state = rv6xx_get_ps(rdev->pm.dpm.current_ps);
+	struct rv6xx_ps *new_state = rv6xx_get_ps(new_ps);
+	struct rv6xx_ps *old_state = rv6xx_get_ps(old_ps);
 
 	if ((new_state->low.flags & ATOM_PPLIB_R600_FLAGS_PCIEGEN2) !=
 	    (old_state->low.flags & ATOM_PPLIB_R600_FLAGS_PCIEGEN2))
@@ -1291,10 +1301,12 @@ static int rv6xx_step_sw_voltage(struct radeon_device *rdev,
 	return 0;
 }
 
-static int rv6xx_step_voltage_if_increasing(struct radeon_device *rdev)
+static int rv6xx_step_voltage_if_increasing(struct radeon_device *rdev,
+					    struct radeon_ps *new_ps,
+					    struct radeon_ps *old_ps)
 {
-	struct rv6xx_ps *new_state = rv6xx_get_ps(rdev->pm.dpm.requested_ps);
-	struct rv6xx_ps *old_state = rv6xx_get_ps(rdev->pm.dpm.current_ps);
+	struct rv6xx_ps *new_state = rv6xx_get_ps(new_ps);
+	struct rv6xx_ps *old_state = rv6xx_get_ps(old_ps);
 
 	if (new_state->low.vddc > old_state->low.vddc)
 		return rv6xx_step_sw_voltage(rdev,
@@ -1304,10 +1316,12 @@ static int rv6xx_step_voltage_if_increasing(struct radeon_device *rdev)
 	return 0;
 }
 
-static int rv6xx_step_voltage_if_decreasing(struct radeon_device *rdev)
+static int rv6xx_step_voltage_if_decreasing(struct radeon_device *rdev,
+					    struct radeon_ps *new_ps,
+					    struct radeon_ps *old_ps)
 {
-	struct rv6xx_ps *new_state = rv6xx_get_ps(rdev->pm.dpm.requested_ps);
-	struct rv6xx_ps *old_state = rv6xx_get_ps(rdev->pm.dpm.current_ps);
+	struct rv6xx_ps *new_state = rv6xx_get_ps(new_ps);
+	struct rv6xx_ps *old_state = rv6xx_get_ps(old_ps);
 
 	if (new_state->low.vddc < old_state->low.vddc)
 		return rv6xx_step_sw_voltage(rdev,
@@ -1400,10 +1414,12 @@ static void rv6xx_enable_thermal_protection(struct radeon_device *rdev,
 		r600_enable_thermal_protection(rdev, enable);
 }
 
-static void rv6xx_generate_transition_stepping(struct radeon_device *rdev)
+static void rv6xx_generate_transition_stepping(struct radeon_device *rdev,
+					       struct radeon_ps *new_ps,
+					       struct radeon_ps *old_ps)
 {
-	struct rv6xx_ps *new_state = rv6xx_get_ps(rdev->pm.dpm.requested_ps);
-	struct rv6xx_ps *old_state = rv6xx_get_ps(rdev->pm.dpm.current_ps);
+	struct rv6xx_ps *new_state = rv6xx_get_ps(new_ps);
+	struct rv6xx_ps *old_state = rv6xx_get_ps(old_ps);
 	struct rv6xx_power_info *pi = rv6xx_get_pi(rdev);
 
 	rv6xx_generate_steps(rdev,
@@ -1412,9 +1428,10 @@ static void rv6xx_generate_transition_stepping(struct radeon_device *rdev)
 			     0, &pi->hw.medium_sclk_index);
 }
 
-static void rv6xx_generate_low_step(struct radeon_device *rdev)
+static void rv6xx_generate_low_step(struct radeon_device *rdev,
+				    struct radeon_ps *new_ps)
 {
-	struct rv6xx_ps *new_state = rv6xx_get_ps(rdev->pm.dpm.requested_ps);
+	struct rv6xx_ps *new_state = rv6xx_get_ps(new_ps);
 	struct rv6xx_power_info *pi = rv6xx_get_pi(rdev);
 
 	pi->hw.low_sclk_index = 0;
@@ -1431,9 +1448,10 @@ static void rv6xx_invalidate_intermediate_steps(struct radeon_device *rdev)
 						  pi->hw.medium_sclk_index);
 }
 
-static void rv6xx_generate_stepping_table(struct radeon_device *rdev)
+static void rv6xx_generate_stepping_table(struct radeon_device *rdev,
+					  struct radeon_ps *new_ps)
 {
-	struct rv6xx_ps *new_state = rv6xx_get_ps(rdev->pm.dpm.requested_ps);
+	struct rv6xx_ps *new_state = rv6xx_get_ps(new_ps);
 	struct rv6xx_power_info *pi = rv6xx_get_pi(rdev);
 
 	pi->hw.low_sclk_index = 0;
@@ -1473,9 +1491,10 @@ static void rv6xx_reset_lvtm_data_sync(struct radeon_device *rdev)
 }
 
 static void rv6xx_enable_dynamic_pcie_gen2(struct radeon_device *rdev,
+					   struct radeon_ps *new_ps,
 					   bool enable)
 {
-	struct rv6xx_ps *new_state = rv6xx_get_ps(rdev->pm.dpm.requested_ps);
+	struct rv6xx_ps *new_state = rv6xx_get_ps(new_ps);
 
 	if (enable) {
 		rv6xx_enable_bif_dynamic_pcie_gen2(rdev, true);
@@ -1492,6 +1511,7 @@ static void rv6xx_enable_dynamic_pcie_gen2(struct radeon_device *rdev,
 int rv6xx_dpm_enable(struct radeon_device *rdev)
 {
 	struct rv6xx_power_info *pi = rv6xx_get_pi(rdev);
+	struct radeon_ps *boot_ps = rdev->pm.dpm.boot_ps;
 
 	if (r600_dynamicpm_enabled(rdev))
 		return -EINVAL;
@@ -1519,12 +1539,12 @@ int rv6xx_dpm_enable(struct radeon_device *rdev)
 
 	rv6xx_program_power_level_enter_state(rdev);
 
-	rv6xx_calculate_stepping_parameters(rdev);
+	rv6xx_calculate_stepping_parameters(rdev, boot_ps);
 
 	if (pi->voltage_control)
 		rv6xx_program_voltage_gpio_pins(rdev);
 
-	rv6xx_generate_stepping_table(rdev);
+	rv6xx_generate_stepping_table(rdev, boot_ps);
 
 	rv6xx_program_stepping_parameters_except_lowest_entry(rdev);
 	rv6xx_program_stepping_parameters_lowest_entry(rdev);
@@ -1551,10 +1571,10 @@ int rv6xx_dpm_enable(struct radeon_device *rdev)
 	r600_start_dpm(rdev);
 
 	if (pi->voltage_control)
-		rv6xx_enable_static_voltage_control(rdev, false);
+		rv6xx_enable_static_voltage_control(rdev, boot_ps, false);
 
 	if (pi->dynamic_pcie_gen2)
-		rv6xx_enable_dynamic_pcie_gen2(rdev, true);
+		rv6xx_enable_dynamic_pcie_gen2(rdev, boot_ps, true);
 
 	if (pi->gfx_clock_gating)
 		r600_gfx_clockgating_enable(rdev, true);
@@ -1565,6 +1585,7 @@ int rv6xx_dpm_enable(struct radeon_device *rdev)
 void rv6xx_dpm_disable(struct radeon_device *rdev)
 {
 	struct rv6xx_power_info *pi = rv6xx_get_pi(rdev);
+	struct radeon_ps *boot_ps = rdev->pm.dpm.boot_ps;
 
 	if (!r600_dynamicpm_enabled(rdev))
 		return;
@@ -1588,10 +1609,10 @@ void rv6xx_dpm_disable(struct radeon_device *rdev)
 	rv6xx_enable_spread_spectrum(rdev, false);
 
 	if (pi->voltage_control)
-		rv6xx_enable_static_voltage_control(rdev, true);
+		rv6xx_enable_static_voltage_control(rdev, boot_ps, true);
 
 	if (pi->dynamic_pcie_gen2)
-		rv6xx_enable_dynamic_pcie_gen2(rdev, false);
+		rv6xx_enable_dynamic_pcie_gen2(rdev, boot_ps, false);
 
 	if (rdev->irq.installed &&
 	    r600_is_internal_thermal_sensor(rdev->pm.int_thermal_type)) {
@@ -1608,6 +1629,8 @@ void rv6xx_dpm_disable(struct radeon_device *rdev)
 int rv6xx_dpm_set_power_state(struct radeon_device *rdev)
 {
 	struct rv6xx_power_info *pi = rv6xx_get_pi(rdev);
+	struct radeon_ps *new_ps = rdev->pm.dpm.requested_ps;
+	struct radeon_ps *old_ps = rdev->pm.dpm.current_ps;
 
 	rv6xx_clear_vc(rdev);
 	r600_power_level_enable(rdev, R600_POWER_LEVEL_LOW, true);
@@ -1620,20 +1643,20 @@ int rv6xx_dpm_set_power_state(struct radeon_device *rdev)
 	r600_power_level_enable(rdev, R600_POWER_LEVEL_HIGH, false);
 	r600_power_level_enable(rdev, R600_POWER_LEVEL_MEDIUM, false);
 
-	rv6xx_generate_transition_stepping(rdev);
+	rv6xx_generate_transition_stepping(rdev, new_ps, old_ps);
 	rv6xx_program_power_level_medium_for_transition(rdev);
 
 	if (pi->voltage_control) {
-		rv6xx_set_sw_voltage_to_safe(rdev);
+		rv6xx_set_sw_voltage_to_safe(rdev, new_ps, old_ps);
 		if (rdev->pm.dpm.platform_caps & ATOM_PP_PLATFORM_CAP_STEPVDDC)
-			rv6xx_set_sw_voltage_to_low(rdev);
+			rv6xx_set_sw_voltage_to_low(rdev, old_ps);
 	}
 
 	if (rdev->pm.dpm.platform_caps & ATOM_PP_PLATFORM_CAP_BACKBIAS)
-		rv6xx_set_safe_backbias(rdev);
+		rv6xx_set_safe_backbias(rdev, new_ps, old_ps);
 
 	if (pi->dynamic_pcie_gen2)
-		rv6xx_set_safe_pcie_gen2(rdev);
+		rv6xx_set_safe_pcie_gen2(rdev, new_ps, old_ps);
 
 	if (pi->voltage_control)
 		rv6xx_enable_dynamic_voltage_control(rdev, false);
@@ -1643,7 +1666,7 @@ int rv6xx_dpm_set_power_state(struct radeon_device *rdev)
 
 	if (pi->voltage_control) {
 		if (rdev->pm.dpm.platform_caps & ATOM_PP_PLATFORM_CAP_STEPVDDC)
-			rv6xx_step_voltage_if_increasing(rdev);
+			rv6xx_step_voltage_if_increasing(rdev, new_ps, old_ps);
 		msleep((rdev->pm.dpm.voltage_response_time + 999) / 1000);
 	}
 
@@ -1651,9 +1674,9 @@ int rv6xx_dpm_set_power_state(struct radeon_device *rdev)
 	r600_power_level_enable(rdev, R600_POWER_LEVEL_LOW, false);
 	r600_wait_for_power_level_unequal(rdev, R600_POWER_LEVEL_LOW);
 
-	rv6xx_generate_low_step(rdev);
+	rv6xx_generate_low_step(rdev, new_ps);
 	rv6xx_invalidate_intermediate_steps(rdev);
-	rv6xx_calculate_stepping_parameters(rdev);
+	rv6xx_calculate_stepping_parameters(rdev, new_ps);
 	rv6xx_program_stepping_parameters_lowest_entry(rdev);
 	rv6xx_program_power_level_low_to_lowest_state(rdev);
 
@@ -1663,7 +1686,7 @@ int rv6xx_dpm_set_power_state(struct radeon_device *rdev)
 
 	if (pi->voltage_control) {
 		if (rdev->pm.dpm.platform_caps & ATOM_PP_PLATFORM_CAP_STEPVDDC)
-			rv6xx_step_voltage_if_decreasing(rdev);
+			rv6xx_step_voltage_if_decreasing(rdev, new_ps, old_ps);
 		rv6xx_enable_dynamic_voltage_control(rdev, true);
 	}
 
@@ -1671,11 +1694,11 @@ int rv6xx_dpm_set_power_state(struct radeon_device *rdev)
 		rv6xx_enable_dynamic_backbias_control(rdev, true);
 
 	if (pi->dynamic_pcie_gen2)
-		rv6xx_enable_dynamic_pcie_gen2(rdev, true);
+		rv6xx_enable_dynamic_pcie_gen2(rdev, new_ps, true);
 
 	rv6xx_reset_lvtm_data_sync(rdev);
 
-	rv6xx_generate_stepping_table(rdev);
+	rv6xx_generate_stepping_table(rdev, new_ps);
 	rv6xx_program_stepping_parameters_except_lowest_entry(rdev);
 	rv6xx_program_power_level_low(rdev);
 	rv6xx_program_power_level_medium(rdev);
