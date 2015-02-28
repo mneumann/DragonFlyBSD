@@ -164,6 +164,7 @@ static u32 tn_rlc_save_restore_register_list_size = ARRAY_SIZE(tn_rlc_save_resto
 
 extern void evergreen_print_gpu_status_regs(struct radeon_device *rdev);
 extern void evergreen_pcie_gen2_enable(struct radeon_device *rdev);
+extern void evergreen_program_aspm(struct radeon_device *rdev);
 
 /* Firmware Names */
 MODULE_FIRMWARE("radeon/BARTS_pfp.bin");
@@ -2112,6 +2113,8 @@ static int cayman_startup(struct radeon_device *rdev)
 
 	/* enable pcie gen2 link */
 	evergreen_pcie_gen2_enable(rdev);
+	/* enable aspm */
+	evergreen_program_aspm(rdev);
 
 	if (rdev->flags & RADEON_IS_IGP) {
 		if (!rdev->me_fw || !rdev->pfp_fw || !rdev->rlc_fw) {
