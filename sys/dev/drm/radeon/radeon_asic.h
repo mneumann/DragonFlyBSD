@@ -671,7 +671,16 @@ void si_rlc_fini(struct radeon_device *rdev);
 int si_rlc_init(struct radeon_device *rdev);
 void si_vram_gtt_location(struct radeon_device *rdev,
 			  struct radeon_mc *mc);
-
+int si_dpm_init(struct radeon_device *rdev);
+void si_dpm_setup_asic(struct radeon_device *rdev);
+int si_dpm_enable(struct radeon_device *rdev);
+void si_dpm_disable(struct radeon_device *rdev);
+int si_dpm_pre_set_power_state(struct radeon_device *rdev);
+int si_dpm_set_power_state(struct radeon_device *rdev);
+void si_dpm_post_set_power_state(struct radeon_device *rdev);
+void si_dpm_fini(struct radeon_device *rdev);
+void si_dpm_display_configuration_changed(struct radeon_device *rdev);
+ 
 /* DCE8 - CIK */
 void dce8_bandwidth_update(struct radeon_device *rdev);
 

@@ -25,6 +25,7 @@
  */
 
 #include <drm/drmP.h>
+#include <linux/firmware.h>
 #include "radeon.h"
 #include "radeon_asic.h"
 #include <uapi_drm/radeon_drm.h>
@@ -42,9 +43,38 @@
 #define PCI_EXP_DEVSTA_TRPND 0x0020
 #define PCI_EXP_LNKCAP_CLKPM 0x00040000
 
-extern void evergreen_print_gpu_status_regs(struct radeon_device *rdev);
+MODULE_FIRMWARE("radeon/TAHITI_ce.bin");
+MODULE_FIRMWARE("radeon/TAHITI_mc.bin");
+MODULE_FIRMWARE("radeon/TAHITI_rlc.bin");
+MODULE_FIRMWARE("radeon/TAHITI_smc.bin");
+MODULE_FIRMWARE("radeon/PITCAIRN_pfp.bin");
+MODULE_FIRMWARE("radeon/PITCAIRN_me.bin");
+MODULE_FIRMWARE("radeon/PITCAIRN_ce.bin");
+MODULE_FIRMWARE("radeon/PITCAIRN_mc.bin");
+MODULE_FIRMWARE("radeon/PITCAIRN_rlc.bin");
+MODULE_FIRMWARE("radeon/PITCAIRN_smc.bin");
+MODULE_FIRMWARE("radeon/VERDE_pfp.bin");
+MODULE_FIRMWARE("radeon/VERDE_me.bin");
+MODULE_FIRMWARE("radeon/VERDE_ce.bin");
+MODULE_FIRMWARE("radeon/VERDE_mc.bin");
+MODULE_FIRMWARE("radeon/VERDE_rlc.bin");
+MODULE_FIRMWARE("radeon/VERDE_smc.bin");
+MODULE_FIRMWARE("radeon/OLAND_pfp.bin");
+MODULE_FIRMWARE("radeon/OLAND_me.bin");
+MODULE_FIRMWARE("radeon/OLAND_ce.bin");
+MODULE_FIRMWARE("radeon/OLAND_mc.bin");
+MODULE_FIRMWARE("radeon/OLAND_rlc.bin");
+MODULE_FIRMWARE("radeon/OLAND_smc.bin");
+MODULE_FIRMWARE("radeon/HAINAN_pfp.bin");
+MODULE_FIRMWARE("radeon/HAINAN_me.bin");
+MODULE_FIRMWARE("radeon/HAINAN_ce.bin");
+MODULE_FIRMWARE("radeon/HAINAN_mc.bin");
+MODULE_FIRMWARE("radeon/HAINAN_rlc.bin");
+MODULE_FIRMWARE("radeon/HAINAN_smc.bin");
+
 static void si_pcie_gen3_enable(struct radeon_device *rdev);
 static void si_program_aspm(struct radeon_device *rdev);
+extern void evergreen_print_gpu_status_regs(struct radeon_device *rdev);
 
 static const u32 verde_rlc_save_restore_register_list[] =
 {
@@ -1512,6 +1542,7 @@ static int si_init_microcode(struct radeon_device *rdev)
 	const char *chip_name;
 	const char *rlc_chip_name;
 	size_t pfp_req_size, me_req_size, ce_req_size, rlc_req_size, mc_req_size;
+	size_t smc_req_size;
 	char fw_name[30];
 	int err;
 
@@ -1526,6 +1557,7 @@ static int si_init_microcode(struct radeon_device *rdev)
 		ce_req_size = SI_CE_UCODE_SIZE * 4;
 		rlc_req_size = SI_RLC_UCODE_SIZE * 4;
 		mc_req_size = SI_MC_UCODE_SIZE * 4;
+		smc_req_size = ALIGN(TAHITI_SMC_UCODE_SIZE, 4);
 		break;
 	case CHIP_PITCAIRN:
 		chip_name = "PITCAIRN";
@@ -1535,6 +1567,7 @@ static int si_init_microcode(struct radeon_device *rdev)
 		ce_req_size = SI_CE_UCODE_SIZE * 4;
 		rlc_req_size = SI_RLC_UCODE_SIZE * 4;
 		mc_req_size = SI_MC_UCODE_SIZE * 4;
+		smc_req_size = ALIGN(PITCAIRN_SMC_UCODE_SIZE, 4);
 		break;
 	case CHIP_VERDE:
 		chip_name = "VERDE";
@@ -1544,6 +1577,7 @@ static int si_init_microcode(struct radeon_device *rdev)
 		ce_req_size = SI_CE_UCODE_SIZE * 4;
 		rlc_req_size = SI_RLC_UCODE_SIZE * 4;
 		mc_req_size = SI_MC_UCODE_SIZE * 4;
+		smc_req_size = ALIGN(VERDE_SMC_UCODE_SIZE, 4);
 		break;
 	case CHIP_OLAND:
 		chip_name = "OLAND";
@@ -1553,6 +1587,7 @@ static int si_init_microcode(struct radeon_device *rdev)
 		ce_req_size = SI_CE_UCODE_SIZE * 4;
 		rlc_req_size = SI_RLC_UCODE_SIZE * 4;
 		mc_req_size = OLAND_MC_UCODE_SIZE * 4;
+		smc_req_size = ALIGN(OLAND_SMC_UCODE_SIZE, 4);
 		break;
 	case CHIP_HAINAN:
 		chip_name = "HAINAN";
@@ -1562,6 +1597,7 @@ static int si_init_microcode(struct radeon_device *rdev)
 		ce_req_size = SI_CE_UCODE_SIZE * 4;
 		rlc_req_size = SI_RLC_UCODE_SIZE * 4;
 		mc_req_size = OLAND_MC_UCODE_SIZE * 4;
+		smc_req_size = ALIGN(HAINAN_SMC_UCODE_SIZE, 4);
 		break;
 	default: panic("%s: Unsupported family %d", __func__, rdev->family);
 	}
@@ -1636,6 +1672,19 @@ static int si_init_microcode(struct radeon_device *rdev)
 		err = -EINVAL;
 	}
 
+	ksnprintf(fw_name, sizeof(fw_name), "radeon/%s_smc.bin", chip_name);
+	rdev->smc_fw = firmware_get(fw_name);
+	if (rdev->smc_fw == NULL) {
+		err = -ENOENT;
+		goto out;
+	}
+	if (rdev->smc_fw->datasize != smc_req_size) {
+		DRM_ERROR(
+		       "si_smc: Bogus length %zu in firmware \"%s\"\n",
+		       rdev->smc_fw->datasize, fw_name);
+		err = -EINVAL;
+	}
+
 out:
 	if (err) {
 		if (err != -EINVAL)
@@ -1661,6 +1710,10 @@ out:
 		if (rdev->mc_fw != NULL) {
 			firmware_put(rdev->mc_fw, FIRMWARE_UNLOAD);
 			rdev->mc_fw = NULL;
+		}
+		if (rdev->smc_fw != NULL) {
+			firmware_put(rdev->smc_fw, FIRMWARE_UNLOAD);
+			rdev->smc_fw = NULL;
 		}
 	}
 	return err;
@@ -1695,6 +1748,11 @@ static void si_fini_microcode(struct radeon_device *rdev)
 	if (rdev->mc_fw != NULL) {
 		firmware_put(rdev->mc_fw, FIRMWARE_UNLOAD);
 		rdev->mc_fw = NULL;
+	}
+
+	if (rdev->smc_fw != NULL) {
+		firmware_put(rdev->smc_fw, FIRMWARE_UNLOAD);
+		rdev->smc_fw = NULL;
 	}
 
 	if (rdev->ce_fw != NULL) {
@@ -5445,6 +5503,7 @@ int si_irq_set(struct radeon_device *rdev)
 	u32 grbm_int_cntl = 0;
 	u32 grph1 = 0, grph2 = 0, grph3 = 0, grph4 = 0, grph5 = 0, grph6 = 0;
 	u32 dma_cntl, dma_cntl1;
+	u32 thermal_int = 0;
 
 	if (!rdev->irq.installed) {
 		DRM_ERROR("Can't enable IRQ/MSI because no handler is installed\n");
@@ -5469,6 +5528,9 @@ int si_irq_set(struct radeon_device *rdev)
 
 	dma_cntl = RREG32(DMA_CNTL + DMA0_REGISTER_OFFSET) & ~TRAP_ENABLE;
 	dma_cntl1 = RREG32(DMA_CNTL + DMA1_REGISTER_OFFSET) & ~TRAP_ENABLE;
+
+	thermal_int = RREG32(CG_THERMAL_INT) &
+		~(THERM_INT_MASK_HIGH | THERM_INT_MASK_LOW);
 
 	/* enable CP interrupts on all rings */
 	if (atomic_read(&rdev->irq.ring_int[RADEON_RING_TYPE_GFX_INDEX])) {
@@ -5556,6 +5618,11 @@ int si_irq_set(struct radeon_device *rdev)
 
 	WREG32(GRBM_INT_CNTL, grbm_int_cntl);
 
+	if (rdev->irq.dpm_thermal) {
+		DRM_DEBUG("dpm thermal\n");
+		thermal_int |= THERM_INT_MASK_HIGH | THERM_INT_MASK_LOW;
+	}
+
 	if (rdev->num_crtc >= 2) {
 		WREG32(INT_MASK + EVERGREEN_CRTC0_REGISTER_OFFSET, crtc1);
 		WREG32(INT_MASK + EVERGREEN_CRTC1_REGISTER_OFFSET, crtc2);
@@ -5590,6 +5657,8 @@ int si_irq_set(struct radeon_device *rdev)
 		WREG32(DC_HPD5_INT_CONTROL, hpd5);
 		WREG32(DC_HPD6_INT_CONTROL, hpd6);
 	}
+
+	WREG32(CG_THERMAL_INT, thermal_int);
 
 	return 0;
 }
@@ -5755,6 +5824,7 @@ irqreturn_t si_irq_process(struct radeon_device *rdev)
 	u32 src_id, src_data, ring_id;
 	u32 ring_index;
 	bool queue_hotplug = false;
+	bool queue_thermal = false;
 
 	if (!rdev->ih.enabled || rdev->shutdown)
 		return IRQ_NONE;
@@ -6025,6 +6095,16 @@ restart_ih:
 			DRM_DEBUG("IH: DMA trap\n");
 			radeon_fence_process(rdev, R600_RING_TYPE_DMA_INDEX);
 			break;
+		case 230: /* thermal low to high */
+			DRM_DEBUG("IH: thermal low to high\n");
+			rdev->pm.dpm.thermal.high_to_low = false;
+			queue_thermal = true;
+			break;
+		case 231: /* thermal high to low */
+			DRM_DEBUG("IH: thermal high to low\n");
+			rdev->pm.dpm.thermal.high_to_low = true;
+			queue_thermal = true;
+			break;
 		case 233: /* GUI IDLE */
 			DRM_DEBUG("IH: GUI idle\n");
 			break;
@@ -6043,6 +6123,9 @@ restart_ih:
 	}
 	if (queue_hotplug)
 		taskqueue_enqueue(rdev->tq, &rdev->hotplug_work);
+	if (queue_thermal && rdev->pm.dpm_enabled)
+		taskqueue_enqueue(rdev->tq, &rdev->pm.dpm.thermal.work);
+
 	rdev->ih.rptr = rptr;
 	WREG32(IH_RB_RPTR, rdev->ih.rptr);
 	atomic_set(&rdev->ih.lock, 0);
