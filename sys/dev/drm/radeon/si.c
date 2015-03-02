@@ -32,13 +32,8 @@
 #include "atom.h"
 #include "si_blit_shaders.h"
 #include "clearstate_si.h"
+#include "radeon_ucode.h"
 
-#define SI_PFP_UCODE_SIZE 2144
-#define SI_PM4_UCODE_SIZE 2144
-#define SI_CE_UCODE_SIZE 2144
-#define SI_RLC_UCODE_SIZE 2048
-#define SI_MC_UCODE_SIZE 7769
-#define OLAND_MC_UCODE_SIZE 7863
 
 #define PCI_EXP_LNKCTL PCIER_LINKCTRL /* 16 */
 #define PCI_EXP_LNKCTL2 48
