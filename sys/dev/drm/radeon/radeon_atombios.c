@@ -3142,7 +3142,7 @@ radeon_atom_is_voltage_gpio(struct radeon_device *rdev,
 				break;
 			case 2:
 				num_indices = (size - sizeof(ATOM_COMMON_TABLE_HEADER)) /
-					sizeof(ATOM_VOLTAGE_OBJECT_INFO_V2);
+					sizeof(ATOM_VOLTAGE_OBJECT_V2);
 
 				for (i = 0; i < num_indices; i++) {
 					if ((voltage_info->v2.asVoltageObj[i].ucVoltageType == voltage_type) &&
@@ -3223,7 +3223,7 @@ int radeon_atom_get_max_voltage(struct radeon_device *rdev,
 			break;
 		case 2:
 			num_indices = (size - sizeof(ATOM_COMMON_TABLE_HEADER)) /
-				sizeof(ATOM_VOLTAGE_OBJECT_INFO_V2);
+				sizeof(ATOM_VOLTAGE_OBJECT_V2);
 
 			for (i = 0; i < num_indices; i++) {
 				if (voltage_info->v2.asVoltageObj[i].ucVoltageType == voltage_type) {
@@ -3279,7 +3279,7 @@ int radeon_atom_get_min_voltage(struct radeon_device *rdev,
 			break;
 		case 2:
 			num_indices = (size - sizeof(ATOM_COMMON_TABLE_HEADER)) /
-				sizeof(ATOM_VOLTAGE_OBJECT_INFO_V2);
+				sizeof(ATOM_VOLTAGE_OBJECT_V2);
 
 			for (i = 0; i < num_indices; i++) {
 				if (voltage_info->v2.asVoltageObj[i].ucVoltageType == voltage_type) {
@@ -3398,7 +3398,7 @@ int radeon_atom_get_voltage_table(struct radeon_device *rdev,
 				return -EINVAL;
 			case 2:
 				num_indices = (size - sizeof(ATOM_COMMON_TABLE_HEADER)) /
-					sizeof(ATOM_VOLTAGE_OBJECT_INFO_V2);
+					sizeof(ATOM_VOLTAGE_OBJECT_V2);
 
 				for (i = 0; i < num_indices; i++) {
 					if (voltage_info->v2.asVoltageObj[i].ucVoltageType == voltage_type) {
