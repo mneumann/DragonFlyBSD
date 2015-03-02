@@ -3800,8 +3800,10 @@ int ni_dpm_set_power_state(struct radeon_device *rdev)
 #if 0
 	/* XXX */
 	ret = ni_unrestrict_performance_levels_after_switch(rdev);
-	if (ret)
+	if (ret) {
+		DRM_ERROR("ni_unrestrict_performance_levels_after_switch failed\n");
 		return ret;
+	}
 #endif
 
 	return 0;
