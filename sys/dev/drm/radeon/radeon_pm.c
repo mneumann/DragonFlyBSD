@@ -1290,7 +1290,6 @@ static void radeon_pm_compute_clocks_old(struct radeon_device *rdev)
 	if (rdev->pm.num_power_states < 2)
 		return;
 
-	TASK_INIT(&rdev->pm.dpm.thermal.work, 0, radeon_dpm_thermal_work_handler, rdev);
 	lockmgr(&rdev->pm.mutex, LK_EXCLUSIVE);
 
 	rdev->pm.active_crtcs = 0;
