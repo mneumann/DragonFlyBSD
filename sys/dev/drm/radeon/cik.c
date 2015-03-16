@@ -5977,6 +5977,8 @@ static int cik_startup(struct radeon_device *rdev)
 	struct radeon_ring *ring;
 	int r;
 
+	cik_mc_program(rdev);
+
 	if (rdev->flags & RADEON_IS_IGP) {
 		if (!rdev->me_fw || !rdev->pfp_fw || !rdev->ce_fw ||
 		    !rdev->mec_fw || !rdev->sdma_fw || !rdev->rlc_fw) {
@@ -6008,7 +6010,6 @@ static int cik_startup(struct radeon_device *rdev)
 	if (r)
 		return r;
 
-	cik_mc_program(rdev);
 	r = cik_pcie_gart_enable(rdev);
 	if (r)
 		return r;
