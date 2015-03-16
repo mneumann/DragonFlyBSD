@@ -730,7 +730,7 @@ static __unused int ci_mc_load_microcode(struct radeon_device *rdev)
  * the driver (not loaded into hw).
  * Returns 0 on success, error on failure.
  */
-static __unused int cik_init_microcode(struct radeon_device *rdev)
+static int cik_init_microcode(struct radeon_device *rdev)
 {
 	const char *chip_name;
 	size_t pfp_req_size, me_req_size, ce_req_size,
