@@ -5282,14 +5282,12 @@ static void si_enable_mc_ls(struct radeon_device *rdev,
 
 static void si_init_cg(struct radeon_device *rdev)
 {
-	bool has_uvd = true;
-
 	si_enable_mgcg(rdev, true);
 	si_enable_cgcg(rdev, true);
 	/* disable MC LS on Tahiti */
 	if (rdev->family == CHIP_TAHITI)
 		si_enable_mc_ls(rdev, false);
-	if (has_uvd) {
+	if (rdev->has_uvd) {
 		si_enable_uvd_mgcg(rdev, true);
 		si_init_uvd_internal_cg(rdev);
 	}
@@ -5297,9 +5295,7 @@ static void si_init_cg(struct radeon_device *rdev)
 
 static void si_fini_cg(struct radeon_device *rdev)
 {
-	bool has_uvd = true;
-
-	if (has_uvd)
+	if (rdev->has_uvd)
 		si_enable_uvd_mgcg(rdev, false);
 	si_enable_cgcg(rdev, false);
 	si_enable_mgcg(rdev, false);
