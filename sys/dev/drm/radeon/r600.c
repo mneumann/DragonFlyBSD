@@ -2316,12 +2316,14 @@ int r600_init_microcode(struct radeon_device *rdev)
 
 	if ((rdev->family >= CHIP_RV770) && (rdev->family <= CHIP_HEMLOCK)) {
 		ksnprintf(fw_name, sizeof(fw_name), "radeon/%s_smc.bin", smc_chip_name);
-		rdev->smc_fw = firmware_get(fw_name);
-		if (rdev->smc_fw == NULL) {
-			err = -ENOENT;
-			goto out;
-		}
-		if (rdev->smc_fw->datasize != smc_req_size) {
+ 		err = request_firmware(&rdev->smc_fw, fw_name, rdev->dev);
+		if (err) {
+			printk(KERN_ERR
+			       "smc: error loading firmware \"%s\"\n",
+			       fw_name);
+			release_firmware(rdev->smc_fw);
+			rdev->smc_fw = NULL;
+		} else if (rdev->smc_fw->datasize != smc_req_size) {
 			printk(KERN_ERR
 			       "smc: Bogus length %zu in firmware \"%s\"\n",
 			       rdev->smc_fw->datasize, fw_name);
