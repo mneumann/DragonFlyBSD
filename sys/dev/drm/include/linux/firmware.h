@@ -27,6 +27,23 @@
 #ifndef _LINUX_FIRMWARE_H_
 #define _LINUX_FIRMWARE_H_
 
+#include <sys/bus.h>
+#include <sys/firmware.h>
+
 #define MODULE_FIRMWARE(name)
+
+static inline int
+request_firmware(const struct firmware **fw, const char *name, __unused device_t dev) {
+	*fw = firmware_get(name);
+	if (*fw) {
+		return 0;
+	}
+	return -1;
+}
+
+static inline void
+release_firmware(const struct firmware *fw) {
+	firmware_put(fw, FIRMWARE_UNLOAD);
+}
 
 #endif	/* _LINUX_FIRMWARE_H_ */
