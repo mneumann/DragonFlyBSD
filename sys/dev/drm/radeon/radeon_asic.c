@@ -35,6 +35,7 @@
 #include "radeon.h"
 #include "radeon_asic.h"
 #include "atom.h"
+#include "rv770_dpm.h"
 
 /*
  * Registers accessors functions.
@@ -1390,6 +1391,7 @@ static struct radeon_asic rv770_asic = {
 		.get_mclk = &rv770_dpm_get_mclk,
 		.print_power_state = &rv770_dpm_print_power_state,
 		.debugfs_print_current_performance_level = &rv770_dpm_debugfs_print_current_performance_level,
+		.force_performance_level = &rv770_dpm_force_performance_level,
 	},
 	.pflip = {
 		.pre_page_flip = &rs600_pre_page_flip,
@@ -1513,6 +1515,7 @@ static struct radeon_asic evergreen_asic = {
 		.get_mclk = &rv770_dpm_get_mclk,
 		.print_power_state = &rv770_dpm_print_power_state,
 		.debugfs_print_current_performance_level = &rv770_dpm_debugfs_print_current_performance_level,
+		.force_performance_level = &rv770_dpm_force_performance_level,
 	},
 	.pflip = {
 		.pre_page_flip = &evergreen_pre_page_flip,
@@ -1759,6 +1762,7 @@ static struct radeon_asic btc_asic = {
 		.get_mclk = &btc_dpm_get_mclk,
 		.print_power_state = &rv770_dpm_print_power_state,
 		.debugfs_print_current_performance_level = &rv770_dpm_debugfs_print_current_performance_level,
+		.force_performance_level = &rv770_dpm_force_performance_level,
 	},
 	.pflip = {
 		.pre_page_flip = &evergreen_pre_page_flip,
