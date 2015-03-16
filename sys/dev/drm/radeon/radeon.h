@@ -68,6 +68,7 @@
 #include <sys/systm.h>
 #include <sys/linker.h>
 #include <sys/firmware.h>
+#include <linux/seq_file.h>
 
 #include <contrib/dev/acpica/source/include/acpi.h>
 #include <dev/acpica/acpivar.h>
@@ -1687,6 +1688,7 @@ struct radeon_asic {
 		u32 (*get_sclk)(struct radeon_device *rdev, bool low);
 		u32 (*get_mclk)(struct radeon_device *rdev, bool low);
 		void (*print_power_state)(struct radeon_device *rdev, struct radeon_ps *ps);
+		void (*debugfs_print_current_performance_level)(struct radeon_device *rdev, struct seq_file *m);
 	} dpm;
 	/* pageflipping */
 	struct {
@@ -2457,6 +2459,7 @@ void radeon_ring_write(struct radeon_ring *ring, uint32_t v);
 #define radeon_dpm_get_sclk(rdev, l) rdev->asic->dpm.get_sclk((rdev), (l))
 #define radeon_dpm_get_mclk(rdev, l) rdev->asic->dpm.get_mclk((rdev), (l))
 #define radeon_dpm_print_power_state(rdev, ps) rdev->asic->dpm.print_power_state((rdev), (ps))
+#define radeon_dpm_debugfs_print_current_performance_level(rdev, m) rdev->asic->dpm.debugfs_print_current_performance_level((rdev), (m))
 
 /* Common functions */
 /* AGP */
