@@ -4592,6 +4592,7 @@ irqreturn_t evergreen_irq_process(struct radeon_device *rdev)
 	bool queue_hotplug = false;
 	bool queue_hdmi = false;
 	bool queue_thermal = false;
+	u32 status, addr;
 
 	if (!rdev->ih.enabled || rdev->shutdown)
 		return IRQ_NONE;
@@ -4878,11 +4879,14 @@ restart_ih:
 			break;
 		case 146:
 		case 147:
+			addr = RREG32(VM_CONTEXT1_PROTECTION_FAULT_ADDR);
+			status = RREG32(VM_CONTEXT1_PROTECTION_FAULT_STATUS);
 			dev_err(rdev->dev, "GPU fault detected: %d 0x%08x\n", src_id, src_data);
 			dev_err(rdev->dev, "  VM_CONTEXT1_PROTECTION_FAULT_ADDR   0x%08X\n",
-				RREG32(VM_CONTEXT1_PROTECTION_FAULT_ADDR));
+				addr);
 			dev_err(rdev->dev, "  VM_CONTEXT1_PROTECTION_FAULT_STATUS 0x%08X\n",
-				RREG32(VM_CONTEXT1_PROTECTION_FAULT_STATUS));
+				status);
+			cayman_vm_decode_fault(rdev, status, addr);
 			/* reset addr and status */
 			WREG32_P(VM_CONTEXT1_CNTL2, 1, ~1);
 			break;
