@@ -1626,6 +1626,11 @@ struct radeon_pm {
 	enum radeon_int_thermal_type int_thermal_type;
 	struct ksensor		*int_sensor;
 	struct ksensordev	*int_sensordev;
+	/* fan control parameters */
+	bool                    no_fan;
+	u8                      fan_pulses_per_revolution;
+	u8                      fan_min_rpm;
+	u8                      fan_max_rpm;
 	/* dpm */
 	bool                    dpm_enabled;
 	struct radeon_dpm       dpm;
