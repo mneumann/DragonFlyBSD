@@ -1334,7 +1334,7 @@ int radeon_device_init(struct radeon_device *rdev,
 	/* Set asic functions */
 	r = radeon_asic_init(rdev);
 	if (r)
-		return r;
+		goto failed;
 
 	/* all of the newer IGP chips have an internal gart
 	 * However some rs4xx report as AGP, so remove that here.
@@ -1674,6 +1674,11 @@ int radeon_suspend_kms(struct drm_device *dev, bool suspend, bool fbcon)
 #endif /* DUMBBELL_WIP */
 	}
 	return 0;
+
+failed:
+	if (runtime)
+		vga_switcheroo_fini_domain_pm_ops(rdev->dev);
+	return r;
 }
 
 /**
