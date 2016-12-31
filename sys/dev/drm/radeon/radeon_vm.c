@@ -140,7 +140,6 @@ struct radeon_cs_reloc *radeon_vm_get_bos(struct radeon_device *rdev,
 		return NULL;
 
 	/* add the vm page table to the list */
-	list[0].gobj = NULL;
 	list[0].robj = vm->page_directory;
 	list[0].prefered_domains = RADEON_GEM_DOMAIN_VRAM;
 	list[0].allowed_domains = RADEON_GEM_DOMAIN_VRAM;
@@ -153,7 +152,6 @@ struct radeon_cs_reloc *radeon_vm_get_bos(struct radeon_device *rdev,
 		if (!vm->page_tables[i].bo)
 			continue;
 
-		list[idx].gobj = NULL;
 		list[idx].robj = vm->page_tables[i].bo;
 		list[idx].prefered_domains = RADEON_GEM_DOMAIN_VRAM;
 		list[idx].allowed_domains = RADEON_GEM_DOMAIN_VRAM;
