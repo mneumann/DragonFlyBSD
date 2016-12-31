@@ -1315,6 +1315,7 @@ int radeon_device_init(struct radeon_device *rdev,
 		 LK_CANRECURSE);
 	spin_init(&rdev->gpu_clock_mutex, "radeon_clockmtx");
 	spin_init(&rdev->srbm_mutex, "radeon_srbm_mutex");
+	spin_init(&rdev->grbm_idx_mutex, "radeon_grbm_idx_mutex");
 	lockinit(&rdev->pm.mclk_lock, "drm__radeon_device__pm__mclk_lock", 0,
 		 LK_CANRECURSE);
 	lockinit(&rdev->exclusive_lock, "drm__radeon_device__exclusive_lock",
