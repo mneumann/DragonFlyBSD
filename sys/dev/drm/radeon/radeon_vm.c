@@ -460,7 +460,7 @@ error:
  * Validate and set the offset requested within the vm address space.
  * Returns 0 for success, error for failure.
  *
- * Object has to be reserved!
+ * Object has to be reserved and gets unreserved by this function!
  */
 int radeon_vm_bo_set_addr(struct radeon_device *rdev,
 			  struct radeon_bo_va *bo_va,
@@ -585,7 +585,7 @@ int radeon_vm_bo_set_addr(struct radeon_device *rdev,
 	}
 
 	lockmgr(&vm->mutex, LK_RELEASE);
-	return radeon_bo_reserve(bo_va->bo, false);
+	return 0;
 }
 
 /**
