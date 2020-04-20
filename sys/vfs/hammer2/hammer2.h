@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2018 The DragonFly Project.  All rights reserved.
+ * Copyright (c) 2011-2020 The DragonFly Project.  All rights reserved.
  *
  * This code is derived from software contributed to The DragonFly Project
  * by Matthew Dillon <dillon@dragonflybsd.org>
@@ -39,7 +39,7 @@
  * This header file contains structures used internally by the HAMMER2
  * implementation.  See hammer2_disk.h for on-disk structures.
  *
- * There is an in-memory representation of all on-media data structure.
+ * There is an in-memory representation of all on-media data structures.
  * Almost everything is represented by a hammer2_chain structure in-memory.
  * Other higher-level structures typically map to chains.
  *
@@ -264,6 +264,8 @@ struct hammer2_chain_core {
 	u_int		live_count;	/* live (not deleted) chains in tree */
 	u_int		chain_count;	/* live + deleted chains under core */
 	int		generation;	/* generation number (inserts only) */
+	uint64_t	cumulative_crc  /* cumulative CRC */
+
 };
 
 typedef struct hammer2_chain_core hammer2_chain_core_t;

@@ -49,7 +49,7 @@
  * Concurrent front-end operations can still run against backend flushes
  * as long as they do not cross the current flush boundary.  An operation
  * running above the current flush (in areas not yet flushed) can become
- * part of the current flush while ano peration running below the current
+ * part of the current flush while an operation running below the current
  * flush can become part of the next flush.
  */
 #include <sys/cdefs.h>
@@ -1521,6 +1521,8 @@ void
 hammer2_chain_countbrefs(hammer2_chain_t *chain,
 			 hammer2_blockref_t *base, int count)
 {
+	uint64_t cumulative_crc = 0;
+
 	hammer2_spin_ex(&chain->core.spin);
         if ((chain->flags & HAMMER2_CHAIN_COUNTEDBREFS) == 0) {
 		if (base) {
@@ -1533,12 +1535,18 @@ hammer2_chain_countbrefs(hammer2_chain_t *chain,
 				if (base[count].type != HAMMER2_BREF_TYPE_EMPTY)
 					atomic_add_int(&chain->core.live_count,
 						       1);
+
+				/* Accumulate the first 64-bits of the check code of each bref */
+				if (base[count].type == HAMMER2_BREF_TYPE_DATA)
+					cumulative_crc ^= base[count].xxhash64.value;
+
 				--count;
 			}
 		} else {
 			chain->core.live_zero = 0;
 		}
 		/* else do not modify live_count */
+		chain->core.cumulative_crc = cumulative_crc;
 		atomic_set_int(&chain->flags, HAMMER2_CHAIN_COUNTEDBREFS);
 	}
 	hammer2_spin_unex(&chain->core.spin);
@@ -5478,6 +5486,9 @@ hammer2_base_delete(hammer2_chain_t *parent,
 		}
 		/* fall through */
 	case HAMMER2_BREF_TYPE_INDIRECT:
+		if (scan -> type != HAMMER2_BREF_TYPE_INODE) {
+			parent->core.cumulative_crc ^= scan->bref.xxhash64.value;
+		}
 		if (scan->type != HAMMER2_BREF_TYPE_DATA) {
 			parent->bref.embed.stats.data_count -=
 				scan->embed.stats.data_count;
@@ -5589,6 +5600,9 @@ hammer2_base_insert(hammer2_chain_t *parent,
 			++parent->bref.leaf_count;
 		/* fall through */
 	case HAMMER2_BREF_TYPE_INDIRECT:
+		if (elm->type != HAMMER2_BREF_TYPE_INODE) {
+			parent->core.cumulative_crc ^= elm->xxhash64.valule;
+		}
 		if (elm->type != HAMMER2_BREF_TYPE_DATA) {
 			parent->bref.embed.stats.data_count +=
 				elm->embed.stats.data_count;
