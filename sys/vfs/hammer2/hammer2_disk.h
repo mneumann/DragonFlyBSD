@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2019 The DragonFly Project.  All rights reserved.
+ * Copyright (c) 2011-2020 The DragonFly Project.  All rights reserved.
  *
  * This code is derived from software contributed to The DragonFly Project
  * by Matthew Dillon <dillon@dragonflybsd.org>
@@ -62,7 +62,7 @@
 /*
  * The data at the end of a file or directory may be a fragment in order
  * to optimize storage efficiency.  The minimum fragment size is 1KB.
- * Since allocations are in powers of 2 fragments must also be sized in
+ * Since allocations are in powers of 2, fragments must also be sized in
  * powers of 2 (1024, 2048, ... 65536).
  *
  * For the moment the maximum allocation size is HAMMER2_PBUFSIZE (64K),
@@ -637,7 +637,7 @@ typedef struct hammer2_dirent_head hammer2_dirent_head_t;
  *
  * CONTENT ADDRESSABLE INDEXING (future) - Using a 256 or 512-bit check code.
  */
-struct hammer2_blockref {		/* MUST BE EXACTLY 64 BYTES */
+struct hammer2_blockref {		/* MUST BE EXACTLY 128 BYTES */
 	uint8_t		type;		/* type of underlying item */
 	uint8_t		methods;	/* check method & compression method */
 	uint8_t		copyid;		/* specify which copy this is */
@@ -1029,7 +1029,19 @@ struct hammer2_inode_meta {
 	 * (not yet implemented)
 	 */
 	uint64_t	decrypt_check;	/* 00E0 decryption validator */
-	hammer2_off_t	reservedE0[3];	/* 00E8/F0/F8 */
+
+	/*
+	 * Keeps a cumulative CRC over the data blocks of the inode as a simple
+	 * measure of (potential) file equality.
+	 *
+	 * Every time a block belonging to an inode gets updated or deleted,
+	 * it's inode's cumulative CRC will get updated. The check sections
+	 * of all blockrefs are used and XORed together to make the cumulative
+	 * CRC.
+	 */
+	uint64_t	cumulative_crc;	/* 00E8 cumulative CRC */
+	hammer2_off_t	reservedF0;	/* 00F0 (avail) */
+	hammer2_off_t	reservedF8;	/* 00F8 (avail) */
 } __packed;
 
 typedef struct hammer2_inode_meta hammer2_inode_meta_t;
