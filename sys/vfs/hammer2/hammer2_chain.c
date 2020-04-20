@@ -5601,7 +5601,7 @@ hammer2_base_insert(hammer2_chain_t *parent,
 		/* fall through */
 	case HAMMER2_BREF_TYPE_INDIRECT:
 		if (elm->type != HAMMER2_BREF_TYPE_INODE) {
-			parent->core.cumulative_crc ^= elm->xxhash64.valule;
+			parent->core.cumulative_crc ^= elm->xxhash64.value;
 		}
 		if (elm->type != HAMMER2_BREF_TYPE_DATA) {
 			parent->bref.embed.stats.data_count +=
