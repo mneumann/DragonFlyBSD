@@ -5420,7 +5420,7 @@ static __inline void
 update_delta_crc(uint64_t *delta_crc, hammer2_blockref_t *bref)
 {
 	// XXX: Include offset
-	*delta_crc ^= bref->xxhash64.value;
+	*delta_crc ^= bref->check.xxhash64.value;
 }
 
 /*
@@ -5485,7 +5485,7 @@ hammer2_base_delete(hammer2_chain_t *parent,
 				--parent->bref.leaf_count;
 		}
 		if (scan->type == HAMMER2_BREF_TYPE_DATA) {
-			update_delta_crc(&parent->core.delta_crc, &scan->bref);
+			update_delta_crc(&parent->core.delta_crc, scan);
 		}
 
 		/* fall through */
@@ -5600,7 +5600,7 @@ hammer2_base_insert(hammer2_chain_t *parent,
 		if (parent->bref.leaf_count != HAMMER2_BLOCKREF_LEAF_MAX)
 			++parent->bref.leaf_count;
 		if (elm->type == HAMMER2_BREF_TYPE_DATA) {
-			update_delta_crc(&parent->core.delta_crc, &elm->bref);
+			update_delta_crc(&parent->core.delta_crc, elm);
 		}
 		/* fall through */
 	case HAMMER2_BREF_TYPE_INDIRECT:
