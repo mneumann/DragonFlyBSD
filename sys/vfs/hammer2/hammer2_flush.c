@@ -765,6 +765,14 @@ hammer2_flush_core(hammer2_flush_info_t *info, hammer2_chain_t *chain,
 		}
 
 		/*
+		 * Propagate delta CRC upwards
+		 */
+		if (parent) {
+			parent->core.delta_crc ^= chain->core.delta_crc;
+			chain->core.delta_crc = 0;
+		}
+
+		/*
 		 * Update chain CRCs for flush.
 		 *
 		 * NOTE: Volume headers are NOT flushed here as they require
@@ -900,6 +908,14 @@ hammer2_flush_core(hammer2_flush_info_t *info, hammer2_chain_t *chain,
 				hammer2_chain_setcheck(chain, chain->data);
 			break;
 		case HAMMER2_BREF_TYPE_INODE:
+			/*
+			 * Synchronize in-memory delta CRC with on-disk cumulative CRC
+			 */
+			if (chain->core.delta_crc != 0) {
+				chain->data->ipdata.meta.cumulative_crc ^= chain->core.delta_crc;
+				hammer2_io_setdirty(chain->dio);
+			}
+
 			/*
 			 * NOTE: We must call io_setdirty() to make any late
 			 *	 changes to the inode data, the system might
