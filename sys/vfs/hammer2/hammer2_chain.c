@@ -1521,8 +1521,6 @@ void
 hammer2_chain_countbrefs(hammer2_chain_t *chain,
 			 hammer2_blockref_t *base, int count)
 {
-	uint64_t cumulative_crc = 0;
-
 	hammer2_spin_ex(&chain->core.spin);
         if ((chain->flags & HAMMER2_CHAIN_COUNTEDBREFS) == 0) {
 		if (base) {
@@ -1536,17 +1534,12 @@ hammer2_chain_countbrefs(hammer2_chain_t *chain,
 					atomic_add_int(&chain->core.live_count,
 						       1);
 
-				/* Accumulate the first 64-bits of the check code of each bref */
-				if (base[count].type == HAMMER2_BREF_TYPE_DATA)
-					cumulative_crc ^= base[count].xxhash64.value;
-
 				--count;
 			}
 		} else {
 			chain->core.live_zero = 0;
 		}
 		/* else do not modify live_count */
-		chain->core.cumulative_crc = cumulative_crc;
 		atomic_set_int(&chain->flags, HAMMER2_CHAIN_COUNTEDBREFS);
 	}
 	hammer2_spin_unex(&chain->core.spin);
@@ -5423,6 +5416,13 @@ found:
 	return(chain);
 }
 
+static __inline void
+update_delta_crc(uint64_t *delta_crc, hammer2_blockref_t *bref)
+{
+	// XXX: Include offset
+	*delta_crc ^= bref->xxhash64.value;
+}
+
 /*
  * Locate the specified block array element and delete it.  The element
  * must exist.
@@ -5484,11 +5484,12 @@ hammer2_base_delete(hammer2_chain_t *parent,
 			if (parent->bref.leaf_count)
 				--parent->bref.leaf_count;
 		}
+		if (scan->type == HAMMER2_BREF_TYPE_DATA) {
+			update_delta_crc(&parent->core.delta_crc, &scan->bref);
+		}
+
 		/* fall through */
 	case HAMMER2_BREF_TYPE_INDIRECT:
-		if (scan -> type != HAMMER2_BREF_TYPE_INODE) {
-			parent->core.cumulative_crc ^= scan->bref.xxhash64.value;
-		}
 		if (scan->type != HAMMER2_BREF_TYPE_DATA) {
 			parent->bref.embed.stats.data_count -=
 				scan->embed.stats.data_count;
@@ -5598,11 +5599,11 @@ hammer2_base_insert(hammer2_chain_t *parent,
 	case HAMMER2_BREF_TYPE_DATA:
 		if (parent->bref.leaf_count != HAMMER2_BLOCKREF_LEAF_MAX)
 			++parent->bref.leaf_count;
+		if (elm->type == HAMMER2_BREF_TYPE_DATA) {
+			update_delta_crc(&parent->core.delta_crc, &elm->bref);
+		}
 		/* fall through */
 	case HAMMER2_BREF_TYPE_INDIRECT:
-		if (elm->type != HAMMER2_BREF_TYPE_INODE) {
-			parent->core.cumulative_crc ^= elm->xxhash64.value;
-		}
 		if (elm->type != HAMMER2_BREF_TYPE_DATA) {
 			parent->bref.embed.stats.data_count +=
 				elm->embed.stats.data_count;

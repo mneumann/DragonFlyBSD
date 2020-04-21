@@ -264,8 +264,7 @@ struct hammer2_chain_core {
 	u_int		live_count;	/* live (not deleted) chains in tree */
 	u_int		chain_count;	/* live + deleted chains under core */
 	int		generation;	/* generation number (inserts only) */
-	uint64_t	cumulative_crc  /* cumulative CRC */
-
+	uint64_t	delta_crc	/* delta CRC */
 };
 
 typedef struct hammer2_chain_core hammer2_chain_core_t;
