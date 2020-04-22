@@ -109,6 +109,7 @@ print_inode(const char *path)
 	printf("inode_quota = 0x%jx\n", (uintmax_t)meta->inode_quota);
 	printf("pfs_lsnap_tid = 0x%jx\n", (uintmax_t)meta->pfs_lsnap_tid);
 	printf("decrypt_check = 0x%jx\n", (uintmax_t)meta->decrypt_check);
+	printf("cumulative_crc= 0x%jx\n", (uintmax_t)meta->cumulative_crc);
 
 	free(str);
 	/* XXX HAMMER2IOC_INODE_GET only supports meta part */
