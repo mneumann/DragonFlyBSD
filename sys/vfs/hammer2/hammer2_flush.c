@@ -913,6 +913,7 @@ hammer2_flush_core(hammer2_flush_info_t *info, hammer2_chain_t *chain,
 			 */
 			if (chain->core.delta_crc != 0) {
 				chain->data->ipdata.meta.cumulative_crc ^= chain->core.delta_crc;
+				chain->core.delta_crc = 0;
 				hammer2_io_setdirty(chain->dio);
 			}
 
@@ -1376,6 +1377,11 @@ hammer2_xop_inode_flush(hammer2_xop_t *arg, void *scratch __unused, int clindex)
 			if (chain->parent)
 				hammer2_chain_setflush(chain->parent);
 			hammer2_flush(chain, xflags);
+
+			/*
+			 * Sync backend chain with frontend inode
+			 */
+			ip->meta.cumulative_crc = chain->data->ipdata.meta.cumulative_crc;
 
 			/* XXX cluster */
 			if (ip == pmp->iroot && pmp != hmp->spmp) {
