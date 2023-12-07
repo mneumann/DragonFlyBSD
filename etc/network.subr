@@ -936,7 +936,7 @@ network6_getladdr()
 {
 	local proto addr rest
 
-	ifconfig $1 2>/dev/null | while read proto addr rest; do
+	ifconfig $1 inet6 2>/dev/null | while read proto addr rest; do
 		case ${proto} in
 		inet6)
 			case ${addr} in
