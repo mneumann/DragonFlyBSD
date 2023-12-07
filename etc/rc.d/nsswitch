@@ -28,7 +28,7 @@
 
 # PROVIDE: nsswitch
 # REQUIRE: root
-# BEFORE:  NETWORK
+# BEFORE:  NETWORKING
 
 . /etc/rc.subr
 
