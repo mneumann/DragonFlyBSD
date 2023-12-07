@@ -932,16 +932,19 @@ network6_default_interface_setup()
 	esac
 }
 
+# network6_getladdr if [flag]
 network6_getladdr()
 {
-	local proto addr rest
+	local _if _flag proto addr rest
+	_if=$1
+	_flag=$2
 
-	ifconfig $1 inet6 2>/dev/null | while read proto addr rest; do
+	ifconfig $_if inet6 2>/dev/null | while read proto addr rest; do
 		case ${proto} in
 		inet6)
 			case ${addr} in
 			fe80::*)
-				if [ -z "$2" ]; then
+				if [ -z "$_flag" ]; then
 					echo ${addr}
 					return
 				fi
