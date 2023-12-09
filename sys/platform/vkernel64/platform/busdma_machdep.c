@@ -58,8 +58,6 @@ struct bus_dma_tag {
 	bus_size_t	boundary;
 	bus_addr_t	lowaddr;
 	bus_addr_t	highaddr;
-	bus_dma_filter_t *filter;
-	void		*filterarg;
 	bus_size_t	maxsize;
 	u_int		nsegments;
 	bus_size_t	maxsegsz;
@@ -172,10 +170,8 @@ run_filter(bus_dma_tag_t dmat, bus_addr_t paddr)
 
 	retval = 0;
 	do {
-		if (((paddr > dmat->lowaddr && paddr <= dmat->highaddr) ||
+		if ((paddr > dmat->lowaddr && paddr <= dmat->highaddr) ||
 		     (bounce_alignment && (paddr & (dmat->alignment - 1)) != 0))
-		 && (dmat->filter == NULL ||
-		     dmat->filter(dmat->filterarg, paddr) != 0))
 			retval = 1;
 
 		dmat = dmat->parent;
@@ -229,8 +225,6 @@ bus_dma_tag_create(bus_dma_tag_t parent, bus_size_t alignment,
 	newtag->boundary = boundary;
 	newtag->lowaddr = trunc_page((vm_paddr_t)lowaddr) + (PAGE_SIZE - 1);
 	newtag->highaddr = trunc_page((vm_paddr_t)highaddr) + (PAGE_SIZE - 1);
-	newtag->filter = filter;
-	newtag->filterarg = filterarg;
 	newtag->maxsize = maxsize;
 	newtag->nsegments = nsegments;
 	newtag->maxsegsz = maxsegsz;
@@ -256,15 +250,11 @@ bus_dma_tag_create(bus_dma_tag_t parent, bus_size_t alignment,
 		newtag->alignment = MAX(parent->alignment, newtag->alignment);
 #endif
 
-		if (newtag->filter == NULL) {
-			/*
-			 * Short circuit looking at our parent directly
-			 * since we have encapsulated all of its information
-			 */
-			newtag->filter = parent->filter;
-			newtag->filterarg = parent->filterarg;
-			newtag->parent = parent->parent;
-		}
+        /*
+         * Short circuit looking at our parent directly
+         * since we have encapsulated all of its information
+         */
+		newtag->parent = parent->parent;
 		if (newtag->parent != NULL)
 			parent->ref_count++;
 	}
