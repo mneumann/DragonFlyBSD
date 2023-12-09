@@ -62,7 +62,6 @@ struct bounce_zone;
 struct bus_dmamap;
 
 struct bus_dma_tag {
-	bus_dma_tag_t	parent;
 	bus_size_t	alignment;
 	bus_size_t	boundary;
 	bus_addr_t	lowaddr;
@@ -71,7 +70,6 @@ struct bus_dma_tag {
 	u_int		nsegments;
 	bus_size_t	maxsegsz;
 	int		flags;
-	int		ref_count;
 	int		map_count;
 	bus_dma_segment_t *segments;
 	struct bounce_zone *bounce_zone;
@@ -182,17 +180,11 @@ SYSCTL_INT(_hw_busdma, OID_AUTO, bounce_alignment, CTLFLAG_RD,
 static __inline int
 run_filter(bus_dma_tag_t dmat, bus_addr_t paddr)
 {
-	int retval;
+	if ((paddr > dmat->lowaddr && paddr <= dmat->highaddr) ||
+	     (bounce_alignment && (paddr & (dmat->alignment - 1)) != 0))
+        return (1);
 
-	retval = 0;
-	do {
-		if ((paddr > dmat->lowaddr && paddr <= dmat->highaddr) ||
-		     (bounce_alignment && (paddr & (dmat->alignment - 1)) != 0))
-			retval = 1;
-
-		dmat = dmat->parent;
-	} while (retval == 0 && dmat != NULL);
-	return (retval);
+	return (0);
 }
 
 static __inline
@@ -261,7 +253,6 @@ bus_dma_tag_create(bus_dma_tag_t parent, bus_size_t alignment,
 	newtag = kmalloc(sizeof(*newtag), M_DEVBUF, M_INTWAIT | M_ZERO);
 
 	spin_init(&newtag->spin, "busdmacreate");
-	newtag->parent = parent;
 	newtag->alignment = alignment;
 	newtag->boundary = boundary;
 	newtag->lowaddr = trunc_page((vm_paddr_t)lowaddr) + (PAGE_SIZE - 1);
@@ -270,7 +261,6 @@ bus_dma_tag_create(bus_dma_tag_t parent, bus_size_t alignment,
 	newtag->nsegments = nsegments;
 	newtag->maxsegsz = maxsegsz;
 	newtag->flags = flags;
-	newtag->ref_count = 1; /* Count ourself */
 	newtag->map_count = 0;
 	newtag->segments = NULL;
 	newtag->bounce_zone = NULL;
@@ -291,13 +281,6 @@ bus_dma_tag_create(bus_dma_tag_t parent, bus_size_t alignment,
 		newtag->alignment = MAX(parent->alignment, newtag->alignment);
 #endif
 
-		/*
-		 * Short circuit to looking at our parent directly since we
-		 * have encapsulated all of its information.
-		 */
-		newtag->parent = parent->parent;
-		if (newtag->parent != NULL)
-			parent->ref_count++;
 	}
 
 	if (newtag->lowaddr < ptoa(Maxmem))
@@ -354,25 +337,10 @@ bus_dma_tag_destroy(bus_dma_tag_t dmat)
 		if (dmat->map_count != 0)
 			return (EBUSY);
 
-		while (dmat != NULL) {
-			bus_dma_tag_t parent;
-
-			parent = dmat->parent;
-			dmat->ref_count--;
-			if (dmat->ref_count == 0) {
-				free_bounce_zone(dmat);
-				if (dmat->segments != NULL)
-					kfree(dmat->segments, M_DEVBUF);
-				kfree(dmat, M_DEVBUF);
-				/*
-				 * Last reference count, so
-				 * release our reference
-				 * count on our parent.
-				 */
-				dmat = parent;
-			} else
-				dmat = NULL;
-		}
+		free_bounce_zone(dmat);
+		if (dmat->segments != NULL)
+			kfree(dmat->segments, M_DEVBUF);
+		kfree(dmat, M_DEVBUF);
 	}
 	return (0);
 }
