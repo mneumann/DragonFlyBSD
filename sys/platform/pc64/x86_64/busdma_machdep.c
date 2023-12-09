@@ -177,8 +177,13 @@ SYSCTL_INT(_hw_busdma, OID_AUTO, max_bpages, CTLFLAG_RD, &max_bounce_pages,
 SYSCTL_INT(_hw_busdma, OID_AUTO, bounce_alignment, CTLFLAG_RD,
 	   &bounce_alignment, 0, "Obey alignment constraint");
 
+
+/*
+ * Returns true if the address falls within the tag's exclusion window, or
+ * fails to meet its alignment requirements.
+ */
 static __inline int
-run_filter(bus_dma_tag_t dmat, bus_addr_t paddr)
+addr_needs_bounce(bus_dma_tag_t dmat, bus_addr_t paddr)
 {
 	if ((paddr > dmat->lowaddr && paddr <= dmat->highaddr) ||
 	     (bounce_alignment && (paddr & (dmat->alignment - 1)) != 0))
@@ -623,7 +628,7 @@ _bus_dmamap_load_buffer(bus_dma_tag_t dmat,
 
 		while (vaddr < vendaddr) {
 			paddr = _bus_dma_extract(pmap, vaddr);
-			if (run_filter(dmat, paddr) != 0)
+			if (addr_needs_bounce(dmat, paddr))
 				map->pagesneeded++;
 			vaddr += (PAGE_SIZE - (vaddr & PAGE_MASK));
 		}
@@ -678,7 +683,7 @@ _bus_dmamap_load_buffer(bus_dma_tag_t dmat,
 		size = PAGE_SIZE - (paddr & PAGE_MASK);
 		if (size > buflen)
 			size = buflen;
-		if (map->pagesneeded != 0 && run_filter(dmat, paddr)) {
+		if (map->pagesneeded != 0 && addr_needs_bounce(dmat, paddr)) {
 			/*
 			 * NOTE: paddr may have different in-page offset,
 			 *	 unless BUS_DMA_KEEP_PG_OFFSET is set.
