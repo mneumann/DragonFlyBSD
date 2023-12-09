@@ -236,6 +236,10 @@ bus_dma_tag_create(bus_dma_tag_t parent, bus_size_t alignment,
 	bus_dma_tag_t newtag;
 	int error = 0;
 
+	/* Filters are no longer supported. */
+	if (filter != NULL || filterarg != NULL)
+		return (EINVAL);
+
 	/*
 	 * Sanity checks
 	 */
