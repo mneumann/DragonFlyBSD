@@ -1234,7 +1234,6 @@ jme_dma_alloc(struct jme_softc *sc)
 	    1, JME_RING_BOUNDARY,	/* algnmnt, boundary */
 	    sc->jme_lowaddr,		/* lowaddr */
 	    BUS_SPACE_MAXADDR,		/* highaddr */
-	    NULL, NULL,			/* filter, filterarg */
 	    BUS_SPACE_MAXSIZE_32BIT,	/* maxsize */
 	    0,				/* nsegments */
 	    BUS_SPACE_MAXSIZE_32BIT,	/* maxsegsize */
@@ -1277,7 +1276,6 @@ jme_dma_alloc(struct jme_softc *sc)
 	    1, 0,			/* algnmnt, boundary */
 	    sc->jme_lowaddr,		/* lowaddr */
 	    BUS_SPACE_MAXADDR,		/* highaddr */
-	    NULL, NULL,			/* filter, filterarg */
 	    BUS_SPACE_MAXSIZE_32BIT,	/* maxsize */
 	    0,				/* nsegments */
 	    BUS_SPACE_MAXSIZE_32BIT,	/* maxsegsize */
@@ -1315,7 +1313,6 @@ jme_dma_alloc(struct jme_softc *sc)
 	    1, 0,			/* algnmnt, boundary */
 	    BUS_SPACE_MAXADDR,		/* lowaddr */
 	    BUS_SPACE_MAXADDR,		/* highaddr */
-	    NULL, NULL,			/* filter, filterarg */
 	    JME_TSO_MAXSIZE,		/* maxsize */
 	    JME_MAXTXSEGS,		/* nsegments */
 	    JME_MAXSEGSIZE,		/* maxsegsize */
@@ -2544,7 +2541,7 @@ jme_rxeof(struct jme_rxdata *rdata, int count, int cpuid)
 			 * This test should be enough to detect the pending
 			 * RSS information delivery, given:
 			 * - If RSS hash is not calculated, the hashinfo
-			 *   will be 0.  Howvever, the lower 32bits of RX
+			 *   will be 0.  However, the lower 32bits of RX
 			 *   buffers' physical address will never be 0.
 			 *   (see jme_rxbuf_dma_filter)
 			 * - If RSS hash is calculated, the lowest 4 bits
@@ -3424,6 +3421,7 @@ jme_rxring_dma_alloc(struct jme_rxdata *rdata)
 	return 0;
 }
 
+#if 0
 static int
 jme_rxbuf_dma_filter(void *arg __unused, bus_addr_t paddr)
 {
@@ -3438,6 +3436,7 @@ jme_rxbuf_dma_filter(void *arg __unused, bus_addr_t paddr)
 	}
 	return 0;
 }
+#endif
 
 static int
 jme_rxbuf_dma_alloc(struct jme_rxdata *rdata)
@@ -3447,7 +3446,9 @@ jme_rxbuf_dma_alloc(struct jme_rxdata *rdata)
 
 	lowaddr = BUS_SPACE_MAXADDR;
 	if (JME_ENABLE_HWRSS(rdata->jme_sc)) {
+#if 0
 		/* jme_rxbuf_dma_filter will be called */
+#endif
 		lowaddr = BUS_SPACE_MAXADDR_32BIT;
 	}
 
@@ -3457,7 +3458,20 @@ jme_rxbuf_dma_alloc(struct jme_rxdata *rdata)
 	    JME_RX_BUF_ALIGN, 0,	/* algnmnt, boundary */
 	    lowaddr,			/* lowaddr */
 	    BUS_SPACE_MAXADDR,		/* highaddr */
-	    jme_rxbuf_dma_filter, NULL,	/* filter, filterarg */
+#if 0
+		/*
+		 * It should be safe to remove the jme_rxbuf_dma_filter as we
+		 * set lowaddr to BUS_SPACE_MAXADDR_32BIT, so we use 32 bit DMA
+		 * addressing.
+		 *
+		 * According to FreeBSD commit f37739d7:
+		 *
+		 * "JMC260 chip full mask revision 2 has a silicon bug that can't
+		 * handle 64bit DMA addressing. Add workaround to the bug by limiting
+		 * DMA address space to be within 32bit."
+		 */
+	    jme_rxbuf_dma_filter, NULL, /* filter, filterarg */
+#endif
 	    MCLBYTES,			/* maxsize */
 	    1,				/* nsegments */
 	    MCLBYTES,			/* maxsegsize */

@@ -222,16 +222,11 @@ bus_dma_tag_unlock(bus_dma_tag_t tag)
 int
 bus_dma_tag_create(bus_dma_tag_t parent, bus_size_t alignment,
 		   bus_size_t boundary, bus_addr_t lowaddr,
-		   bus_addr_t highaddr, bus_dma_filter_t *filter,
-		   void *filterarg, bus_size_t maxsize, int nsegments,
+		   bus_addr_t highaddr, bus_size_t maxsize, int nsegments,
 		   bus_size_t maxsegsz, int flags, bus_dma_tag_t *dmat)
 {
 	bus_dma_tag_t newtag;
 	int error = 0;
-
-	/* Filters are no longer supported. */
-	if (filter != NULL || filterarg != NULL)
-		return (EINVAL);
 
 	/*
 	 * Sanity checks
