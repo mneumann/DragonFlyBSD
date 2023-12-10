@@ -25,11 +25,11 @@
  * SUCH DAMAGE.
  */
 
-#include <sys/cdefs.h>
 /*
  * Abstract 1 to 1 HID input usage to evdev event mapper driver.
  */
 
+#include <sys/cdefs.h>
 #include "opt_hid.h"
 
 #include <sys/param.h>
