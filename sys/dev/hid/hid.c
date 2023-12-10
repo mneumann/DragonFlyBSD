@@ -39,7 +39,7 @@
 #include <sys/malloc.h>
 #include <sys/module.h>
 #include <sys/sysctl.h>
-#include <sys/system.h>
+#include <sys/systm.h>
 
 #define	HID_DEBUG_VAR	hid_debug
 #include <dev/hid/hid.h>
