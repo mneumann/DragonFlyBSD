@@ -39,7 +39,7 @@
 struct evdev_dev;
 
 typedef int (evdev_open_t)(struct evdev_dev *);
-typedef void (evdev_close_t)(struct evdev_dev *);
+typedef int (evdev_close_t)(struct evdev_dev *);
 typedef void (evdev_event_t)(struct evdev_dev *, uint16_t,
     uint16_t, int32_t);
 typedef void (evdev_keycode_t)(struct evdev_dev *,

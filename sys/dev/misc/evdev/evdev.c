@@ -887,7 +887,7 @@ evdev_dispose_client(struct evdev_dev *evdev, struct evdev_client *client)
 	if (LIST_EMPTY(&evdev->ev_clients)) {
 		if (evdev->ev_methods != NULL &&
 		    evdev->ev_methods->ev_close != NULL)
-			evdev->ev_methods->ev_close(evdev);
+			(void)evdev->ev_methods->ev_close(evdev);
 		if (evdev_event_supported(evdev, EV_REP) &&
 		    bit_test(evdev->ev_flags, EVDEV_FLAG_SOFTREPEAT))
 			evdev_stop_repeat(evdev);
