@@ -355,7 +355,8 @@ MFILES?= kern/bus_if.m kern/device_if.m bus/iicbus/iicbb_if.m \
     dev/virtual/virtio/virtio/virtio_bus_if.m \
     dev/misc/backlight/backlight_if.m dev/misc/coremctl/coremctl_if.m kern/cpu_if.m \
     bus/gpio/gpio_if.m \
-    freebsd/net/ifdi_if.m
+    freebsd/net/ifdi_if.m \
+    dev/hid/hid_if.m
 
 .for _srcsrc in ${MFILES}
 .for _ext in c h
