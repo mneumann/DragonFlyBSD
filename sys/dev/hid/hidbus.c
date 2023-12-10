@@ -199,7 +199,7 @@ hidbus_add_child(device_t dev, u_int order, const char *name, int unit)
 	if (child == NULL)
 			return (child);
 
-	tlc = malloc(sizeof(struct hidbus_ivars), M_DEVBUF, M_WAITOK | M_ZERO);
+	tlc = kmalloc(sizeof(struct hidbus_ivars), M_DEVBUF, M_WAITOK | M_ZERO);
 	tlc->mtx = &sc->mtx;
 	device_set_ivars(child, tlc);
 	sx_xlock(&sc->sx);
@@ -322,7 +322,7 @@ hidbus_detach_children(device_t dev)
 				break;
 			}
 		}
-		free(children, M_TEMP);
+		kfree(children, M_TEMP);
 	}
 
 	HID_INTR_UNSETUP(device_get_parent(bus), bus);
@@ -360,10 +360,10 @@ hidbus_attach(device_t dev)
 	 */
 	d_len = devinfo->rdescsize;
 	if (d_len != 0) {
-		d_ptr = malloc(d_len, M_DEVBUF, M_ZERO | M_WAITOK);
+		d_ptr = kmalloc(d_len, M_DEVBUF, M_ZERO | M_WAITOK);
 		error = hid_get_rdesc(dev, d_ptr, d_len);
 		if (error != 0) {
-			free(d_ptr, M_DEVBUF);
+			kfree(d_ptr, M_DEVBUF);
 			d_len = 0;
 			d_ptr = NULL;
 		}
@@ -390,7 +390,7 @@ hidbus_detach(device_t dev)
 	hidbus_detach_children(dev);
 	sx_destroy(&sc->sx);
 	mtx_destroy(&sc->mtx);
-	free(sc->rdesc.data, M_DEVBUF);
+	kfree(sc->rdesc.data, M_DEVBUF);
 
 	return (0);
 }
@@ -416,7 +416,7 @@ hidbus_ivar_dtor(epoch_context_t ctx)
 	struct hidbus_ivars *tlc;
 
 	tlc = __containerof(ctx, struct hidbus_ivars, epoch_ctx);
-	free(tlc, M_DEVBUF);
+	kfree(tlc, M_DEVBUF);
 }
 
 static void
@@ -555,7 +555,7 @@ hidbus_find_child(device_t bus, int32_t usage)
 			break;
 		}
 	}
-	free(children, M_TEMP);
+	kfree(children, M_TEMP);
 
 	return (child);
 }
@@ -745,10 +745,10 @@ hid_set_report_descr(device_t dev, const void *data, hid_size_t len)
 		return(error);
 
 	/* Make private copy to handle a case of dynamicaly allocated data. */
-	rdesc.data = malloc(len, M_DEVBUF, M_ZERO | M_WAITOK);
+	rdesc.data = kmalloc(len, M_DEVBUF, M_ZERO | M_WAITOK);
 	bcopy(data, rdesc.data, len);
 	sc->overloaded = true;
-	free(sc->rdesc.data, M_DEVBUF);
+	kfree(sc->rdesc.data, M_DEVBUF);
 	bcopy(&rdesc, &sc->rdesc, sizeof(struct hid_rdesc_info));
 
 	error = hidbus_attach_children(bus);

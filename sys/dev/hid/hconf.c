@@ -145,7 +145,7 @@ hconf_set_feature_control(struct hconf_softc *sc, int ctrl_id, u_int val)
 	if (fc->rlen <= 1)
 		return (ENXIO);
 
-	fbuf = malloc(fc->rlen, M_TEMP, M_WAITOK | M_ZERO);
+	fbuf = kmalloc(fc->rlen, M_TEMP, M_WAITOK | M_ZERO);
 	sx_xlock(&sc->lock);
 
 	/*
@@ -174,7 +174,7 @@ hconf_set_feature_control(struct hconf_softc *sc, int ctrl_id, u_int val)
 		fc->val = val;
 
 	sx_unlock(&sc->lock);
-	free(fbuf, M_TEMP);
+	kfree(fbuf, M_TEMP);
 
 	return (error);
 }

@@ -269,7 +269,7 @@ hms_attach(device_t dev)
 	    hidmap_test_cap(sc->caps, HMS_REL_Y)) {
 		sc->iichid_sampling = true;
 		sc->isize = hid_report_size_max(d_ptr, d_len, hid_input, NULL);
-		sc->last_ir = malloc(sc->isize, M_DEVBUF, M_WAITOK | M_ZERO);
+		sc->last_ir = kmalloc(sc->isize, M_DEVBUF, M_WAITOK | M_ZERO);
 		sc->drift_thresh = 2;
 		SYSCTL_ADD_U32(device_get_sysctl_ctx(dev),
 		    SYSCTL_CHILDREN(device_get_sysctl_tree(dev)), OID_AUTO,
@@ -314,7 +314,7 @@ hms_detach(device_t dev)
 	error = hidmap_detach(&sc->hm);
 #ifdef IICHID_SAMPLING
 	if (error == 0)
-		free(sc->last_ir, M_DEVBUF);
+		kfree(sc->last_ir, M_DEVBUF);
 #endif
 	return (error);
 }

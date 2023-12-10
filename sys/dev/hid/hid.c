@@ -182,7 +182,7 @@ hid_start_parse(const void *d, hid_size_t len, int kindset)
 		return (NULL);
 	}
 
-	s = malloc(sizeof *s, M_TEMP, M_WAITOK | M_ZERO);
+	s = kmalloc(sizeof *s, M_TEMP, M_WAITOK | M_ZERO);
 	s->start = s->p = d;
 	s->end = ((const uint8_t *)d) + len;
 	s->kindset = kindset;
@@ -198,7 +198,7 @@ hid_end_parse(struct hid_data *s)
 	if (s == NULL)
 		return;
 
-	free(s, M_TEMP);
+	kfree(s, M_TEMP);
 }
 
 /*------------------------------------------------------------------------*

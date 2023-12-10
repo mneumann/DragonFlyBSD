@@ -79,10 +79,10 @@ SYSCTL_INT(_hw_hid_hidraw, OID_AUTO, debug, CTLFLAG_RWTUN,
 #define	HIDRAW_LOCAL_BUFSIZE	64	/* Size of on-stack buffer. */
 #define	HIDRAW_LOCAL_ALLOC(local_buf, size)		\
 	(sizeof(local_buf) > (size) ? (local_buf) :	\
-	    malloc((size), M_DEVBUF, M_ZERO | M_WAITOK))
+	    kmalloc((size), M_DEVBUF, M_ZERO | M_WAITOK))
 #define	HIDRAW_LOCAL_FREE(local_buf, buf)		\
 	if ((local_buf) != (buf)) {			\
-		free((buf), M_DEVBUF);			\
+		kfree((buf), M_DEVBUF);			\
 	}
 
 struct hidraw_softc {
@@ -364,9 +364,9 @@ hidraw_open(struct cdev *dev, int flag, int mode, struct thread *td)
 		return (error);
 	}
 
-	sc->sc_q = malloc(sc->sc_rdesc->rdsize * HIDRAW_BUFFER_SIZE, M_DEVBUF,
+	sc->sc_q = kmalloc(sc->sc_rdesc->rdsize * HIDRAW_BUFFER_SIZE, M_DEVBUF,
 	    M_ZERO | M_WAITOK);
-	sc->sc_qlen = malloc(sizeof(hid_size_t) * HIDRAW_BUFFER_SIZE, M_DEVBUF,
+	sc->sc_qlen = kmalloc(sizeof(hid_size_t) * HIDRAW_BUFFER_SIZE, M_DEVBUF,
 	    M_ZERO | M_WAITOK);
 
 	/* Set up interrupt pipe. */
@@ -394,8 +394,8 @@ hidraw_dtor(void *data)
 
 	sc->sc_tail = sc->sc_head = 0;
 	sc->sc_async = 0;
-	free(sc->sc_q, M_DEVBUF);
-	free(sc->sc_qlen, M_DEVBUF);
+	kfree(sc->sc_q, M_DEVBUF);
+	kfree(sc->sc_qlen, M_DEVBUF);
 	sc->sc_q = NULL;
 
 	mtx_lock(&sc->sc_mtx);
@@ -800,7 +800,7 @@ hidraw_ioctl(struct cdev *dev, u_long cmd, caddr_t addr, int flag,
 		    sizeof(hdi->hdi_phys));
 		strlcpy(hdi->hdi_uniq, sc->sc_hw->serial,
 		    sizeof(hdi->hdi_uniq));
-		snprintf(hdi->hdi_release, sizeof(hdi->hdi_release), "%x.%02x",
+		ksnprintf(hdi->hdi_release, sizeof(hdi->hdi_release), "%x.%02x",
 		    sc->sc_hw->idVersion >> 8, sc->sc_hw->idVersion & 0xff);
 		return(0);
 

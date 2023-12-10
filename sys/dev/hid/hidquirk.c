@@ -317,7 +317,7 @@ hidquirk_strtou16(const char **pptr, const char *name, const char *what)
 
 	value = strtoul(*pptr, &end, 0);
 	if (value > 65535 || *pptr == end || (*end != ' ' && *end != '\t')) {
-		printf("%s: %s 16-bit %s value set to zero\n",
+		kprintf("%s: %s 16-bit %s value set to zero\n",
 		    name, what, *end == 0 ? "incomplete" : "invalid");
 		return (0);
 	}
@@ -345,7 +345,7 @@ hidquirk_add_entry_from_str(const char *name, const char *env)
 		return;
 
 	if (bootverbose)
-		printf("Adding HID QUIRK '%s' = '%s'\n", name, env);
+		kprintf("Adding HID QUIRK '%s' = '%s'\n", name, env);
 
 	/* parse device information */
 	entry.bus = hidquirk_strtou16(&env, name, "Bus ID");
@@ -371,7 +371,7 @@ hidquirk_add_entry_from_str(const char *name, const char *env)
 		if (quirk < HID_QUIRK_MAX) {
 			entry.quirks[quirk_idx++] = quirk;
 		} else {
-			printf("%s: unknown HID quirk '%.*s' (skipped)\n",
+			kprintf("%s: unknown HID quirk '%.*s' (skipped)\n",
 			    name, (int)(end - env), env);
 		}
 		env = end;
@@ -384,19 +384,19 @@ hidquirk_add_entry_from_str(const char *name, const char *env)
 	/* register quirk */
 	if (quirk_idx != 0) {
 		if (*env != 0) {
-			printf("%s: Too many HID quirks, only %d allowed!\n",
+			kprintf("%s: Too many HID quirks, only %d allowed!\n",
 			    name, HID_SUB_QUIRKS_MAX);
 		}
 		mtx_lock(&hidquirk_mtx);
 		new = hidquirk_get_entry(entry.bus, entry.vid, entry.pid,
 		    entry.lo_rev, entry.hi_rev, 1);
 		if (new == NULL)
-			printf("%s: HID quirks table is full!\n", name);
+			kprintf("%s: HID quirks table is full!\n", name);
 		else
 			memcpy(new->quirks, entry.quirks, sizeof(entry.quirks));
 		mtx_unlock(&hidquirk_mtx);
 	} else {
-		printf("%s: No USB quirks found!\n", name);
+		kprintf("%s: No USB quirks found!\n", name);
 	}
 }
 
@@ -411,7 +411,7 @@ hidquirk_init(void *arg)
 
 	/* look for quirks defined by the environment variable */
 	for (i = 0; i != 100; i++) {
-		snprintf(envkey, sizeof(envkey), HID_QUIRK_ENVROOT "%d", i);
+		ksnprintf(envkey, sizeof(envkey), HID_QUIRK_ENVROOT "%d", i);
 
 		/* Stop at first undefined var */
 		if (!testenv(envkey))

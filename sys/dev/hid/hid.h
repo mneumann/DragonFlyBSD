@@ -201,7 +201,7 @@ extern int hid_debug;
 #ifdef HID_DEBUG
 #define DPRINTFN(n,fmt,...) do {			\
 	if ((HID_DEBUG_VAR) >= (n)) {			\
-		printf("%s: " fmt,			\
+		kprintf("%s: " fmt,			\
 		    __FUNCTION__ ,##__VA_ARGS__);	\
 	}						\
 } while (0)

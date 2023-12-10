@@ -129,7 +129,7 @@ void
 hidmap_support_key(struct hidmap *hm, uint16_t key)
 {
 	if (hm->key_press == NULL) {
-		hm->key_press = malloc(howmany(KEY_CNT, 8), M_DEVBUF,
+		hm->key_press = kmalloc(howmany(KEY_CNT, 8), M_DEVBUF,
 		    M_ZERO | M_WAITOK);
 		evdev_support_event(hm->evdev, EV_KEY);
 		hm->key_min = key;
@@ -139,7 +139,7 @@ hidmap_support_key(struct hidmap *hm, uint16_t key)
 	hm->key_max = MAX(hm->key_max, key);
 	if (isset(hm->key_press, key)) {
 		if (hm->key_rel == NULL)
-			hm->key_rel = malloc(howmany(KEY_CNT, 8), M_DEVBUF,
+			hm->key_rel = kmalloc(howmany(KEY_CNT, 8), M_DEVBUF,
 			    M_ZERO | M_WAITOK);
 	} else {
 		setbit(hm->key_press, key);
@@ -449,7 +449,7 @@ hidmap_probe_hid_descr(void *d_ptr, hid_size_t d_len, uint8_t tlc_index,
 	bool do_free = false;
 
 	if (caps == NULL) {
-		caps = malloc(HIDMAP_CAPS_SZ(nitems_map), M_DEVBUF,
+		caps = kmalloc(HIDMAP_CAPS_SZ(nitems_map), M_DEVBUF,
 		    M_WAITOK | M_ZERO);
 		do_free = true;
 	} else
@@ -491,7 +491,7 @@ hidmap_probe_hid_descr(void *d_ptr, hid_size_t d_len, uint8_t tlc_index,
 	}
 
 	if (do_free)
-		free(caps, M_DEVBUF);
+		kfree(caps, M_DEVBUF);
 
 	return (items);
 }
@@ -624,7 +624,7 @@ hidmap_parse_hid_item(struct hidmap *hm, struct hid_item *hi,
 			if (can_map_arr_list(hi, mi, hi->usages[i], uoff)) {
 				hidmap_support_key(hm, mi->code + uoff);
 				if (item->codes == NULL)
-					item->codes = malloc(
+					item->codes = kmalloc(
 					    hi->nusages * sizeof(uint16_t),
 					    M_DEVBUF, M_WAITOK | M_ZERO);
 				item->codes[i] = mi->code + uoff;
@@ -749,7 +749,7 @@ hidmap_attach(struct hidmap* hm)
 #ifdef HID_DEBUG
 	if (hm->debug_var == NULL) {
 		hm->debug_var = &hm->debug_level;
-		snprintf(tunable, sizeof(tunable), "hw.hid.%s.debug",
+		ksnprintf(tunable, sizeof(tunable), "hw.hid.%s.debug",
 		    device_get_name(hm->dev));
 		TUNABLE_INT_FETCH(tunable, &hm->debug_level);
 		SYSCTL_ADD_INT(device_get_sysctl_ctx(hm->dev),
@@ -763,7 +763,7 @@ hidmap_attach(struct hidmap* hm)
 
 	hm->cb_state = HIDMAP_CB_IS_ATTACHING;
 
-	hm->hid_items = malloc(hm->nhid_items * sizeof(struct hid_item),
+	hm->hid_items = kmalloc(hm->nhid_items * sizeof(struct hid_item),
 	    M_DEVBUF, M_WAITOK | M_ZERO);
 
 	hidbus_set_intr(hm->dev, hidmap_intr, hm);
@@ -818,12 +818,12 @@ hidmap_detach(struct hidmap* hm)
 			    hi->type == HIDMAP_TYPE_CALLBACK)
 				hi->cb(hm, hi, (union hidmap_cb_ctx){});
 			else if (hi->type == HIDMAP_TYPE_ARR_LIST)
-				free(hi->codes, M_DEVBUF);
-		free(hm->hid_items, M_DEVBUF);
+				kfree(hi->codes, M_DEVBUF);
+		kfree(hm->hid_items, M_DEVBUF);
 	}
 
-	free(hm->key_press, M_DEVBUF);
-	free(hm->key_rel, M_DEVBUF);
+	kfree(hm->key_press, M_DEVBUF);
+	kfree(hm->key_rel, M_DEVBUF);
 
 	return (0);
 }

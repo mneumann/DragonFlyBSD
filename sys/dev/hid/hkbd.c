@@ -1664,7 +1664,7 @@ hkbd_ioctl(keyboard_t *kbd, u_long cmd, caddr_t arg)
 
 	/*
 	 * XXX KDGKBSTATE, KDSKBSTATE and KDSETLED can be called from any
-	 * context where printf(9) can be called, which among other things
+	 * context where kprintf(9) can be called, which among other things
 	 * includes interrupt filters and threads with any kinds of locks
 	 * already held.  For this reason it would be dangerous to acquire
 	 * the Giant here unconditionally.  On the other hand we have to

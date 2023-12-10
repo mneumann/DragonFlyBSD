@@ -315,7 +315,7 @@ hmt_attach(device_t dev)
 
 	fsize = hid_report_size_max(d_ptr, d_len, hid_feature, NULL);
 	if (fsize != 0)
-		fbuf = malloc(fsize, M_TEMP, M_WAITOK | M_ZERO);
+		fbuf = kmalloc(fsize, M_TEMP, M_WAITOK | M_ZERO);
 
 	/* Fetch and parse "Contact count maximum" feature report */
 	if (sc->cont_max_rlen > 1) {
@@ -357,7 +357,7 @@ hmt_attach(device_t dev)
 		(void)hid_get_report(dev, fbuf, sc->thqa_cert_rlen, NULL,
 		    HID_FEATURE_REPORT, sc->thqa_cert_rid);
 
-	free(fbuf, M_TEMP);
+	kfree(fbuf, M_TEMP);
 
 	/* Switch touchpad in to absolute multitouch mode */
 	if (sc->type == HMT_TYPE_TOUCHPAD) {
@@ -557,9 +557,9 @@ hmt_intr(void *context, void *buf, hid_size_t len)
 	if (hmt_debug >= 6) {
 		HMT_FOREACH_USAGE(sc->caps, usage) {
 			if (hmt_hid_map[usage].usage != HMT_NO_USAGE)
-				printf(" %-4s", hmt_hid_map[usage].name);
+				kprintf(" %-4s", hmt_hid_map[usage].name);
 		}
-		printf("\n");
+		kprintf("\n");
 	}
 #endif
 
@@ -583,9 +583,9 @@ hmt_intr(void *context, void *buf, hid_size_t len)
 		if (hmt_debug >= 6) {
 			HMT_FOREACH_USAGE(sc->caps, usage) {
 				if (hmt_hid_map[usage].usage != HMT_NO_USAGE)
-					printf("%04x ", slot_data->val[usage]);
+					kprintf("%04x ", slot_data->val[usage]);
 			}
-			printf("slot = %d\n", slot);
+			kprintf("slot = %d\n", slot);
 		}
 #endif
 
