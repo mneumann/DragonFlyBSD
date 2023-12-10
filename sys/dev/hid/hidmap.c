@@ -41,8 +41,8 @@
 #include <sys/sysctl.h>
 #include <sys/systm.h>
 
-#include <dev/evdev/input.h>
-#include <dev/evdev/evdev.h>
+#include <dev/misc/evdev/input.h>
+#include <dev/misc/evdev/evdev.h>
 
 #include <dev/hid/hid.h>
 #include <dev/hid/hidbus.h>
