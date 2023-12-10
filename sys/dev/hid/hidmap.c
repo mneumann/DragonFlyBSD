@@ -778,7 +778,9 @@ hidmap_attach(struct hidmap* hm)
 	evdev_set_id(hm->evdev, hw->idBus, hw->idVendor, hw->idProduct,
 	    hw->idVersion);
 	evdev_set_serial(hm->evdev, hw->serial);
+#ifdef notyet
 	evdev_set_flag(hm->evdev, EVDEV_FLAG_EXT_EPOCH); /* hidbus child */
+#endif
 	evdev_support_event(hm->evdev, EV_SYN);
 	error = hidmap_parse_hid_descr(hm, hidbus_get_index(hm->dev));
 	if (error) {
