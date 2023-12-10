@@ -35,11 +35,11 @@
 
 #include <sys/param.h>
 #include <sys/bus.h>
-#include <sys/kdb.h>
 #include <sys/kernel.h>
 #include <sys/malloc.h>
 #include <sys/module.h>
 #include <sys/sysctl.h>
+#include <sys/system.h>
 
 #define	HID_DEBUG_VAR	hid_debug
 #include <dev/hid/hid.h>
@@ -54,7 +54,7 @@
 int	hid_debug = 0;
 
 SYSCTL_NODE(_hw, OID_AUTO, hid, CTLFLAG_RW, 0, "HID debugging");
-SYSCTL_INT(_hw_hid, OID_AUTO, debug, CTLFLAG_RWTUN,
+SYSCTL_INT(_hw_hid, OID_AUTO, debug, CTLFLAG_RW/*TUN*/,
     &hid_debug, 0, "Debug level");
 
 static void hid_clear_local(struct hid_item *);
@@ -1024,7 +1024,7 @@ hid_quirk_unload(void *arg)
 
 	/* XXX this is a tradeoff */
 
-	pause("WAIT", hz);
+	tsleep(&arg, 0, "WAIT", hz);
 }
 
 int
