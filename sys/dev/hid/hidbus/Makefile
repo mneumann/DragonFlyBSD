@@ -1,8 +1,7 @@
 .PATH: ${.CURDIR}/..
 
-KMOD=	hid
-SRCS=	hid.c hid_if.c
-SRCS+=	opt_hid.h
+KMOD=	hidbus
+SRCS=	hidbus.c
 SRCS+=	bus_if.h device_if.h hid_if.h
 
 EXPORT_SYMS=	YES
