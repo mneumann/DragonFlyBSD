@@ -4383,13 +4383,19 @@ psmsoftintr(void *arg)
 			break;
 
 		case MOUSE_MODEL_SYNAPTICS:
-			if (proc_synaptics(sc, pb, &ms, &x, &y, &z) != 0)
+			if (proc_synaptics(sc, pb, &ms, &x, &y, &z) != 0) {
+				VLOG(3, (LOG_DEBUG, "synaptics: "
+				    "packet rejected\n"));
 				goto next;
+			}
 			break;
 
 		case MOUSE_MODEL_ELANTECH:
-			if (proc_elantech(sc, pb, &ms, &x, &y, &z) != 0)
+			if (proc_elantech(sc, pb, &ms, &x, &y, &z) != 0) {
+				VLOG(3, (LOG_DEBUG, "elantech: "
+				    "packet rejected\n"));
 				goto next;
+			}
 			break;
 
 		case MOUSE_MODEL_TRACKPOINT:
