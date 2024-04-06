@@ -1638,8 +1638,10 @@ psmattach(device_t dev)
 
 	/* Elantech trackpad`s sync bit differs from touchpad`s one */
 	if (sc->hw.model == MOUSE_MODEL_ELANTECH &&
-	    (sc->elanhw.hascrc || sc->elanhw.hastrackpoint))
+	    (sc->elanhw.hascrc || sc->elanhw.hastrackpoint)) {
 		sc->config |= PSM_CONFIG_NOCHECKSYNC;
+		sc->flags &= ~PSM_NEED_SYNCBITS;
+	}
 
 
 	if (!verbose)
@@ -1651,8 +1653,9 @@ psmattach(device_t dev)
 		    sc->hw.hwid >> 8, sc->hw.buttons);
 		kprintf("psm%d: config:%08x, flags:%08x, packet size:%d\n",
 		    unit, sc->config, sc->flags, sc->mode.packetsize);
-		kprintf("psm%d: syncmask:%02x, syncbits:%02x\n",
-		    unit, sc->mode.syncmask[0], sc->mode.syncmask[1]);
+		kprintf("psm%d: syncmask:%02x, syncbits:%02x%s\n",
+		    unit, sc->mode.syncmask[0], sc->mode.syncmask[1],
+		    sc->config & PSM_CONFIG_NOCHECKSYNC ? " (sync not checked)" : "");
 	}
 
 	if (bootverbose)
@@ -2501,7 +2504,8 @@ psmintr(void *arg)
 			VLOG(2, (LOG_DEBUG,
 			    "psmintr: Sync bytes now %04x,%04x\n",
 			    sc->mode.syncmask[0], sc->mode.syncmask[0]));
-		} else if ((c & sc->mode.syncmask[0]) != sc->mode.syncmask[1]) {
+		} else if ((sc->config & PSM_CONFIG_NOCHECKSYNC) == 0 &&
+		    (c & sc->mode.syncmask[0]) != sc->mode.syncmask[1]) {
 			VLOG(3, (LOG_DEBUG, "psmintr: out of sync "
 			    "(%04x != %04x) %d cmds since last error.\n",
 			    c & sc->mode.syncmask[0], sc->mode.syncmask[1],
