@@ -51,6 +51,8 @@
 /* controller commands (sent to KBD_COMMAND_PORT) */
 #define KBDC_SET_COMMAND_BYTE 	0x0060
 #define KBDC_GET_COMMAND_BYTE 	0x0020
+#define KBDC_WRITE_TO_AUX_MUX	0x0090
+#define KBDC_FORCE_AUX_OUTPUT	0x00d3
 #define KBDC_WRITE_TO_AUX    	0x00d4
 #define KBDC_DISABLE_AUX_PORT 	0x00a7
 #define KBDC_ENABLE_AUX_PORT 	0x00a8
@@ -234,6 +236,8 @@ typedef struct atkbdc_softc {
     int lock;			/* FIXME: XXX not quite a semaphore... */
     kbdkqueue kbd;		/* keyboard data queue */
     kbdkqueue aux;		/* auxiliary data queue */
+    int aux_mux_enabled;	/* active PS/2 multiplexing is enabled */
+    int aux_mux_port;		/* current aux mux port */
 } atkbdc_softc_t; 
 
 enum kbdc_device_ivar {
@@ -249,6 +253,8 @@ typedef struct atkbdc_softc *KBDC;
 
 #define KBDC_RID_KBD	 0
 #define KBDC_RID_AUX	 1
+
+#define KBDC_AUX_MUX_NUM_PORTS	4
 
 /* function prototypes */
 
@@ -292,6 +298,11 @@ int test_aux_port(KBDC kbdc);
 
 int get_controller_command_byte(KBDC kbdc);
 int set_controller_command_byte(KBDC kbdc, int mask, int command);
+
+int set_active_aux_mux_port(KBDC p, int port);
+int enable_aux_mux(KBDC p);
+int disable_aux_mux(KBDC p);
+int aux_mux_is_enabled(KBDC p);
 
 #endif /* _KERNEL */
 
