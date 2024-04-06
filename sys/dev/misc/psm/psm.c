@@ -4173,17 +4173,27 @@ proc_elantech(struct psm_softc *sc, packetbuf_t *pb, mousestatus_t *ms,
 		 * over 9 bits with SX/SY the relative top bit and
 		 * X7..X0 and Y7..Y0 the lower bits.
 		 */
-		*x = (pb->ipacket[0] & MOUSE_PS2_XNEG) ?
-		    pb->ipacket[4] - 256 : pb->ipacket[4];
-		*y = (pb->ipacket[0] & MOUSE_PS2_YNEG) ?
-		    pb->ipacket[5] - 256 : pb->ipacket[5];
+		if (!(pb->ipacket[0] & 0xC8) && !(pb->ipacket[1] & 0x7F) &&
+		    !(pb->ipacket[2] & 0x7F) && !(pb->ipacket[3] & 0xC9) &&
+		    !(pb->ipacket[0] & 0x10) != !(pb->ipacket[1] & 0x80) &&
+		    !(pb->ipacket[0] & 0x10) != !(pb->ipacket[3] & 0x10) &&
+		    !(pb->ipacket[0] & 0x20) != !(pb->ipacket[2] & 0x80) &&
+		    !(pb->ipacket[0] & 0x20) != !(pb->ipacket[3] & 0x20)) {
 
-		trackpoint_button =
-		    ((pb->ipacket[0] & 0x01) ? MOUSE_BUTTON1DOWN : 0) |
-		    ((pb->ipacket[0] & 0x02) ? MOUSE_BUTTON3DOWN : 0) |
-		    ((pb->ipacket[0] & 0x04) ? MOUSE_BUTTON2DOWN : 0);
+			*x = (pb->ipacket[0] & MOUSE_PS2_XNEG) ?
+			    pb->ipacket[4] - 256 : pb->ipacket[4];
+			*y = (pb->ipacket[0] & MOUSE_PS2_YNEG) ?
+			    pb->ipacket[5] - 256 : pb->ipacket[5];
 
-		ms->button = touchpad_button | trackpoint_button;
+			trackpoint_button =
+			    ((pb->ipacket[0] & 0x01) ? MOUSE_BUTTON1DOWN : 0) |
+			    ((pb->ipacket[0] & 0x02) ? MOUSE_BUTTON3DOWN : 0) |
+			    ((pb->ipacket[0] & 0x04) ? MOUSE_BUTTON2DOWN : 0);
+
+			ms->button = touchpad_button | trackpoint_button;
+		} else
+			VLOG(3, (LOG_DEBUG, "elantech: "
+			    "unexpected trackpoint packet skipped\n"));
 		return (0);
 
 	case ELANTECH_PKT_NOP:
