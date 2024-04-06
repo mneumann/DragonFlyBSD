@@ -2409,7 +2409,7 @@ psmtimeout(void *arg)
 	sc = (struct psm_softc *)arg;
 	lockmgr(&sc->lock, LK_EXCLUSIVE);
 	if (sc->watchdog && kbdc_lock(sc->kbdc, TRUE)) {
-		VLOG(4, (LOG_DEBUG, "psm%d: lost interrupt?\n", sc->unit));
+		VLOG(6, (LOG_DEBUG, "psm%d: lost interrupt?\n", sc->unit));
 		psmintr(sc);
 		kbdc_lock(sc->kbdc, FALSE);
 	}
