@@ -3144,9 +3144,6 @@ psmgestures(struct psm_softc *sc, finger_t *fingers, int nfingers,
 		int two_finger_scroll;
 		int max_x, max_y;
 
-		/* silence gcc warnings for last VLOG call */
-		dxp = dyp = 0;
-
 		/* Read sysctl. */
 		/* XXX Verify values? */
 		margin_top = sc->syninfo.margin_top;
@@ -3260,6 +3257,9 @@ psmgestures(struct psm_softc *sc, finger_t *fingers, int nfingers,
 		/* Do we have enough packets to consider this a gesture? */
 		if (queue_len < gest->window_min)
 			return;
+
+		dyp = -1;
+		dxp = -1;
 
 		/* Is a scrolling action occurring? */
 		if (!gest->in_taphold && !ms->button &&
