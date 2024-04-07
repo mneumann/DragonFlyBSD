@@ -232,10 +232,18 @@ typedef struct atkbdc_softc {
     bus_space_handle_t ioh1;
     int command_byte;		/* current command byte value */
     int command_mask;		/* command byte mask bits for kbd/aux devices */
+#if 0
     int mux_active;		/* multiplexer is active */
+#endif
     int lock;			/* FIXME: XXX not quite a semaphore... */
     kbdkqueue kbd;		/* keyboard data queue */
     kbdkqueue aux;		/* auxiliary data queue */
+    int quirks;			/* controller doesn't like deactivate */
+#define KBDC_QUIRK_KEEP_ACTIVATED	(1 << 0)
+#define KBDC_QUIRK_IGNORE_PROBE_RESULT	(1 << 1)
+#define KBDC_QUIRK_RESET_AFTER_PROBE	(1 << 2)
+#define KBDC_QUIRK_SETLEDS_ON_INIT	(1 << 3)
+#define KBDC_QUIRK_DISABLE_MUX_PROBE	(1 << 4)
     int aux_mux_enabled;	/* active PS/2 multiplexing is enabled */
     int aux_mux_port;		/* current aux mux port */
 } atkbdc_softc_t; 
@@ -295,6 +303,9 @@ int reset_aux_dev(KBDC kbdc);
 int test_controller(KBDC kbdc);
 int test_kbd_port(KBDC kbdc);
 int test_aux_port(KBDC kbdc);
+
+int kbdc_get_device_mask(KBDC kbdc);
+void kbdc_set_device_mask(KBDC kbdc, int mask);
 
 int get_controller_command_byte(KBDC kbdc);
 int set_controller_command_byte(KBDC kbdc, int mask, int command);

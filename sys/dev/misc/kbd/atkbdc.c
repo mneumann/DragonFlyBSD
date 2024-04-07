@@ -104,6 +104,13 @@ static int wait_for_kbd_ack(atkbdc_softc_t *kbdc);
 static int wait_for_aux_data(atkbdc_softc_t *kbdc);
 static int wait_for_aux_ack(atkbdc_softc_t *kbdc);
 
+static int
+atkbdc_getquirks(void)
+{
+	/* TODO */
+	return (0);
+}
+
 atkbdc_softc_t *
 atkbdc_get_softc(int unit)
 {
@@ -222,6 +229,7 @@ atkbdc_setup(atkbdc_softc_t *sc, bus_space_tag_t tag, bus_space_handle_t h0,
 {
 	if (sc->ioh0 == 0) {	/* XXX */
 	    sc->command_byte = -1;
+	    sc->command_mask = 0;
 	    sc->lock = FALSE;
 	    sc->kbd.head = sc->kbd.tail = 0;
 	    sc->aux.head = sc->aux.tail = 0;
@@ -236,6 +244,9 @@ atkbdc_setup(atkbdc_softc_t *sc, bus_space_tag_t tag, bus_space_handle_t h0,
 	sc->iot = tag;
 	sc->ioh0 = h0;
 	sc->ioh1 = h1;
+
+	sc->quirks = atkbdc_getquirks();
+
 	return 0;
 }
 
@@ -1068,6 +1079,20 @@ test_aux_port(KBDC p)
 }
 
 int
+kbdc_get_device_mask(KBDC p)
+{
+    return kbdcp(p)->command_mask;
+}
+
+void
+kbdc_set_device_mask(KBDC p, int mask)
+{
+    kbdcp(p)->command_mask =
+	mask & (((p->quirks & KBDC_QUIRK_KEEP_ACTIVATED)
+	    ? 0 : KBD_KBD_CONTROL_BITS) | KBD_AUX_CONTROL_BITS);
+}
+
+int
 get_controller_command_byte(KBDC p)
 {
     if (kbdcp(p)->command_byte != -1)
@@ -1086,26 +1111,14 @@ set_controller_command_byte(KBDC p, int mask, int command)
 	return FALSE;
 
     command = (kbdcp(p)->command_byte & ~mask) | (command & mask);
-#if 0
-    if (mask & KBD_DISABLE_KBD_PORT) {
-	    if (command & KBD_DISABLE_KBD_PORT) {
-		if (!write_controller_command(p, KBDC_DISABLE_KBD_PORT))
-		    return FALSE;
-	    }
+    if (command & KBD_DISABLE_KBD_PORT) {
+	if (!write_controller_command(p, KBDC_DISABLE_KBD_PORT))
+	    return FALSE;
     }
-#endif
     if (!write_controller_command(p, KBDC_SET_COMMAND_BYTE))
 	return FALSE;
     if (!write_controller_data(p, command))
 	return FALSE;
-#if 0
-    if (mask & KBD_DISABLE_KBD_PORT) {
-	    if ((command & KBD_DISABLE_KBD_PORT) == 0) {
-		if (!write_controller_command(p, KBDC_ENABLE_KBD_PORT))
-		    return FALSE;
-	    }
-    }
-#endif
     kbdcp(p)->command_byte = command;
 
     if (verbose)

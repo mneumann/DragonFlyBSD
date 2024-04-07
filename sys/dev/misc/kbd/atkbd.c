@@ -50,8 +50,6 @@
 
 #include <bus/isa/isareg.h>
 
-static timeout_t	atkbd_timeout;
-
 static int atkbdhz = 1;
 
 TUNABLE_INT("hw.atkbd.hz", &atkbdhz);
@@ -59,6 +57,9 @@ static SYSCTL_NODE(_hw, OID_AUTO, atkbd, CTLFLAG_RD, 0, "AT keyboard");
 SYSCTL_INT(_hw_atkbd, OID_AUTO, hz, CTLFLAG_RW, &atkbdhz, 1,
     "Polling frequency (in hz)");
 
+
+static void		atkbd_timeout(void *arg);
+static int		atkbd_reset(KBDC kbdc, int flags, int c);
 
 #if 0
 static int atkbd_setmuxmode(KBDC kbdc, int value, int *mux_version);
@@ -1004,6 +1005,38 @@ atkbd_poll(keyboard_t *kbd, int on)
 	return 0;
 }
 
+static int
+atkbd_reset(KBDC kbdc, int flags, int c)
+{
+	/* reset keyboard hardware */
+	if (!(flags & KB_CONF_NO_RESET) && !reset_kbd(kbdc)) {
+		/*
+		 * KEYBOARD ERROR
+		 * Keyboard reset may fail either because the keyboard
+		 * doen't exist, or because the keyboard doesn't pass
+		 * the self-test, or the keyboard controller on the
+		 * motherboard and the keyboard somehow fail to shake hands.
+		 * It is just possible, particularly in the last case,
+		 * that the keyoard controller may be left in a hung state.
+		 * test_controller() and test_kbd_port() appear to bring
+		 * the keyboard controller back (I don't know why and how,
+		 * though.)
+		 */
+		empty_both_buffers(kbdc, 10);
+		test_controller(kbdc);
+		test_kbd_port(kbdc);
+		/*
+		 * We could disable the keyboard port and interrupt... but,
+		 * the keyboard may still exist (see above).
+		 */
+		set_controller_command_byte(kbdc, KBD_KBD_CONTROL_BITS, c);
+		if (bootverbose)
+			kprintf("atkbd: failed to reset the keyboard.\n");
+		return (EIO);
+	}
+	return (0);
+}
+
 /* local functions */
 
 static int
@@ -1177,32 +1210,9 @@ init_keyboard(KBDC kbdc, int *type, int flags)
 	/* default codeset */
 	codeset = -1;
 
-	/* reset keyboard hardware */
-	if (!(flags & KB_CONF_NO_RESET) && !reset_kbd(kbdc)) {
-		/*
-		 * KEYBOARD ERROR
-		 * Keyboard reset may fail either because the keyboard
-		 * doen't exist, or because the keyboard doesn't pass
-		 * the self-test, or the keyboard controller on the
-		 * motherboard and the keyboard somehow fail to shake hands.
-		 * It is just possible, particularly in the last case,
-		 * that the keyoard controller may be left in a hung state.
-		 * test_controller() and test_kbd_port() appear to bring
-		 * the keyboard controller back (I don't know why and how,
-		 * though.)
-		 */
-		empty_both_buffers(kbdc, 10);
-		test_controller(kbdc);
-		test_kbd_port(kbdc);
-		/*
-		 * We could disable the keyboard port and interrupt... but,
-		 * the keyboard may still exist (see above).
-		 */
-		set_controller_command_byte(kbdc, KBD_KBD_CONTROL_BITS, c);
+	if (atkbd_reset(kbdc, flags, c)) {
 		kbdc_lock(kbdc, FALSE);
-		if (bootverbose)
-			kprintf("atkbd: failed to reset the keyboard.\n");
-		return EIO;
+		return (EIO);
 	}
 
 	/* 
