@@ -40,6 +40,7 @@
 #include <sys/bus.h>
 #include <sys/proc.h>
 #include <sys/malloc.h>
+#include <sys/sysctl.h>
 #include <sys/thread2.h>
 
 #include <sys/kbio.h>
@@ -50,6 +51,14 @@
 #include <bus/isa/isareg.h>
 
 static timeout_t	atkbd_timeout;
+
+static int atkbdhz = 1;
+
+TUNABLE_INT("hw.atkbd.hz", &atkbdhz);
+static SYSCTL_NODE(_hw, OID_AUTO, atkbd, CTLFLAG_RD, 0, "AT keyboard");
+SYSCTL_INT(_hw_atkbd, OID_AUTO, hz, CTLFLAG_RW, &atkbdhz, 1,
+    "Polling frequency (in hz)");
+
 
 #if 0
 static int atkbd_setmuxmode(KBDC kbdc, int value, int *mux_version);
@@ -164,7 +173,10 @@ atkbd_timeout(void *arg)
 		if (kbd_check_char(kbd))
 			kbd_intr(kbd, NULL);
 	}
-	callout_reset(&kbd->kb_atkbd_timeout_ch, hz / 10, atkbd_timeout, arg);
+	if (atkbdhz > 0) {
+		callout_reset(&kbd->kb_atkbd_timeout_ch, hz / atkbdhz,
+				atkbd_timeout, arg);
+	}
 	crit_exit();
 }
 
