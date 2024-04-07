@@ -453,6 +453,7 @@ struct psm_softc {		/* Driver status information */
 	int		muxtpbuttons;	/* Touchpad button state */
 	int		muxmsbuttons;	/* Mouse (trackpoint) button state */
 	struct timeval	muxmidtimeout;	/* middle button supression timeout */
+	int		muxsinglesyna;	/* Probe result of single Synaptics */
 };
 static devclass_t psm_devclass;
 
@@ -644,6 +645,7 @@ static int	enable_4dmouse(struct psm_softc *sc, enum probearg arg);
 static int	enable_4dplus(struct psm_softc *sc, enum probearg arg);
 static int	enable_mmanplus(struct psm_softc *sc, enum probearg arg);
 static int	enable_synaptics_mux(struct psm_softc *sc, enum probearg arg);
+static int	enable_single_synaptics_mux(struct psm_softc *sc, enum probearg arg);
 static int	enable_synaptics(struct psm_softc *sc, enum probearg arg);
 static int	enable_trackpoint(struct psm_softc *sc, enum probearg arg);
 static int	enable_versapad(struct psm_softc *sc, enum probearg arg);
@@ -667,8 +669,10 @@ static struct {
 	 * WARNING: the order of probe is very important.  Don't mess it
 	 * unless you know what you are doing.
 	 */
-	{ MOUSE_MODEL_SYNAPTICS,	/* Synaptics Touchpad on Active Mux */
+	{ MOUSE_MODEL_SYNAPTICS,	/* Synaptics + mouse on Active Mux */
 	  0x00, MOUSE_PS2_PACKETSIZE, enable_synaptics_mux },
+	{ MOUSE_MODEL_SYNAPTICS,	/* Single Synaptics on Active Mux */
+	  0xc0, MOUSE_SYNAPTICS_PACKETSIZE, enable_single_synaptics_mux },
 	{ MOUSE_MODEL_NET,		/* Genius NetMouse */
 	  0x08, MOUSE_PS2INTELLI_PACKETSIZE, enable_gmouse },
 	{ MOUSE_MODEL_NETSCROLL,	/* Genius NetScroll */
@@ -5679,6 +5683,8 @@ enable_synaptics_mux(struct psm_softc *sc, enum probearg arg)
 	int active_ports_count = 0;
 	int active_ports_mask = 0;
 
+	sc->muxsinglesyna = FALSE;
+
 	if (mux_disabled != 0)
 		return (FALSE);
 
@@ -5701,18 +5707,16 @@ enable_synaptics_mux(struct psm_softc *sc, enum probearg arg)
 		    active_ports_count);
 
 	/* psm has a special support for GenMouse + SynTouchpad combination */
-	if (active_ports_count >= 2) {
-		for (port = 0; port < KBDC_AUX_MUX_NUM_PORTS; port++) {
-			if ((active_ports_mask & 1 << port) == 0)
-				continue;
-			VLOG(3, (LOG_DEBUG, "aux_mux: probe port %d\n", port));
-			set_active_aux_mux_port(kbdc, port);
-			probe = enable_synaptics(sc, arg);
-			if (probe) {
-				if (arg == PROBE)
-					sc->muxport = port;
-				break;
-			}
+	for (port = 0; port < KBDC_AUX_MUX_NUM_PORTS; port++) {
+		if ((active_ports_mask & 1 << port) == 0)
+			continue;
+		VLOG(3, (LOG_DEBUG, "aux_mux: probe port %d\n", port));
+		set_active_aux_mux_port(kbdc, port);
+		probe = enable_synaptics(sc, arg);
+		if (probe) {
+			if (arg == PROBE)
+				sc->muxport = port;
+			break;
 		}
 	}
 
@@ -5734,7 +5738,17 @@ enable_synaptics_mux(struct psm_softc *sc, enum probearg arg)
 	}
 	empty_both_buffers(kbdc, 10);	/* remove stray data if any */
 
-	return (probe);
+	/* Don't disable syncbit checks if Synaptics is only device on MUX */
+	if (active_ports_count == 1)
+		sc->muxsinglesyna = probe;
+	return (active_ports_count != 1 ? probe : FALSE);
+}
+
+static int
+enable_single_synaptics_mux(struct psm_softc *sc, enum probearg arg)
+{
+	/* Synaptics device is already initialized in enable_synaptics_mux */
+	return (sc->muxsinglesyna);
 }
 
 static int
