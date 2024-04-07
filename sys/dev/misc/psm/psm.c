@@ -533,16 +533,16 @@ enum {
 static int tap_enabled = -1;
 TUNABLE_INT("hw.psm.tap_enabled", &tap_enabled);
 
-static int synaptics_support = 0;
+static int synaptics_support = 1;
 TUNABLE_INT("hw.psm.synaptics_support", &synaptics_support);
 
 static int verbose = PSM_DEBUG;
 TUNABLE_INT("debug.psm.loglevel", &verbose);
 
-static int trackpoint_support = 0;
+static int trackpoint_support = 1;
 TUNABLE_INT("hw.psm.trackpoint_support",&trackpoint_support);
 
-static int elantech_support = 0;
+static int elantech_support = 1;
 TUNABLE_INT("hw.psm.elantech_support",&elantech_support);
 
 
