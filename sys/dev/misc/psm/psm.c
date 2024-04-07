@@ -547,6 +547,8 @@ TUNABLE_INT("hw.psm.trackpoint_support",&trackpoint_support);
 static int elantech_support = 1;
 TUNABLE_INT("hw.psm.elantech_support",&elantech_support);
 
+static int mux_disabled = 0;
+TUNABLE_INT("hw.psm.mux_disabled",&mux_disabled);
 
 /* for backward compatibility */
 #define	OLD_MOUSE_GETHWINFO	_IOR('M', 1, old_mousehw_t)
@@ -2513,6 +2515,9 @@ SYSCTL_INT(_hw_psm, OID_AUTO, trackpoint_support, CTLFLAG_RD,
 
 SYSCTL_INT(_hw_psm, OID_AUTO, elantech_support, CTLFLAG_RD,
     &elantech_support, 0, "Enable support for Elantech touchpads");
+
+SYSCTL_INT(_hw_psm, OID_AUTO, mux_disabled, CTLFLAG_RD,
+    &mux_disabled, 0, "Disable active multiplexing");
 
 static void
 psmintr(void *arg)
@@ -5674,6 +5679,9 @@ enable_synaptics_mux(struct psm_softc *sc, enum probearg arg)
 	int active_ports_count = 0;
 	int active_ports_mask = 0;
 
+	if (mux_disabled != 0)
+		return (FALSE);
+
 	version = enable_aux_mux(kbdc);
 	if (version == -1)
 		return (FALSE);
@@ -5710,6 +5718,21 @@ enable_synaptics_mux(struct psm_softc *sc, enum probearg arg)
 
 	/* IRQ handler does not support active multiplexing mode */
 	disable_aux_mux(kbdc);
+
+	/* Is MUX still alive after switching back to legacy mode? */
+	if (!enable_aux_dev(kbdc) || !disable_aux_dev(kbdc)) {
+		/*
+		 * On some laptops e.g. Lenovo X121e dead AUX MUX can be
+		 * brought back to life with resetting of keyboard.
+		 */
+		reset_kbd(kbdc);
+		if (!enable_aux_dev(kbdc) || !disable_aux_dev(kbdc)) {
+			kprintf("psm%d: AUX MUX hang detected!\n", sc->unit);
+			kprintf("Consider adding hw.psm.mux_disabled=1 to "
+			    "loader tunables\n");
+		}
+	}
+	empty_both_buffers(kbdc, 10);	/* remove stray data if any */
 
 	return (probe);
 }
