@@ -1349,6 +1349,8 @@ psmprobe(device_t dev)
 
 	sc->unit = unit;
 	sc->kbdc = atkbdc_open(device_get_unit(device_get_parent(dev)));
+	if (sc->kbdc == NULL)
+		return (ENXIO);
 	sc->config = flags & PSM_CONFIG_FLAGS;
 	/* XXX: for backward compatibility */
 #if defined(PSM_HOOKRESUME)
