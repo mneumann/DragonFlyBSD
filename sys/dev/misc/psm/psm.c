@@ -2217,9 +2217,6 @@ psmioctl(struct dev_ioctl_args *ap)
 	struct psm_softc *sc = dev->si_drv1;
 	mousemode_t mode;
 	mousestatus_t status;
-#if (defined(MOUSE_GETVARS))
-	mousevar_t *var;
-#endif
 	mousedata_t *data;
 	int stat[3];
 	int command_byte;
@@ -2414,21 +2411,6 @@ psmioctl(struct dev_ioctl_args *ap)
 		lockmgr(&sc->lock, LK_RELEASE);
 		*(mousestatus_t *)addr = status;
 		break;
-
-#if (defined(MOUSE_GETVARS))
-	case MOUSE_GETVARS:
-		var = (mousevar_t *)addr;
-		bzero(var, sizeof(*var));
-		lockmgr(&sc->lock, LK_EXCLUSIVE);
-		var->var[0] = MOUSE_VARS_PS2_SIG;
-		var->var[1] = sc->config;
-		var->var[2] = sc->flags;
-		lockmgr(&sc->lock, LK_RELEASE);
-		break;
-
-	case MOUSE_SETVARS:
-		return (ENODEV);
-#endif /* MOUSE_GETVARS */
 
 	case MOUSE_READSTATE:
 	case MOUSE_READDATA:
