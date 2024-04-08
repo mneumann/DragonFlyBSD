@@ -361,6 +361,13 @@ evdev_set_methods(struct evdev_dev *evdev, void *softc,
 	evdev->ev_softc = softc;
 }
 
+inline void *
+evdev_get_softc(struct evdev_dev *evdev)
+{
+
+	return (evdev->ev_softc);
+}
+
 inline void
 evdev_support_prop(struct evdev_dev *evdev, uint16_t prop)
 {
@@ -394,16 +401,15 @@ evdev_support_rel(struct evdev_dev *evdev, uint16_t code)
 }
 
 inline void
-evdev_support_abs(struct evdev_dev *evdev, uint16_t code, int32_t value,
-    int32_t minimum, int32_t maximum, int32_t fuzz, int32_t flat,
-    int32_t resolution)
+evdev_support_abs(struct evdev_dev *evdev, uint16_t code, int32_t minimum,
+    int32_t maximum, int32_t fuzz, int32_t flat, int32_t resolution)
 {
 	struct input_absinfo absinfo;
 
 	KASSERT(code < ABS_CNT, ("invalid evdev abs property"));
 
 	absinfo = (struct input_absinfo) {
-		.value = value,
+		.value = 0,
 		.minimum = minimum,
 		.maximum = maximum,
 		.fuzz = fuzz,
@@ -823,7 +829,7 @@ evdev_inject_event(struct evdev_dev *evdev, uint16_t type, uint16_t code,
 	case EV_FF:
 		if (evdev->ev_methods != NULL &&
 		    evdev->ev_methods->ev_event != NULL)
-			evdev->ev_methods->ev_event(evdev, evdev->ev_softc,
+			evdev->ev_methods->ev_event(evdev,
 			    type, code, value);
 		/*
 		 * Leds and driver repeats should be reported in ev_event
@@ -863,7 +869,7 @@ evdev_register_client(struct evdev_dev *evdev, struct evdev_client *client)
 	    evdev->ev_methods->ev_open != NULL) {
 		debugf(evdev, "calling ev_open() on device %s",
 		    evdev->ev_shortname);
-		ret = evdev->ev_methods->ev_open(evdev, evdev->ev_softc);
+		ret = evdev->ev_methods->ev_open(evdev);
 	}
 	if (ret == 0)
 		LIST_INSERT_HEAD(&evdev->ev_clients, client, ec_link);
@@ -881,7 +887,7 @@ evdev_dispose_client(struct evdev_dev *evdev, struct evdev_client *client)
 	if (LIST_EMPTY(&evdev->ev_clients)) {
 		if (evdev->ev_methods != NULL &&
 		    evdev->ev_methods->ev_close != NULL)
-			evdev->ev_methods->ev_close(evdev, evdev->ev_softc);
+			(void)evdev->ev_methods->ev_close(evdev);
 		if (evdev_event_supported(evdev, EV_REP) &&
 		    bit_test(evdev->ev_flags, EVDEV_FLAG_SOFTREPEAT))
 			evdev_stop_repeat(evdev);
@@ -915,6 +921,21 @@ evdev_release_client(struct evdev_dev *evdev, struct evdev_client *client)
 	evdev->ev_grabber = NULL;
 
 	return (0);
+}
+
+bool
+evdev_is_grabbed(struct evdev_dev *evdev)
+{
+#if 0
+	if (kdb_active || SCHEDULER_STOPPED())
+		return (false);
+#endif
+	/*
+	 * The function is intended to be called from evdev-unrelated parts of
+	 * code like syscons-compatible parts of mouse and keyboard drivers.
+	 * That makes unlocked read-only access acceptable.
+	 */
+	return (evdev->ev_grabber != NULL);
 }
 
 static void
