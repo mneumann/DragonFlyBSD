@@ -50,11 +50,12 @@
 
 #include <bus/isa/isareg.h>
 
-static int atkbdhz = 1;
+static SYSCTL_NODE(_hw, OID_AUTO, atkbd, CTLFLAG_RD, 0, "AT keyboard");
+
+static int atkbdhz = 0;
 
 TUNABLE_INT("hw.atkbd.hz", &atkbdhz);
-static SYSCTL_NODE(_hw, OID_AUTO, atkbd, CTLFLAG_RD, 0, "AT keyboard");
-SYSCTL_INT(_hw_atkbd, OID_AUTO, hz, CTLFLAG_RW, &atkbdhz, 1,
+SYSCTL_INT(_hw_atkbd, OID_AUTO, hz, CTLFLAG_RW, &atkbdhz, 0,
     "Polling frequency (in hz)");
 
 
