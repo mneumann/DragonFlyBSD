@@ -513,21 +513,25 @@ evdev_ioctl(struct dev_ioctl_args *ap)
 	/* evdev variable-length ioctls handling */
 	switch (IOCBASECMD(cmd)) {
 	case EVIOCGNAME(0):
-		strlcpy(data, evdev->ev_name, len);
+		/* Linux evdev does not terminate truncated strings with 0 */
+		limit = MIN(strlen(evdev->ev_name) + 1, len);
+		memcpy(data, evdev->ev_name, limit);
 		return (0);
 
 	case EVIOCGPHYS(0):
 		if (evdev->ev_shortname[0] == 0)
 			return (ENOENT);
 
-		strlcpy(data, evdev->ev_shortname, len);
+		limit = MIN(strlen(evdev->ev_shortname) + 1, len);
+		memcpy(data, evdev->ev_shortname, limit);
 		return (0);
 
 	case EVIOCGUNIQ(0):
 		if (evdev->ev_serial[0] == 0)
 			return (ENOENT);
 
-		strlcpy(data, evdev->ev_serial, len);
+		limit = MIN(strlen(evdev->ev_serial) + 1, len);
+		memcpy(data, evdev->ev_serial, limit);
 		return (0);
 
 	case EVIOCGPROP(0):
@@ -536,6 +540,7 @@ evdev_ioctl(struct dev_ioctl_args *ap)
 		return (0);
 
 	case EVIOCGMTSLOTS(0):
+		/* EVIOCGMTSLOTS always returns 0 on success */
 		if (evdev->ev_mt == NULL)
 			return (EINVAL);
 		if (len < sizeof(uint32_t))
