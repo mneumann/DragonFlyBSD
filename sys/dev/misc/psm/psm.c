@@ -1846,7 +1846,7 @@ psm_register(device_t dev, int model_code)
 	for (i = 0; i < nbuttons; i++)
 		evdev_support_key(evdev_r, BTN_MOUSE + i);
 
-	error = evdev_register(evdev_r);
+	error = evdev_register_mtx(evdev_r, &sc->lock);
 	if (error)
 		evdev_free(evdev_r);
 	else
@@ -1921,7 +1921,7 @@ psm_register_synaptics(device_t dev)
 		for (i = 0; i < sc->synhw.nExtendedButtons; i++)
 			evdev_support_key(evdev_a, BTN_0 + i);
 
-	error = evdev_register(evdev_a);
+	error = evdev_register_mtx(evdev_a, &sc->lock);
 	if (!error && (sc->synhw.capPassthrough || sc->muxport != PSM_NOMUX)) {
 		guest_model = sc->tpinfo.sysctl_tree != NULL ?
 		    MOUSE_MODEL_TRACKPOINT : MOUSE_MODEL_GENERIC;
@@ -1982,7 +1982,7 @@ psm_register_elantech(device_t dev)
 		evdev_support_key(evdev_a, BTN_RIGHT);
 	psm_support_abs_bulk(evdev_a, elantech_absinfo);
 
-	error = evdev_register(evdev_a);
+	error = evdev_register_mtx(evdev_a, &sc->lock);
 	if (!error && sc->elanhw.hastrackpoint)
 		error = psm_register(dev, MOUSE_MODEL_ELANTECH);
 	if (error)
