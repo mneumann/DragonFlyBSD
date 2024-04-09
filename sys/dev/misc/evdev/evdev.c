@@ -371,7 +371,7 @@ evdev_register_mtx(struct evdev_dev *evdev, struct lock *mtx)
 int
 evdev_unregister(struct evdev_dev *evdev)
 {
-	struct evdev_client *client;
+	struct evdev_client *client, *tmp;
 	int ret;
 	debugf(evdev, "%s: unregistered evdev provider: %s\n",
 	    evdev->ev_shortname, evdev->ev_name);
@@ -381,7 +381,7 @@ evdev_unregister(struct evdev_dev *evdev)
 	EVDEV_LOCK(evdev);
 	evdev->ev_cdev->si_drv1 = NULL;
 	/* Wake up sleepers */
-	LIST_FOREACH(client, &evdev->ev_clients, ec_link) {
+	LIST_FOREACH_MUTABLE(client, &evdev->ev_clients, ec_link, tmp) {
 		evdev_revoke_client(client);
 		evdev_dispose_client(evdev, client);
 		EVDEV_CLIENT_LOCKQ(client);
