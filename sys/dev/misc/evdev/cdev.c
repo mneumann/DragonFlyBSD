@@ -207,6 +207,8 @@ evdev_read(struct dev_read_args *ap)
 				client->ec_blocked = true;
 				ret = lksleep(client, &client->ec_buffer_mtx,
 				    PCATCH, "evread", 0);
+				if (ret == 0 && client->ec_revoked)
+					ret = ENODEV;
 			}
 		}
 	}
