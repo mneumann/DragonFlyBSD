@@ -34,6 +34,7 @@
 #include <sys/malloc.h>
 #include <sys/queue.h>
 #include <sys/event.h>
+#include <sys/sysctl.h>
 
 /* Use a local copy of FreeBSD's bitstring.h. */
 #include "freebsd-bitstring.h"
@@ -135,6 +136,9 @@ struct evdev_dev
 	/* Parent driver callbacks: */
 	const struct evdev_methods * ev_methods;
 	void *			ev_softc;
+
+	/* Sysctl: */
+	struct sysctl_ctx_list	ev_sysctl_ctx;
 
 	LIST_ENTRY(evdev_dev) ev_link;
 	LIST_HEAD(, evdev_client) ev_clients;
