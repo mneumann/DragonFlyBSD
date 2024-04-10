@@ -88,6 +88,7 @@ extern int evdev_sysmouse_t_axis;
 					 * for MT protocol type B reports */
 #define	EVDEV_FLAG_MT_AUTOREL	0x02	/* Autorelease MT-slots not listed in
 					 * current MT protocol type B report */
+#define	EVDEV_FLAG_MT_KEEPID	0x04	/* Do not reassign tracking ID */
 #define	EVDEV_FLAG_MT_TRACK	0x05	/* Assign touch to slot by evdev */
 #define	EVDEV_FLAG_MAX		0x1F
 #define	EVDEV_FLAG_CNT		(EVDEV_FLAG_MAX + 1)
