@@ -47,6 +47,7 @@
 #include <sys/lock.h>
 #include <sys/malloc.h>
 #include <sys/systm.h>
+#include <sys/limits.h>
 
 #include <dev/misc/evdev/evdev.h>
 #include <dev/misc/evdev/evdev_private.h>
@@ -65,11 +66,11 @@ _Static_assert(MAX_MT_SLOTS < sizeof(slotset_t) * 8, "MAX_MT_SLOTS too big");
 #define FOREACHBIT(v, i) \
 	for ((i) = ffs(v) - 1; (i) != -1; (i) = ffs((v) & (~1 << (i))) - 1)
 
-struct {
+static struct {
 	uint16_t	mt;
 	uint16_t	st;
 	int32_t		max;
-} static evdev_mtstmap[] = {
+} evdev_mtstmap[] = {
 	{ ABS_MT_POSITION_X,	ABS_X,		0 },
 	{ ABS_MT_POSITION_Y,	ABS_Y,		0 },
 	{ ABS_MT_PRESSURE,	ABS_PRESSURE,	255 },
@@ -255,6 +256,8 @@ evdev_mt_matching(int *matrix, int m, int n, int *buffer)
 	int *c2r = cs + n;	/* column-to-row assignments in cs */
 	int *cd = c2r + n;	/* column deltas (reduction) */
 
+	row = 0; /* fixes maybe-uninitialized warning */
+
 	for (p = r2c; p < red; *p++ = -1) {}
 	for (; p < mc; *p++ = 0) {}
 	for (col = 0; col < n; col++) {
@@ -329,7 +332,7 @@ evdev_mt_match_frame(struct evdev_dev *evdev, union evdev_mt_slot *pt,
 		return;
 
 	p = mt->matrix;
-	num_touches = bitcount(mt->touches);
+	num_touches = bitcount32(mt->touches);
 	if (num_touches >= size) {
 		FOREACHBIT(mt->touches, slot)
 			for (i = 0; i < size; i++) {

@@ -247,6 +247,36 @@ bit_nclear(bitstr_t *_bitstr, int _start, int _stop)
 	}
 }
 
+/* Find the first '_match'-bit in bit string at or after bit start. */
+static inline int
+bit_ff_at_(bitstr_t *_bitstr, int _start, int _nbits, int _match)
+{
+	bitstr_t *_curbitstr;
+	bitstr_t *_stopbitstr;
+	bitstr_t _mask;
+	bitstr_t _test;
+	int _value;
+
+	if (_start >= _nbits || _nbits <= 0)
+		return (-1);
+
+	_curbitstr = _bitstr + _bit_idx(_start);
+	_stopbitstr = _bitstr + _bit_idx(_nbits - 1);
+	_mask = _match ? 0 : _BITSTR_MASK;
+
+	_test = _mask ^ *_curbitstr;
+	if (_bit_offset(_start) != 0)
+		_test &= _bit_make_mask(_start, _BITSTR_BITS - 1);
+	while (_test == 0 && _curbitstr < _stopbitstr)
+		_test = _mask ^ *(++_curbitstr);
+
+	_value = ((_curbitstr - _bitstr) * _BITSTR_BITS) + ffsl(_test) - 1;
+	if (_test == 0 ||
+	    (_bit_offset(_nbits) != 0 && (u_int)_value >= _nbits))
+		_value = -1;
+	return (_value);
+}
+
 /* Find the first bit set in bit string at or after bit start. */
 static inline void
 bit_ffs_at(bitstr_t *_bitstr, int _start, int _nbits, int *_result)
@@ -354,5 +384,13 @@ bit_count(bitstr_t *_bitstr, int _start, int _nbits, int *_result)
 out:
 	*_result = _value;
 }
+
+/* Traverse all set bits, assigning each location in turn to iter */
+#define	bit_foreach_at(_bitstr, _start, _nbits, _iter)			\
+	for ((_iter) = bit_ff_at_((_bitstr), (_start), (_nbits), 1);	\
+	     (_iter) != -1;						\
+	     (_iter) = bit_ff_at_((_bitstr), (_iter) + 1, (_nbits), 1))
+#define	bit_foreach(_bitstr, _nbits, _iter)				\
+	bit_foreach_at(_bitstr, /*start*/0, _nbits, _iter)
 
 #endif	/* _SYS_FREEBSD_BITSTRING_H_ */
