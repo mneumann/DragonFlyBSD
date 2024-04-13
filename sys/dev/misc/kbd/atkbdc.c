@@ -143,11 +143,11 @@ static int
 atkbdc_getquirks(void)
 {
     int i;
-    char *bios_vendor = kern_getenv("smbios.bios.vendor");
-    char *maker = kern_getenv("smbios.system.maker");
-    char *product = kern_getenv("smbios.system.product");
-    char *version = kern_getenv("smbios.bios.version");
-    char *reldate = kern_getenv("smbios.bios.reldate");
+    char *bios_vendor = kgetenv("smbios.bios.vendor");
+    char *maker = kgetenv("smbios.system.maker");
+    char *product = kgetenv("smbios.system.product");
+    char *version = kgetenv("smbios.bios.version");
+    char *reldate = kgetenv("smbios.bios.reldate");
 
     for (i = 0; i < nitems(quirks); i++)
 	if (QUIRK_STR_EQUAL(quirks[i].bios_vendor, bios_vendor) &&
