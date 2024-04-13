@@ -95,10 +95,10 @@ struct evdev_dev
 	cdev_t			ev_cdev;
 	int			ev_unit;
 	enum evdev_lock_type	ev_lock_type;
-	struct lock *		ev_lock;
-	struct lock		ev_mtx;
+	struct lock *		ev_state_lock;	/* State lock */
+	struct lock		ev_mtx;		/* Internal state lock */
 	struct input_id		ev_id;
-	struct evdev_client *	ev_grabber;
+	struct evdev_client *	ev_grabber;			/* (s) */
 	size_t			ev_report_size;
 
 	/* Supported features: */
@@ -111,27 +111,27 @@ struct evdev_dev
 	bitstr_t		bit_decl(ev_led_flags, LED_CNT);
 	bitstr_t		bit_decl(ev_snd_flags, SND_CNT);
 	bitstr_t		bit_decl(ev_sw_flags, SW_CNT);
-	struct input_absinfo *	ev_absinfo;
+	struct input_absinfo *	ev_absinfo;			/* (s) */
 	bitstr_t		bit_decl(ev_flags, EVDEV_FLAG_CNT);
 
 	/* Repeat parameters & callout: */
-	int			ev_rep[REP_CNT];
-	struct callout		ev_rep_callout;
-	uint16_t		ev_rep_key;
+	int			ev_rep[REP_CNT];		/* (s) */
+	struct callout		ev_rep_callout;			/* (s) */
+	uint16_t		ev_rep_key;			/* (s) */
 
 	/* State: */
-	bitstr_t		bit_decl(ev_key_states, KEY_CNT);
-	bitstr_t		bit_decl(ev_led_states, LED_CNT);
-	bitstr_t		bit_decl(ev_snd_states, SND_CNT);
-	bitstr_t		bit_decl(ev_sw_states, SW_CNT);
-	bool			ev_report_opened;
+	bitstr_t		bit_decl(ev_key_states, KEY_CNT); /* (s) */
+	bitstr_t		bit_decl(ev_led_states, LED_CNT); /* (s) */
+	bitstr_t		bit_decl(ev_snd_states, SND_CNT); /* (s) */
+	bitstr_t		bit_decl(ev_sw_states, SW_CNT);	/* (s) */
+	bool			ev_report_opened;		/* (s) */
 
 	/* Multitouch protocol type B state: */
-	struct evdev_mt *	ev_mt;
+	struct evdev_mt *	ev_mt;				/* (s) */
 
 	/* Counters: */
-	uint64_t		ev_event_count;
-	uint64_t		ev_report_count;
+	uint64_t		ev_event_count;			/* (s) */
+	uint64_t		ev_report_count;		/* (s) */
 
 	/* Parent driver callbacks: */
 	const struct evdev_methods * ev_methods;
@@ -144,9 +144,9 @@ struct evdev_dev
 	LIST_HEAD(, evdev_client) ev_clients;
 };
 
-#define	EVDEV_LOCK(evdev)	 lockmgr((evdev)->ev_lock, LK_EXCLUSIVE)
-#define	EVDEV_UNLOCK(evdev)	 lockmgr((evdev)->ev_lock, LK_RELEASE)
-#define	EVDEV_LOCK_ASSERT(evdev) KKASSERT(lockowned((evdev)->ev_lock) != 0)
+#define	EVDEV_LOCK(evdev)	 lockmgr((evdev)->ev_state_lock, LK_EXCLUSIVE)
+#define	EVDEV_UNLOCK(evdev)	 lockmgr((evdev)->ev_state_lock, LK_RELEASE)
+#define	EVDEV_LOCK_ASSERT(evdev) KKASSERT(lockowned((evdev)->ev_state_lock) != 0)
 #define	EVDEV_ENTER(evdev)  do {					\
 	if ((evdev)->ev_lock_type == EV_LOCK_INTERNAL)			\
 		EVDEV_LOCK(evdev);					\
@@ -161,22 +161,22 @@ struct evdev_dev
 struct evdev_client
 {
 	struct evdev_dev *	ec_evdev;
-	struct lock		ec_buffer_mtx;
+	struct lock		ec_buffer_mtx;	/* Client queue lock */
 	size_t			ec_buffer_size;
-	size_t			ec_buffer_head;
-	size_t			ec_buffer_tail;
-	size_t			ec_buffer_ready;
+	size_t			ec_buffer_head;		/* (q) */
+	size_t			ec_buffer_tail;		/* (q) */
+	size_t			ec_buffer_ready;	/* (q) */
 	enum evdev_clock_id	ec_clock_id;
 	struct kqinfo 		kqinfo;
 	struct sigio *		ec_sigio;
-	bool			ec_async;
-	bool			ec_revoked;
-	bool			ec_blocked;
-	bool			ec_selected;
+	bool			ec_async;		/* (q) */
+	bool			ec_revoked;		/* (l) */
+	bool			ec_blocked;		/* (q) */
+	bool			ec_selected;		/* (q) */
 
-	LIST_ENTRY(evdev_client) ec_link;
+	LIST_ENTRY(evdev_client) ec_link;		/* (l) */
 
-	struct input_event	ec_buffer[];
+	struct input_event	ec_buffer[];		/* (q) */
 };
 
 #define	EVDEV_CLIENT_LOCKQ(client)	lockmgr(&(client)->ec_buffer_mtx, \
@@ -190,6 +190,16 @@ struct evdev_client
 #define	EVDEV_CLIENT_SIZEQ(client) \
     (((client)->ec_buffer_ready + (client)->ec_buffer_size - \
       (client)->ec_buffer_head) % (client)->ec_buffer_size)
+
+/* bitstring(3) helper */
+static inline void
+bit_change(bitstr_t *bitstr, int bit, int value)
+{
+	if (value)
+		bit_set(bitstr, bit);
+	else
+		bit_clear(bitstr, bit);
+}
 
 /* Input device interface: */
 void evdev_send_event(struct evdev_dev *, uint16_t, uint16_t, int32_t);

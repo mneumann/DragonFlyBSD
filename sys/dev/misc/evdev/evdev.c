@@ -103,15 +103,6 @@ static void evdev_start_repeat(struct evdev_dev *, uint16_t);
 static void evdev_stop_repeat(struct evdev_dev *);
 static int evdev_check_event(struct evdev_dev *, uint16_t, uint16_t, int32_t);
 
-static inline void
-bit_change(bitstr_t *bitstr, int bit, int value)
-{
-	if (value)
-		bit_set(bitstr, bit);
-	else
-		bit_clear(bitstr, bit);
-}
-
 struct evdev_dev *
 evdev_alloc(void)
 {
@@ -311,7 +302,7 @@ evdev_register_common(struct evdev_dev *evdev)
 	if (evdev_event_supported(evdev, EV_REP) &&
 	    bit_test(evdev->ev_flags, EVDEV_FLAG_SOFTREPEAT)) {
 		/* Initialize callout */
-		callout_init_lk(&evdev->ev_rep_callout, evdev->ev_lock);
+		callout_init_lk(&evdev->ev_rep_callout, evdev->ev_state_lock);
 
 		if (evdev->ev_rep[REP_DELAY] == 0 &&
 		    evdev->ev_rep[REP_PERIOD] == 0) {
@@ -352,7 +343,7 @@ evdev_register(struct evdev_dev *evdev)
 	int ret;
 
 	evdev->ev_lock_type = EV_LOCK_INTERNAL;
-	evdev->ev_lock = &evdev->ev_mtx;
+	evdev->ev_state_lock = &evdev->ev_mtx;
 	lockinit(&evdev->ev_mtx, "evmtx", 0, 0);
 
 	ret = evdev_register_common(evdev);
@@ -367,7 +358,7 @@ evdev_register_mtx(struct evdev_dev *evdev, struct lock *mtx)
 {
 
 	evdev->ev_lock_type = EV_LOCK_MTX;
-	evdev->ev_lock = mtx;
+	evdev->ev_state_lock = mtx;
 	return (evdev_register_common(evdev));
 }
 
