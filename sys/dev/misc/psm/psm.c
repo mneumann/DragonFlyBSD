@@ -522,8 +522,7 @@ static devclass_t psm_devclass;
 /* other flags (flags) */
 #define	PSM_FLAGS_FINGERDOWN	0x0001	/* VersaPad finger down */
 
-#define kbdcp(p)                        ((atkbdc_softc_t *)(p))
-#define ALWAYS_RESTORE_CONTROLLER(kbdc)	!(kbdcp(kbdc)->quirks \
+#define ALWAYS_RESTORE_CONTROLLER(kbdc)	!(kbdc->quirks \
     & KBDC_QUIRK_KEEP_ACTIVATED)
 
 /* Tunables */
