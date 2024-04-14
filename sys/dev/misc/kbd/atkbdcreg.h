@@ -232,12 +232,10 @@ typedef struct atkbdc_softc {
     bus_space_handle_t ioh1;
     int command_byte;		/* current command byte value */
     int command_mask;		/* command byte mask bits for kbd/aux devices */
-#if 0
-    int mux_active;		/* multiplexer is active */
-#endif
     int lock;			/* FIXME: XXX not quite a semaphore... */
     kbdkqueue kbd;		/* keyboard data queue */
     kbdkqueue aux;		/* auxiliary data queue */
+    int retry;
     int quirks;			/* controller doesn't like deactivate */
 #define KBDC_QUIRK_KEEP_ACTIVATED	(1 << 0)
 #define KBDC_QUIRK_IGNORE_PROBE_RESULT	(1 << 1)
