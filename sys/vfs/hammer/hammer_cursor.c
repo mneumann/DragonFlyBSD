@@ -660,7 +660,7 @@ hammer_cursor_down(hammer_cursor_t cursor)
 	}
 
 	/*
-	 * If no error occured we can lock the new child node.  If the
+	 * If no error occurred we can lock the new child node.  If the
 	 * node is deadlock flagged wait up to hammer_tdmux_ticks (1 second)
 	 * for the deadlock to clear.  Otherwise a large number of concurrent
 	 * readers can continuously stall the flusher.
@@ -767,7 +767,7 @@ hammer_lock_cursor(hammer_cursor_t cursor)
 	cursor->flags &= ~HAMMER_CURSOR_TRACKED;
 
 	/*
-	 * If a ripout has occured iterations must re-test the (new)
+	 * If a ripout has occurred iterations must re-test the (new)
 	 * current element.  Clearing ATEDISK prevents the element from
 	 * being skipped and RETEST causes it to be re-tested.
 	 */

@@ -48,7 +48,7 @@
  * represented 64 bytes a maximally sized ALIST would represent
  * 128 gigabytes.
  *
- * A radix tree is used to maintain the bitmap and layed out in a manner
+ * A radix tree is used to maintain the bitmap and laid out in a manner
  * similar to the blist code.  Meta nodes use a radix of 16 and 2 bits per
  * block while leaf nodes use a radix of 32 and 1 bit per block (stored in
  * a 32 bit bitmap field).  Both meta and leaf nodes have a hint field.
@@ -57,8 +57,8 @@
  * will never contain a value that is too low.  When the radix tree is
  * searched, allocation failures in subtrees update the hint. 
  *
- * The radix tree is layed out recursively using a linear array.  Each meta
- * node is immediately followed (layed out sequentially in memory) by
+ * The radix tree is laid out recursively using a linear array.  Each meta
+ * node is immediately followed (laid out sequentially in memory) by
  * ALIST_META_RADIX lower level nodes.  This is a recursive structure but one
  * that can be easily scanned through a very simple 'skip' calculation.  In
  * order to support large radixes, portions of the tree may reside outside our

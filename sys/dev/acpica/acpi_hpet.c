@@ -418,7 +418,7 @@ acpi_hpet_attach(device_t dev)
 	if (sc->mem_res == NULL) {
 		/*
 		 * We only need to make sure that main counter
-		 * is accessable.
+		 * is accessible.
 		 */
 		device_printf(dev, "can't map %dB register space, try %dB\n",
 			      HPET_MEM_WIDTH, HPET_MEM_WIDTH_MIN);

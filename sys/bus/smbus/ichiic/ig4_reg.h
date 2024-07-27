@@ -253,7 +253,7 @@
  * RAW_INTR_STAT- (RO) Raw Interrupt Status Register		22.2.10
  *
  *	GEN_CALL	Set only when a general call (broadcast) address
- *			is received and acknowleged, stays set until
+ *			is received and acknowledged, stays set until
  *			cleared by reading CLR_GEN_CALL.
  *
  *	START_DET	Set when a START or RESTART condition has occurred
@@ -277,7 +277,7 @@
  *			cleared by HW when the buffer level goes above
  *			the threshold.
  *
- *	TX_OVER		Indicates that the processer attempted to write
+ *	TX_OVER		Indicates that the processor attempted to write
  *			to the TX FIFO while the TX FIFO was full.  Cleared
  *			by reading CLR_TX_OVER.
  *

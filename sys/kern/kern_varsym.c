@@ -325,9 +325,9 @@ sys_varsym_list(struct sysmsg *sysmsg, const struct varsym_list_args *uap)
 	lockmgr(&vss->vx_lock, LK_RELEASE);
 
 	/*
-	 * Save the marker back.  If no error occured and earlyterm is clear
+	 * Save the marker back.  If no error occurred and earlyterm is clear
 	 * the marker is set to -1 indicating that the variable list has been
-	 * exhausted.  If no error occured the number of bytes loaded into
+	 * exhausted.  If no error occurred the number of bytes loaded into
 	 * the buffer will be returned, otherwise the syscall code returns -1.
 	 */
 	if (error == 0 && earlyterm == 0)

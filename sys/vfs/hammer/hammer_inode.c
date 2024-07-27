@@ -1549,7 +1549,7 @@ hammer_unload_inode(hammer_inode_t ip)
 }
 
 /*
- * Called during unmounting if a critical error occured.  The in-memory
+ * Called during unmounting if a critical error occurred.  The in-memory
  * inode and all related structures are destroyed.
  *
  * If a critical error did not occur the unmount code calls the standard
@@ -1737,7 +1737,7 @@ hammer_update_atime_quick(hammer_inode_t ip)
  * to reflush if it is currently flushing.
  *
  * Upon return if the inode could not be flushed due to a setup
- * dependancy, then it will be automatically flushed when the dependancy
+ * dependency, then it will be automatically flushed when the dependency
  * is satisfied.
  */
 void
@@ -1780,7 +1780,7 @@ hammer_flush_inode(hammer_inode_t ip, int flags)
 	 * state we have to put it back into an IDLE state so we can
 	 * drop the extra ref.
 	 *
-	 * If we have a parent dependancy we must still fall through
+	 * If we have a parent dependency we must still fall through
 	 * so we can run it.
 	 */
 	if ((ip->flags & HAMMER_INODE_MODMASK) == 0) {
@@ -1799,7 +1799,7 @@ hammer_flush_inode(hammer_inode_t ip, int flags)
 	switch(ip->flush_state) {
 	case HAMMER_FST_IDLE:
 		/*
-		 * We have no dependancies and can flush immediately.  Some
+		 * We have no dependencies and can flush immediately.  Some
 		 * our children may not be flushable so we have to re-test
 		 * with that additional knowledge.
 		 */
@@ -1807,11 +1807,11 @@ hammer_flush_inode(hammer_inode_t ip, int flags)
 		break;
 	case HAMMER_FST_SETUP:
 		/*
-		 * Recurse upwards through dependancies via target_list
+		 * Recurse upwards through dependencies via target_list
 		 * and start their flusher actions going if possible.
 		 *
 		 * 'good' is our connectivity.  -1 means we have none and
-		 * can't flush, 0 means there weren't any dependancies, and
+		 * can't flush, 0 means there weren't any dependencies, and
 		 * 1 means we have good connectivity.
 		 */
 		good = hammer_setup_parent_inodes(ip, 0, flg);
@@ -1829,7 +1829,7 @@ hammer_flush_inode(hammer_inode_t ip, int flags)
 			 * us as soon as it does.
 			 *
 			 * The REFLUSH flag is also needed to trigger
-			 * dependancy wakeups.
+			 * dependency wakeups.
 			 */
 			ip->flags |= HAMMER_INODE_CONN_DOWN |
 				     HAMMER_INODE_REFLUSH;
@@ -1845,7 +1845,7 @@ hammer_flush_inode(hammer_inode_t ip, int flags)
 		 * if needed after it completes its current flush.
 		 *
 		 * The REFLUSH flag is also needed to trigger
-		 * dependancy wakeups.
+		 * dependency wakeups.
 		 */
 		if ((ip->flags & HAMMER_INODE_REFLUSH) == 0)
 			ip->flags |= HAMMER_INODE_REFLUSH;
@@ -1914,7 +1914,7 @@ hammer_setup_parent_inodes(hammer_inode_t ip, int depth,
 }
 
 /*
- * This helper function takes a record representing the dependancy between
+ * This helper function takes a record representing the dependency between
  * the parent inode and child inode.
  *
  * record		= record in question (*rec in below)
@@ -1939,7 +1939,7 @@ hammer_setup_parent_inodes(hammer_inode_t ip, int depth,
  *
  * Return 0 if the record is not relevant
  *
- * Return -1 if we can't resolve the dependancy and there is no connectivity.
+ * Return -1 if we can't resolve the dependency and there is no connectivity.
  */
 static int
 hammer_setup_parent_inodes_helper(hammer_record_t record, int depth,
@@ -1981,12 +1981,12 @@ hammer_setup_parent_inodes_helper(hammer_record_t record, int depth,
 	}
 
 	/*
-	 * It must be a setup record.  Try to resolve the setup dependancies
+	 * It must be a setup record.  Try to resolve the setup dependencies
 	 * by recursing upwards so we can place ip on the flush list.
 	 *
 	 * Limit ourselves to 20 levels of recursion to avoid blowing out
 	 * the kernel stack.  If we hit the recursion limit we can't flush
-	 * until the parent flushes.  The parent will flush independantly
+	 * until the parent flushes.  The parent will flush independently
 	 * on its own and ultimately a deep recursion will be resolved.
 	 */
 	KKASSERT(record->flush_state == HAMMER_FST_SETUP);
@@ -2186,7 +2186,7 @@ hammer_flush_inode_core(hammer_inode_t ip, hammer_flush_group_t flg, int flags)
 #endif
 
 			/*
-			 * REFLUSH is needed to trigger dependancy wakeups
+			 * REFLUSH is needed to trigger dependency wakeups
 			 * when an inode is in SETUP.
 			 */
 			ip->flags |= HAMMER_INODE_REFLUSH;
@@ -2293,7 +2293,7 @@ hammer_setup_child_callback(hammer_record_t rec, void *data)
 	}
 
 	/*
-	 * If the record is in an idle state it has no dependancies and
+	 * If the record is in an idle state it has no dependencies and
 	 * can be flushed.
 	 */
 	ip = rec->ip;
@@ -2303,7 +2303,7 @@ hammer_setup_child_callback(hammer_record_t rec, void *data)
 	switch(rec->flush_state) {
 	case HAMMER_FST_IDLE:
 		/*
-		 * The record has no setup dependancy, we can flush it.
+		 * The record has no setup dependency, we can flush it.
 		 */
 		KKASSERT(rec->target_ip == NULL);
 		rec->flush_state = HAMMER_FST_FLUSH;
@@ -2314,7 +2314,7 @@ hammer_setup_child_callback(hammer_record_t rec, void *data)
 		break;
 	case HAMMER_FST_SETUP:
 		/*
-		 * The record has a setup dependancy.  These are typically
+		 * The record has a setup dependency.  These are typically
 		 * directory entry adds and deletes.  Such entries will be
 		 * flushed when their inodes are flushed so we do not
 		 * usually have to add them to the flush here.  However,
@@ -2360,7 +2360,7 @@ hammer_setup_child_callback(hammer_record_t rec, void *data)
 			/*
 			 * We aren't reclaiming and the target ip was not
 			 * previously prevented from flushing due to this
-			 * record dependancy.  Do not flush this record.
+			 * record dependency.  Do not flush this record.
 			 */
 			/*r = 0;*/
 		} else
@@ -2399,7 +2399,7 @@ hammer_setup_child_callback(hammer_record_t rec, void *data)
 			 *
 			 * XXX this needs help.  If a delete-on-disk we could
 			 * disconnect the target.  If the target has its own
-			 * dependancies they really need to be flushed.
+			 * dependencies they really need to be flushed.
 			 *
 			 * XXX
 			 */
@@ -2458,7 +2458,7 @@ hammer_syncgrp_child_callback(hammer_record_t rec, void *data)
 /*
  * Wait for a previously queued flush to complete.
  *
- * If a critical error occured we don't try to wait.
+ * If a critical error occurred we don't try to wait.
  */
 void
 hammer_wait_inode(hammer_inode_t ip)
@@ -2680,7 +2680,7 @@ hammer_sync_inode_done(hammer_inode_t ip, int error)
 	}
 
 	/*
-	 * If we have no parent dependancies we can clear CONN_DOWN
+	 * If we have no parent dependencies we can clear CONN_DOWN
 	 */
 	if (TAILQ_EMPTY(&ip->target_list))
 		ip->flags &= ~HAMMER_INODE_CONN_DOWN;
@@ -2943,7 +2943,7 @@ hammer_sync_inode(hammer_transaction_t trans, hammer_inode_t ip)
 			 * it gets synced.
 			 *
 			 * If the ADD was not deleted by the frontend we
-			 * can remove the dependancy from our target_list.
+			 * can remove the dependency from our target_list.
 			 */
 			if (depend->flags & HAMMER_RECF_DELETED_FE) {
 				++nlinks;
@@ -3094,7 +3094,7 @@ hammer_sync_inode(hammer_transaction_t trans, hammer_inode_t ip)
 	 * If we are deleting the inode the frontend had better not have
 	 * any active references on elements making up the inode.
 	 *
-	 * The call to hammer_ip_delete_clean() cleans up auxillary records
+	 * The call to hammer_ip_delete_clean() cleans up auxiliary records
 	 * but not DB or DATA records.  Those must have already been deleted
 	 * by the normal truncation mechanic.
 	 */
@@ -3148,7 +3148,7 @@ defer_buffer_flush:
 	 *
 	 * In the case of a defered buffer flush we still update the on-disk
 	 * inode to satisfy visibility requirements if there happen to be
-	 * directory dependancies.
+	 * directory dependencies.
 	 */
 	switch(ip->flags & (HAMMER_INODE_DELETED | HAMMER_INODE_ONDISK)) {
 	case HAMMER_INODE_DELETED|HAMMER_INODE_ONDISK:
@@ -3286,7 +3286,7 @@ hammer_inode_unloadable_check(hammer_inode_t ip, int getvp)
 }
 
 /*
- * After potentially resolving a dependancy the inode is tested
+ * After potentially resolving a dependency the inode is tested
  * to determine whether it needs to be reflushed.
  */
 void

@@ -131,7 +131,7 @@ bt_pci_attach(device_t dev)
 	/* Allocate a dmatag for our CCB DMA maps */
 	/* XXX Should be a child of the PCI bus dma tag */
 	if (bus_dma_tag_create(	/* parent	*/ NULL,
-				/* alignemnt	*/ 1,
+				/* alignment	*/ 1,
 				/* boundary	*/ 0,
 				/* lowaddr	*/ BUS_SPACE_MAXADDR_32BIT,
 				/* highaddr	*/ BUS_SPACE_MAXADDR,

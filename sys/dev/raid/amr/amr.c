@@ -487,7 +487,7 @@ shutdown_out:
 /*
  * Bug-for-bug compatibility with Linux!
  * Some apps will send commands with inlen and outlen set to 0,
- * even though they expect data to be transfered to them from the
+ * even though they expect data to be transferred to them from the
  * card.  Linux accidentally allows this by allocating a 4KB
  * buffer for the transfer anyways, but it then throws it away
  * without copying it back to the app.

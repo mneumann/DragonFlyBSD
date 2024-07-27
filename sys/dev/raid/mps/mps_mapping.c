@@ -1585,7 +1585,7 @@ _mapping_process_dpm_pg0(struct mps_softc *sc)
 }
 
 /*
- * mps_mapping_check_devices - start of the day check for device availabilty
+ * mps_mapping_check_devices - start of the day check for device availability
  * @sc: per adapter object
  * @sleep_flag: Flag indicating whether this function can sleep or not
  *

@@ -94,7 +94,7 @@ TAILQ_HEAD(namecache_list, namecache);
  * Because the namecache structure maintains the path through mount points,
  * null, and union mounts, and other VFS overlays, several namecache
  * structures may pass through the same vnode.  Also note that namespaces
- * relating to non-existant (i.e. not-yet-created) files/directories may be
+ * relating to non-existent (i.e. not-yet-created) files/directories may be
  * locked.  Lock coherency is achieved by requiring that the particular
  * namecache record whos parent represents the physical directory in which
  * the namespace operation is to occur be the one that is locked.  In 

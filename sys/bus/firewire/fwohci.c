@@ -495,7 +495,7 @@ fwohci_reset(struct fwohci_softc *sc, device_t dev)
 		OWRITE(sc,  OHCI_ITCTLCLR(i), OHCI_CNTL_DMA_RUN);
 	}
 
-	/* FLUSH FIFO and reset Transmitter/Reciever */
+	/* FLUSH FIFO and reset Transmitter/Receiver */
 	OWRITE(sc, OHCI_HCCCTL, OHCI_HCC_RESET);
 	if (bootverbose)
 		device_printf(dev, "resetting OHCI...");
@@ -681,7 +681,7 @@ fwohci_init(struct fwohci_softc *sc, device_t dev)
 #endif
 
 
-/* SID recieve buffer must allign 2^11 */
+/* SID receive buffer must align 2^11 */
 #define	OHCI_SIDSIZE	(1 << 11)
 	sc->sid_buf = fwdma_malloc(&sc->fc, OHCI_SIDSIZE, OHCI_SIDSIZE,
 						&sc->sid_dma, BUS_DMA_WAITOK);
@@ -895,7 +895,7 @@ txloop:
 			OHCI_OUTPUT_MORE | OHCI_KEY_ST2 | hdr_len);
  	FWOHCI_DMA_WRITE(db->db.desc.addr, 0);
  	FWOHCI_DMA_WRITE(db->db.desc.res, 0);
-/* Specify bound timer of asy. responce */
+/* Specify bound timer of asy. response */
 	if(&sc->atrs == dbch){
  		FWOHCI_DMA_WRITE(db->db.desc.res,
 			 (OREAD(sc, OHCI_CYCLETIMER) >> 12) + (1 << 13));
@@ -1693,7 +1693,7 @@ fwohci_stop(struct fwohci_softc *sc, device_t dev)
 		OWRITE(sc,  OHCI_ITCTLCLR(i), OHCI_CNTL_DMA_RUN);
 	}
 
-/* FLUSH FIFO and reset Transmitter/Reciever */
+/* FLUSH FIFO and reset Transmitter/Receiver */
 	OWRITE(sc,  OHCI_HCCCTL, OHCI_HCC_RESET);
 
 /* Stop interrupt */

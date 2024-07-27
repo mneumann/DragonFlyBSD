@@ -228,7 +228,7 @@ SYSCTL_INT(_net_inet_tcp, OID_AUTO, inflight_debug, CTLFLAG_RW,
 /*
  * NOTE: tcp_inflight_start is essentially the starting receive window
  *	 for a connection.  If set too low then fetches over tcp
- *	 connections will take noticably longer to ramp-up over
+ *	 connections will take noticeably longer to ramp-up over
  *	 high-latency connections.  6144 is too low for a default,
  *	 use something more reasonable.
  */
@@ -987,7 +987,7 @@ tcp_close(struct tcpcb *tp)
 		/*
 		 * The old comment here said:
 		 * update the pipelimit (ssthresh) if it has been updated
-		 * already or if a pipesize was specified & the threshhold
+		 * already or if a pipesize was specified & the threshold
 		 * got below half the pipesize.  I.e., wait for bad news
 		 * before we start updating, then update on both good
 		 * and bad news.
@@ -1253,7 +1253,7 @@ tcp_pcblist(SYSCTL_HANDLER_ARGS)
 	/*
 	 * OK, now we're committed to doing something.  Run the inpcb list
 	 * for each cpu in the system and construct the output.  Use a
-	 * list placemarker to deal with list changes occuring during
+	 * list placemarker to deal with list changes occurring during
 	 * copyout blockages (but otherwise depend on being on the correct
 	 * cpu to avoid races).
 	 */
@@ -1945,7 +1945,7 @@ tcp_rtlookup6(struct in_conninfo *inc)
  * stream, whether using NewReno or not, will eventually buffer as
  * many packets as it is able and the only reason this typically works is
  * due to the fairly small default buffers made available for a connection
- * (typicaly 16K or 32K).  As machines use larger windows and/or window
+ * (typically 16K or 32K).  As machines use larger windows and/or window
  * scaling it is now fairly easy for even a single TCP connection to blow-out
  * all available buffer space not only on the local interface, but on
  * intermediate routers and switches as well.  NewReno makes a misguided

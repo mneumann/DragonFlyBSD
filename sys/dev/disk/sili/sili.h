@@ -225,7 +225,7 @@ int silidebug = SILI_D_VERBOSE;
  *
  * NOTE: RESUME if set to 1 processing is enabled for outstanding commands
  *       to additional targets connected to a port multiplier after a command
- *	 error has occured.  When set the internal BUSY status will be set
+ *	 error has occurred.  When set the internal BUSY status will be set
  *	 for the target that errored, preventing additional commands from
  *       being sent until a Port Initialize operation is performed.
  *
@@ -485,7 +485,7 @@ int silidebug = SILI_D_VERBOSE;
  * assumed valid.  Use READ LOG EXTENDED to determine the tag number.
  * However, the documentation does appear to indicate that for non-NCQ
  * errors the command slot does contain the tag that errored (since there
- * will be only one truely active).
+ * will be only one truly active).
  */
 #define SILI_PREG_CONTEXT		0x1E04
 #define SILI_PREG_CONTEXT_SLOT_MASK	0x1F
@@ -562,7 +562,7 @@ int silidebug = SILI_D_VERBOSE;
 #define  SILI_PREG_SSTS_DET_OFFLINE	0x00000004	/* BIST/LOOPBACK */
 
 /*
- * These are mostly R/W1C bits.  "B", "C", and "H" operate independantly
+ * These are mostly R/W1C bits.  "B", "C", and "H" operate independently
  * and depend on the corresponding error counter register.
  */
 #define SILI_PREG_SERR			0x1F08

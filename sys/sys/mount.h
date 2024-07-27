@@ -120,7 +120,7 @@ struct statfs {
 #if defined(_KERNEL) || defined(_KERNEL_STRUCTURES)
 
 /*
- * bio_ops are associated with the mount structure and used in conjuction
+ * bio_ops are associated with the mount structure and used in conjunction
  * with the b_dep field in a buffer.  Currently softupdates and HAMMER
  * utilize this field.
  *

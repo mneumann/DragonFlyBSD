@@ -133,7 +133,7 @@ int  smb_rq_sign(struct smb_rq *rqp);
 int  smb_rq_verify(struct smb_rq *rqp);
 
 /*
- * Compatibilty with 5.x functions
+ * Compatibility with 5.x functions
  */
 int smb_kthread_create(void (*func)(void *), void *arg,
 	struct proc **newpp, int flags, const char *fmt, ...)

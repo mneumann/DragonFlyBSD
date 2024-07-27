@@ -97,7 +97,7 @@ struct mountctl_install_journal {
 #define MC_JOURNAL_RACTIVE		0x00000010	/* rthread running */
 #define MC_JOURNAL_WWAIT		0x00000040	/* write stall */
 #define MC_JOURNAL_WANT_AUDIT		0x00010000	/* audit trail */
-#define MC_JOURNAL_WANT_REVERSABLE	0x00020000	/* reversable stream */
+#define MC_JOURNAL_WANT_REVERSABLE	0x00020000	/* reversible stream */
 #define MC_JOURNAL_WANT_FULLDUPLEX	0x00040000	/* has ack stream */
 
 struct mountctl_restart_journal {

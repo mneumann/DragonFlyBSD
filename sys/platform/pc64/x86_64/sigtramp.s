@@ -45,7 +45,7 @@ NON_GPROF_ENTRY(sigcode)
 	pushq	$0			/* junk to fake return addr. */
 	movq	$SYS_sigreturn,%rax
 	syscall				/* enter kernel with args */
-0:	hlt				/* trap priviliged instruction */
+0:	hlt				/* trap privileged instruction */
 	jmp	0b
 
 	ALIGN_TEXT

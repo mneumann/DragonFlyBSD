@@ -3738,7 +3738,7 @@ hdaa_audio_adddac(struct hdaa_devinfo *devinfo, int asid)
 		    asid, as->index);
 	);
 
-	/* Find the exisitng DAC position and return if found more the one. */
+	/* Find the existing DAC position and return if found more the one. */
 	pos = -1;
 	for (i = 0; i < 16; i++) {
 		if (as->dacs[0][i] <= 0)
@@ -4091,7 +4091,7 @@ hdaa_audio_trace_as_extra(struct hdaa_devinfo *devinfo)
 }
 
 /*
- * Bind assotiations to PCM channels
+ * Bind associations to PCM channels
  */
 static void
 hdaa_audio_bind_as(struct hdaa_devinfo *devinfo)

@@ -2807,7 +2807,7 @@ emu_init(struct emu_sc_info *sc)
 	/*
 	 * CAxxxx cards needs additional setup:
 	 * 1. Set I2S capture sample rate to 96000
-	 * 2. Disable P16v / P17v proceesing
+	 * 2. Disable P16v / P17v processing
 	 * 3. Allow EMU10K DSP inputs
 	 */
 	if ((sc->is_ca0102) || (sc->is_ca0108)) {

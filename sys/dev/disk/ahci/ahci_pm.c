@@ -651,7 +651,7 @@ ahci_pm_hardreset(struct ahci_port *ap, int target, int hard)
 	/*
 	 * Clear SERR on the target so we get a new NOTIFY event if a hot-plug
 	 * or hot-unplug occurs.  Clear any spurious IFS that may have
-	 * occured during the probe.
+	 * occurred during the probe.
 	 *
 	 * WARNING!  100ms seems to work in most cases but
 	 */
@@ -856,7 +856,7 @@ retry:
 	error = 0;
 
 	/*
-	 * Who knows what kind of mess occured.  We have exclusive access
+	 * Who knows what kind of mess occurred.  We have exclusive access
 	 * to the port so try to clean up potential problems.
 	 */
 err:

@@ -68,8 +68,8 @@
  *	due to swap interleaving not all that much less), but the blist code 
  *	scales much, much better.
  *
- *	LAYOUT: The radix tree is layed out recursively using a
- *	linear array.  Each meta node is immediately followed (layed out
+ *	LAYOUT: The radix tree is laid out recursively using a
+ *	linear array.  Each meta node is immediately followed (laid out
  *	sequentially in memory) by BLIST_META_RADIX lower level nodes.  This
  *	is a recursive structure but one that can be easily scanned through
  *	a very simple 'skip' calculation.  In order to support large radixes, 
@@ -88,7 +88,7 @@
  *	ranges.
  *
  *	NOTE: The radix may exceed BLIST_BMAP_RADIX bits in order to support
- *	      up to 2^(BLIST_BMAP_RADIX-1) blocks.  The first divison will
+ *	      up to 2^(BLIST_BMAP_RADIX-1) blocks.  The first division will
  *	      drop the radix down and fit it within a signed BLIST_BMAP_RADIX
  *	      bit integer.
  *
@@ -266,7 +266,7 @@ blist_allocat(blist_t bl, swblk_t count, swblk_t blkat)
 
 /*
  * blist_free() -	free up space in the block bitmap.  Return the base
- *		     	of a contiguous region.  Panic if an inconsistancy is
+ *		     	of a contiguous region.  Panic if an inconsistency is
  *			found.
  */
 

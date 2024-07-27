@@ -816,7 +816,7 @@ ASR_failActiveCommands(Asr_softc_t *sc)
 
 		ccb->status &= ~CAM_STATUS_MASK;
 		ccb->status |= CAM_REQUEUE_REQ;
-		/* Nothing Transfered */
+		/* Nothing Transferred */
 		((struct ccb_scsiio *)ccb)->resid
 		  = ((struct ccb_scsiio *)ccb)->dxfer_len;
 
@@ -3084,7 +3084,7 @@ typedef U32   DPT_TAG_T;
 typedef U32   DPT_MSG_T;
 typedef U32   DPT_RTN_T;
 
-#undef SCSI_RESET	/* Conflicts with "scsi/scsiconf.h" defintion */
+#undef SCSI_RESET	/* Conflicts with "scsi/scsiconf.h" definition */
 #include	"dev/raid/asr/osd_unix.h"
 
 #define	asr_unit(dev)	  minor(dev)

@@ -378,8 +378,8 @@ done2:
  * vmspace_pread(id, buf, nbyte, flags, offset)
  *
  * Read data from a vmspace.  The number of bytes read is returned or
- * -1 if an unrecoverable error occured.  If the number of bytes read is
- * less then the request size, a page fault occured in the VMSPACE which
+ * -1 if an unrecoverable error occurred.  If the number of bytes read is
+ * less then the request size, a page fault occurred in the VMSPACE which
  * the caller must resolve in order to proceed.
  *
  * (not implemented yet)
@@ -412,8 +412,8 @@ done3:
  * vmspace_pwrite(id, buf, nbyte, flags, offset)
  *
  * Write data to a vmspace.  The number of bytes written is returned or
- * -1 if an unrecoverable error occured.  If the number of bytes written is
- * less then the request size, a page fault occured in the VMSPACE which
+ * -1 if an unrecoverable error occurred.  If the number of bytes written is
+ * less then the request size, a page fault occurred in the VMSPACE which
  * the caller must resolve in order to proceed.
  *
  * (not implemented yet)

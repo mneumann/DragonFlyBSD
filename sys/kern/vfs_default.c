@@ -166,7 +166,7 @@ vop_defaultop(struct vop_generic_args *ap)
  *
  * A locked ncp is passed in to be resolved.  The NCP is resolved by
  * figuring out the vnode (if any) and calling cache_setvp() to attach the
- * vnode to the entry.  If the entry represents a non-existant node then
+ * vnode to the entry.  If the entry represents a non-existent node then
  * cache_setvp() is called with a NULL vnode to resolve the entry into a
  * negative cache entry.  No vnode locks are retained and the
  * ncp is left locked on return.
@@ -285,7 +285,7 @@ vop_compat_nlookupdotdot(struct vop_nlookupdotdot_args *ap)
 	 * vop_old_lookup() always returns vp locked.  dvp may or may not be
 	 * left locked depending on CNP_PDIRUNLOCK.
 	 *
-	 * (*vpp) will be returned locked if no error occured, which is the
+	 * (*vpp) will be returned locked if no error occurred, which is the
 	 * state we want.
 	 */
 	error = vop_old_lookup(ap->a_head.a_ops, ap->a_dvp, ap->a_vpp, &cnp);
@@ -1294,7 +1294,7 @@ vop_stdnowrite(struct vop_write_args *ap)
 
 /* 
  * vfs default ops
- * used to fill the vfs fucntion table to get reasonable default return values.
+ * used to fill the vfs function table to get reasonable default return values.
  */
 int
 vop_stdmountctl(struct vop_mountctl_args *ap)

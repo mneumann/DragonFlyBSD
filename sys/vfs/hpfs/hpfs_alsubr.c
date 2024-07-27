@@ -403,7 +403,7 @@ retry:
 				dprintf(("hpfs_addextent: successful (split)\n"));
 				/*
 				 * Then hpfs_addextentr has split tree below, now
-				 * we need to fix this level. Particulary:
+				 * we need to fix this level. Particularly:
 				 * fix last AlNode and add another one.
 				 */
 
@@ -429,7 +429,7 @@ retry:
 				u_long nlen;
 
 				/*
-				 * Search bitmap for block begining from
+				 * Search bitmap for block beginning from
 				 * alp->al_lsn + alp->al_len and long of ralp->al_len
 				 */
 				error = hpfs_bmlookup (hpmp, 0,
@@ -531,7 +531,7 @@ retry:
 
 /*
  * Descent down to the end of tree, then search for
- * ralp->len contignous run begining from last run's end and
+ * ralp->len contignous run beginning from last run's end and
  * concatenate new block! If we can't find one, then...
  *
  * Parameters:
@@ -593,7 +593,7 @@ hpfs_addextentr(struct hpfsmount *hpmp, lsn_t rlsn, alleaf_t *ralp,
 				dprintf(("hpfs_addextentr: successful (split)\n"));
 				/*
 				 * Then hpfs_addextentr has split tree below, now
-				 * we need to fix this level. Particulary:
+				 * we need to fix this level. Particularly:
 				 * fix last AlNode and add another one.
 				 */
 				bcopy(ranp, AB_LASTANP(rabp), sizeof(alnode_t) * 2);
@@ -616,7 +616,7 @@ hpfs_addextentr(struct hpfsmount *hpmp, lsn_t rlsn, alleaf_t *ralp,
 				lsn_t nlsn;
 				u_long nlen;
 				/*
-				 * Search bitmap for block begining from
+				 * Search bitmap for block beginning from
 				 * alp->al_lsn + alp->al_len and long of ralp->al_len
 				 */
 				error = hpfs_bmlookup (hpmp, 0,
@@ -632,7 +632,7 @@ hpfs_addextentr(struct hpfsmount *hpmp, lsn_t rlsn, alleaf_t *ralp,
 
 				/* 
 				 * If ending of existed entry fits the
-				 * begining of the extent being added,
+				 * beginning of the extent being added,
 				 * then we add concatenate two extents.
 				 */
 				if (alp->al_lsn + alp->al_len == nlsn) {
@@ -686,7 +686,7 @@ hpfs_addextentr(struct hpfsmount *hpmp, lsn_t rlsn, alleaf_t *ralp,
 			AB_LASTANP(&rasp->as_ab)->an_nextoff = ~0;
 
 			/* We need to fix new allocated AlSec's
-			 * children, becouse their parent has changed.
+			 * children, because their parent has changed.
 			 */
 			anp = AB_ALNODE(&nrasp->as_ab);
 			for (i=0; i<nrasp->as_ab.ab_busycnt; i++) {
@@ -832,7 +832,7 @@ hpfs_truncatealblk(struct hpfsmount *hpmp, alblk_t *abp, lsn_t bn, int *resp)
 				}
 
 				/* There can not be any more entries
-				 * over greater bn, becouse last AlSec
+				 * over greater bn, because last AlSec
 				 * wasn't freed totally. So go out.
 				 */
 				break;

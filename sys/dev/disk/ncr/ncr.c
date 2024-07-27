@@ -747,7 +747,7 @@ struct head {
 **
 **	The last four bytes are used inside the script by "COPY" commands.
 **	Because source and destination must have the same alignment
-**	in a longword, the fields HAVE to be at the choosen offsets.
+**	in a longword, the fields HAVE to be at the chosen offsets.
 **		xerr_st	(4)	0	(0x34)	scratcha
 **		sync_st	(5)	1	(0x05)	sxfer
 **		wide_st	(7)	3	(0x03)	scntl3
@@ -796,7 +796,7 @@ struct head {
 **	the DSA (data structure address) register points
 **	to this substructure of the nccb.
 **	This substructure contains the header with
-**	the script-processor-changable data and
+**	the script-processor-changeable data and
 **	data blocks for the indirect move commands.
 **
 **----------------------------------------------------------
@@ -836,7 +836,7 @@ struct dsb {
 **	the DSA (data structure address) register points
 **	to this substructure of the nccb.
 **	This substructure contains the header with
-**	the script-processor-changable data and then
+**	the script-processor-changeable data and then
 **	data blocks for the indirect move commands.
 **
 **----------------------------------------------------------
@@ -3667,7 +3667,7 @@ ncr_attach (device_t dev)
 		(np->rv_ctest5 & DFS) ? "large" : "normal");
 
 	/*
-	**	Print some complementary information that can be helpfull.
+	**	Print some complementary information that can be helpful.
 	*/
 	if (bootverbose)
 		kprintf("%s: %s, %s IRQ driver%s\n",
@@ -5220,7 +5220,7 @@ ncr_timeout (void *arg)
 **		scntl3:	(see the manual)
 **
 **	current script command:
-**		dsp:	script adress (relative to start of script).
+**		dsp:	script address (relative to start of script).
 **		dbc:	first word of script command.
 **
 **	First 16 register of the chip:
@@ -5670,7 +5670,7 @@ static void ncr_int_ma (ncb_p np, u_char dstat)
 
 
 	/*
-	**	The data in the dma fifo has not been transfered to
+	**	The data in the dma fifo has not been transferred to
 	**	the target -> add the amount to the rest
 	**	and clear the data.
 	**	Check the sstat2 register in case of wide transfer.
@@ -5967,7 +5967,7 @@ static void ncr_int_sir (ncb_p np)
 **	Was Sie schon immer ueber transfermode negotiation wissen wollten ...
 **
 **	We try to negotiate sync and wide transfer only after
-**	a successfull inquire command. We look at byte 7 of the
+**	a successful inquire command. We look at byte 7 of the
 **	inquire data to determine the capabilities if the target.
 **
 **	When we try to negotiate, we append the negotiation message
@@ -5975,7 +5975,7 @@ static void ncr_int_sir (ncb_p np)
 **	The host status field is set to HS_NEGOTIATE to mark this
 **	situation.
 **
-**	If the target doesn't answer this message immidiately
+**	If the target doesn't answer this message immediately
 **	(as required by the standard), the SIR_NEGO_FAIL interrupt
 **	will be raised eventually.
 **	The handler removes the HS_NEGOTIATE status, and sets the

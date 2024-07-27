@@ -1725,7 +1725,7 @@ fw_rcv_copy(struct fw_rcv_buf *rb)
 }
 
 /*
- * Generic packet receving process.
+ * Generic packet receiving process.
  */
 void
 fw_rcv(struct fw_rcv_buf *rb)

@@ -34,7 +34,7 @@
  * $DragonFly: src/sys/sys/machintr.h,v 1.7 2007/04/30 16:46:01 dillon Exp $
  */
 /*
- * This module defines the ABI for the machine-independant cpu interrupt
+ * This module defines the ABI for the machine-independent cpu interrupt
  * vector and masking layer.
  */
 

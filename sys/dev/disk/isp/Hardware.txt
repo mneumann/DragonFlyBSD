@@ -75,7 +75,7 @@ Brocade 2400
 
 	For the Silkworm II, set operating mode to "Tachyon" (mode 3).
 
-	The web interace isn't good- but telnet is what I prefer anyhow.
+	The web interface isn't good- but telnet is what I prefer anyhow.
 
 	You can't connect a Silkworm II and the other Brocades together
 	as E-ports to make a large fabric (at least with the f/w *I*

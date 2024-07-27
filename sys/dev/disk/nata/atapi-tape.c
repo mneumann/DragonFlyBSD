@@ -400,7 +400,7 @@ ast_strategy(struct dev_strategy_args *ap)
     u_int32_t blkcount;
     int8_t ccb[16];
 
-    /* if it's a null transfer, return immediatly. */
+    /* if it's a null transfer, return immediately. */
     if (bbp->b_bcount == 0) {
 	bbp->b_resid = 0;
 	biodone(bp);

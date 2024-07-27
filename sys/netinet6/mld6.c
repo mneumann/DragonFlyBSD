@@ -479,7 +479,7 @@ mld6_sendpkt(struct in6_multi *in6m, int type, const struct in6_addr *dst)
 	 */
 	im6o.im6o_multicast_loop = (ip6_mrouter != NULL);
 
-	/* increment output statictics */
+	/* increment output statistics */
 	icmp6stat.icp6s_outhist[type]++;
 
 	ip6_output(mh, &ip6_opts, NULL, 0, &im6o, &outif, NULL);

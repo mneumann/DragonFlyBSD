@@ -190,7 +190,7 @@ SYSCTL_PROC(_debug, OID_AUTO, wakeup_umtx, CTLTYPE_UQUAD|CTLFLAG_RW, 0, 0,
  * a 1-second recalc to help out.
  *
  * This code also allows us to store sysclock_t data in the process structure
- * without fear of an overrun, since sysclock_t are guarenteed to hold
+ * without fear of an overrun, since sysclock_t are guaranteed to hold
  * several seconds worth of count.
  *
  * WARNING!  callouts can preempt normal threads.  However, they will not
@@ -655,7 +655,7 @@ tsleep(const volatile void *ident, int flags, const char *wmesg, int timo)
 	 * a wakeup() was processed before the thread could go to sleep.
 	 *
 	 * If TDF_TSLEEPQ is set, make sure the ident matches the recorded
-	 * ident.  If it does not then the thread slept inbetween the
+	 * ident.  If it does not then the thread slept in-between the
 	 * caller's initial tsleep_interlock() call and the caller's tsleep()
 	 * call.
 	 *
@@ -731,7 +731,7 @@ tsleep(const volatile void *ident, int flags, const char *wmesg, int timo)
 	KKASSERT(gd == td->td_gd);
 
 	/*
-	 * Cleanup the timeout.  If the timeout has already occured thandle
+	 * Cleanup the timeout.  If the timeout has already occurred thandle
 	 * has already been stopped, otherwise stop thandle.
 	 *
 	 * If the timeout is still running the callout thread must be blocked
@@ -1082,7 +1082,7 @@ restart:
 	 * message for each thread on the target cpu (!= current cpu) that
 	 * needed to be woken up.
 	 *
-	 * NOTE: Wakeups occuring on remote cpus are asynchronous.  This
+	 * NOTE: Wakeups occurring on remote cpus are asynchronous.  This
 	 *	 should be ok since we are passing idents in the IPI rather
 	 *	 then thread pointers.
 	 *

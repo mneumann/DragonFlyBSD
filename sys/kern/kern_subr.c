@@ -164,7 +164,7 @@ uiomove(caddr_t cp, size_t n, struct uio *uio)
 /*
  * This is the same as uiomove() except (cp, n) is within the bounds of
  * the passed, locked buffer.  Under certain circumstances a VM fault
- * occuring with a locked buffer held can result in a deadlock or an
+ * occurring with a locked buffer held can result in a deadlock or an
  * attempt to recursively lock the buffer.
  *
  * This procedure deals with these cases.

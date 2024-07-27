@@ -95,7 +95,7 @@ fwdma_malloc(struct firewire_comm *fc, int alignment, bus_size_t size,
 		flag, &dma->dma_map);
 	if (err) {
 		kprintf("fwdma_malloc: failed(2)\n");
-		/* XXX destory tag */
+		/* XXX destroy tag */
 		return(NULL);
 	}
 

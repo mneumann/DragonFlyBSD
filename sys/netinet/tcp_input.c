@@ -316,7 +316,7 @@ do { \
  * Returns TRUE, if this segment can be merged with the last
  * pending segment in the reassemble queue and this segment
  * does not overlap with the pending segment immediately
- * preceeding the last pending segment.
+ * preceding the last pending segment.
  */
 static __inline boolean_t
 tcp_paws_canreasslast(const struct tcpcb *tp, const struct tcphdr *th, int tlen)
@@ -343,13 +343,13 @@ tcp_paws_canreasslast(const struct tcpcb *tp, const struct tcphdr *th, int tlen)
 	prev = TAILQ_PREV(last, tsegqe_head, tqe_q);
 	if (prev == NULL) {
 		/*
-		 * No pending preceeding segment, we assume this segment
+		 * No pending preceding segment, we assume this segment
 		 * could be reassembled.
 		 */
 		return TRUE;
 	}
 
-	/* This segment does not overlap with the preceeding segment */
+	/* This segment does not overlap with the preceding segment */
 	if (SEQ_GEQ(th->th_seq, prev->tqe_th->th_seq + prev->tqe_len))
 		return TRUE;
 
@@ -1650,7 +1650,7 @@ after_listen:
 	 *   echo of our outgoing acknowledgement numbers, but some hosts
 	 *   send a reset with the sequence number at the rightmost edge
 	 *   of our receive window, and we have to handle this case.
-	 * If we have multiple segments in flight, the intial reset
+	 * If we have multiple segments in flight, the initial reset
 	 * segment sequence numbers will be to the left of last_ack_sent,
 	 * but they will eventually catch up.
 	 * In any case, it never made sense to trim reset segments to
@@ -3094,7 +3094,7 @@ tcp_rmx_mss(struct tcpcb *tp, struct rtentry *rt, int offer)
 		/*
 		 * There's some sort of gateway or interface
 		 * buffer limit on the path.  Use this to set
-		 * the slow start threshhold, but set the
+		 * the slow start threshold, but set the
 		 * threshold to no less than 2*mss.
 		 */
 		tp->snd_ssthresh = max(2 * mss, rt->rt_rmx.rmx_ssthresh);
@@ -3469,7 +3469,7 @@ tcp_recv_dupack(struct tcpcb *tp, tcp_seq th_ack, u_int to_flags)
 	 * We have outstanding data (other than a window probe),
 	 * this is a completely duplicate ack (ie, window info
 	 * didn't change), the ack is the biggest we've seen and
-	 * we've seen exactly our rexmt threshhold of them, so
+	 * we've seen exactly our rexmt threshold of them, so
 	 * assume a packet has been dropped and retransmit it.
 	 * Kludge snd_nxt & the congestion window so we send only
 	 * this one packet.
@@ -3488,7 +3488,7 @@ tcp_recv_dupack(struct tcpcb *tp, tcp_seq th_ack, u_int to_flags)
 				force = TRUE;
 			}
 
-			/* No artifical cwnd inflation. */
+			/* No artificial cwnd inflation. */
 			tcp_sack_rexmt(tp, force);
 		} else {
 			/*
@@ -3516,7 +3516,7 @@ tcp_recv_dupack(struct tcpcb *tp, tcp_seq th_ack, u_int to_flags)
 		 * retransmit.  This also meets the requirement of
 		 * RFC3042 that new segments should not be sent if
 		 * the SACK blocks do not contain new information
-		 * (XXX we actually loosen the requirment that only
+		 * (XXX we actually loosen the requirement that only
 		 * DSACK is checked here).
 		 *
 		 * This kind of ACKs are usually sent after spurious

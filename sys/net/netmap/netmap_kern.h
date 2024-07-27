@@ -761,7 +761,7 @@ extern int netmap_generic_ringsize;
 #define	NETMAP_SET_CAPABLE(ifp)				\
 	(ifp)->if_capabilities |= IFCAP_NETMAP
 
-/* Callback invoked by the dma machinery after a successfull dmamap_load */
+/* Callback invoked by the dma machinery after a successful dmamap_load */
 static void netmap_dmamap_cb(__unused void *arg,
     __unused bus_dma_segment_t * segs, __unused int nseg, __unused int error)
 {

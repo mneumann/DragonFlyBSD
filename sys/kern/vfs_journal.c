@@ -555,11 +555,11 @@ journal_reserve(struct journal *jo, struct journal_rawrecbeg **rawpp,
 	 *
 	 * NOTE: The worker thread will not flush past an incomplete
 	 * record, so the reserved space can be filled in at-will.  The
-	 * journaling code must also be aware the reserved sections occuring
+	 * journaling code must also be aware the reserved sections occurring
 	 * after this one will also not be written out even if completed
 	 * until this one is completed.
 	 *
-	 * The transaction id must accomodate real and potential pad creation.
+	 * The transaction id must accommodate real and potential pad creation.
 	 */
 	rawp = (void *)(jo->fifo.membase + (jo->fifo.windex & jo->fifo.mask));
 	if (req != bytes) {
@@ -574,10 +574,10 @@ journal_reserve(struct journal *jo, struct journal_rawrecbeg **rawpp,
 	jo->transid += 2;
 
 	/*
-	 * Issue a memory barrier to guarentee that the record data has been
+	 * Issue a memory barrier to guarantee that the record data has been
 	 * properly initialized before we advance the write index and return
 	 * a pointer to the reserved record.  Otherwise the worker thread
-	 * could accidently run past us.
+	 * could accidentally run past us.
 	 *
 	 * Note that stream records are always 16-byte aligned.
 	 */
@@ -768,7 +768,7 @@ journal_commit(struct journal *jo, struct journal_rawrecbeg **rawpp,
 
     /*
      * Fill in begmagic last.  This will allow the worker thread to proceed.
-     * Use a memory barrier to guarentee write ordering.  Mark the stream
+     * Use a memory barrier to guarantee write ordering.  Mark the stream
      * as terminated if closeout is set.  This is the typical case.
      */
     if (closeout)
@@ -915,8 +915,8 @@ jrecord_pop(struct jrecord *jrec, struct journal_subrecord *save)
      * pushptrgood is non-zero after decrementing.
      *
      * The old jrec->parent may be NULL if it is no longer accessible.
-     * If pushptrgood is non-zero, however, it is guarenteed to not
-     * be NULL (since no flush occured).
+     * If pushptrgood is non-zero, however, it is guaranteed to not
+     * be NULL (since no flush occurred).
      */
     jrec->last = jrec->parent;
     --jrec->pushcount;
@@ -1021,7 +1021,7 @@ jrecord_write(struct jrecord *jrec, int16_t rectype, int bytes)
 				JREC_DEFAULTSIZE, &pusheditout);
 	if (pusheditout) {
 	    /*
-	     * If a pushout occured, the pushed out stream record was
+	     * If a pushout occurred, the pushed out stream record was
 	     * truncated as specified and the new record is exactly the
 	     * extension size specified.
 	     */
@@ -1031,7 +1031,7 @@ jrecord_write(struct jrecord *jrec, int16_t rectype, int bytes)
 	    jrec->pushptrgood = 0;	/* restored parents in pops no good */
 	} else {
 	    /*
-	     * If no pushout occured the stream record is NOT truncated and
+	     * If no pushout occurred the stream record is NOT truncated and
 	     * IS extended.
 	     */
 	    jrec->stream_reserved += JREC_DEFAULTSIZE;
@@ -1343,7 +1343,7 @@ jrecord_write_cred(struct jrecord *jrec, struct thread *td, struct ucred *cred)
  *
  * XXX this needs work.  We should write out the inode number as well,
  * and in fact avoid writing out the file path for seqential writes
- * occuring within e.g. a certain period of time.
+ * occurring within e.g. a certain period of time.
  */
 void
 jrecord_write_vnode_ref(struct jrecord *jrec, struct vnode *vp)

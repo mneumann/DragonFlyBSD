@@ -1302,7 +1302,7 @@ ppc_detect(struct ppc_data *ppc, int chipset_mode)
 	ppc->ppc_avm = PPB_COMPATIBLE;
 
 #ifdef PPC_PROBE_CHIPSET
-	/* we have to differenciate available chipset modes,
+	/* we have to differentiate available chipset modes,
 	 * chipset running modes and IEEE-1284 operating modes
 	 *
 	 * after detection, the port must support running in compatible mode

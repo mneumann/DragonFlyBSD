@@ -672,7 +672,7 @@ bufinit(void *dummy __unused)
 	/* hirunningspace -- see below */
 
 	/*
-	 * Reduce the chance of a deadlock occuring by limiting the number
+	 * Reduce the chance of a deadlock occurring by limiting the number
 	 * of delayed-write dirty buffers we allow to stack up.
 	 *
 	 * We don't want too much actually queued to the device at once
@@ -1098,7 +1098,7 @@ bdwrite(struct buf *bp)
 	 *
 	 * However, we must still clean the pages to satisfy the
 	 * vnode_pager and pageout daemon, so they think the pages
-	 * have been "cleaned".  What has really occured is that
+	 * have been "cleaned".  What has really occurred is that
 	 * they've been earmarked for later writing by the buffer
 	 * cache.
 	 *
@@ -2039,7 +2039,7 @@ restart:
 		spin_unlock(&pcpu->spin);
 
 		/*
-		 * Dependancies must be handled before we disassociate the
+		 * Dependencies must be handled before we disassociate the
 		 * vnode.
 		 *
 		 * NOTE: HAMMER will set B_LOCKED if the buffer cannot
@@ -2318,7 +2318,7 @@ buf_daemon_hw(void)
 /*
  * Flush up to (flushperqueue) buffers in the dirty queue.  Each cpu has a
  * localized version of the queue.  Each call made to this function iterates
- * to another cpu.  It is desireable to flush several buffers from the same
+ * to another cpu.  It is desirable to flush several buffers from the same
  * cpu's queue at once, as these are likely going to be linear.
  *
  * We must be careful to free up B_INVAL buffers instead of write them, which
@@ -2432,7 +2432,7 @@ again:
 		/*
 		 * spinlock not held here.
 		 *
-		 * If the buffer has a dependancy, buf_checkwrite() must
+		 * If the buffer has a dependency, buf_checkwrite() must
 		 * also return 0 for us to be able to initate the write.
 		 *
 		 * If the buffer is flagged B_ERROR it may be requeued
@@ -2716,7 +2716,7 @@ getcacheblk(struct vnode *vp, off_t loffset, int blksize, int blkflags)
  *	to clear B_INVAL.  If the caller does this without issuing an I/O, 
  *	the caller should set B_CACHE ( as an optimization ), else the caller
  *	should issue the I/O and biodone() will set B_CACHE if the I/O was
- *	a write attempt or if it was a successfull read.  If the caller 
+ *	a write attempt or if it was a successful read.  If the caller
  *	intends to issue a READ, the caller must clear B_INVAL and B_ERROR
  *	prior to issuing the READ.  biodone() will *not* clear B_INVAL.
  *
@@ -2835,8 +2835,8 @@ loop:
 		bremfree(bp);
 
 		/*
-		 * Any size inconsistancy with a dirty buffer or a buffer
-		 * with a softupdates dependancy must be resolved.  Resizing
+		 * Any size inconsistency with a dirty buffer or a buffer
+		 * with a softupdates dependency must be resolved.  Resizing
 		 * the buffer in such circumstances can lead to problems.
 		 *
 		 * Dirty or dependant buffers are written synchronously.
@@ -2950,7 +2950,7 @@ loop:
 		 * Atomically insert the buffer into the hash, so that it can
 		 * be found by findblk().
 		 *
-		 * If bgetvp() returns non-zero a collision occured, and the
+		 * If bgetvp() returns non-zero a collision occurred, and the
 		 * bp will not be associated with the vnode.
 		 *
 		 * Make sure the translation layer has been cleared.
@@ -2994,7 +2994,7 @@ loop:
  * or reacquire a buffer which is interlocked by having bioops->io_deallocate
  * set B_LOCKED (which handles the acquisition race).
  *
- * To this end, either B_LOCKED must be set or the dependancy list must be
+ * To this end, either B_LOCKED must be set or the dependency list must be
  * non-empty.
  */
 void
@@ -3014,7 +3014,7 @@ regetblk(struct buf *bp)
  *	resize a buffer up or down.
  *
  *	Note that this code is tricky, and has many complications to resolve
- *	deadlock or inconsistant data situations.  Tread lightly!!! 
+ *	deadlock or inconsistent data situations.  Tread lightly!!!
  *	There are B_CACHE and B_DELWRI interactions that must be dealt with by 
  *	the caller.  Calling this code willy nilly can result in the loss of
  *	data.
@@ -3494,11 +3494,11 @@ vn_cache_strategy_callback(struct bio *bio)
  *	assuming B_INVAL is clear.
  *
  *	For the VMIO case, we set B_CACHE if the op was a read and no
- *	read error occured, or if the op was a write.  B_CACHE is never
+ *	read error occurred, or if the op was a write.  B_CACHE is never
  *	set if the buffer is invalid or otherwise uncacheable.
  *
  *	bpdone does not mess with B_INVAL, allowing the I/O routine or the
- *	initiator to leave B_INVAL set to brelse the buffer out of existance
+ *	initiator to leave B_INVAL set to brelse the buffer out of existence
  *	in the biodone routine.
  *
  *	bpdone is responsible for calling bundirty() on the buffer after a
@@ -3603,7 +3603,7 @@ bpdone(struct buf *bp, int elseit)
 
 		/*
 		 * Set B_CACHE if the op was a normal read and no error
-		 * occured.  B_CACHE is set for writes in the b*write()
+		 * occurred.  B_CACHE is set for writes in the b*write()
 		 * routines.
 		 */
 		iosize = bp->b_bcount - bp->b_resid;
@@ -3793,7 +3793,7 @@ biodone_sync(struct bio *bio)
  *
  *	This routine is called in lieu of iodone in the case of
  *	incomplete I/O.  This keeps the busy status for pages
- *	consistant.
+ *	consistent.
  */
 void
 vfs_unbusy_pages(struct buf *bp)
@@ -3849,10 +3849,10 @@ vfs_unbusy_pages(struct buf *bp)
  *	progress, and treat the pages associated with the buffer
  *	almost as being PBUSY_LOCKED.  Also the object 'paging_in_progress'
  *	flag is handled to make sure that the object doesn't become
- *	inconsistant.
+ *	inconsistent.
  *
  *	Since I/O has not been initiated yet, certain buffer flags
- *	such as B_ERROR or B_INVAL may be in an inconsistant state
+ *	such as B_ERROR or B_INVAL may be in an inconsistent state
  *	and should be ignored.
  */
 void
@@ -4462,7 +4462,7 @@ nestiobuf_iodone(struct bio *bio)
 	if (bp->b_error == 0 &&
 	    (bp->b_bcount < bp->b_bufsize || bp->b_resid > 0)) {
 		/*
-		 * Not all got transfered, raise an error. We have no way to
+		 * Not all got transferred, raise an error. We have no way to
 		 * propagate these conditions to mbp.
 		 */
 		error = EIO;
@@ -4485,7 +4485,7 @@ nestiobuf_done(struct bio *mbio, int donebytes, int error, struct devstat *stats
 	KKASSERT((int)(intptr_t)mbio->bio_driver_info > 0);
 
 	/*
-	 * If an error occured, propagate it to the master buffer.
+	 * If an error occurred, propagate it to the master buffer.
 	 *
 	 * Several biodone()s may wind up running concurrently so
 	 * use an atomic op to adjust b_flags.
@@ -4520,7 +4520,7 @@ nestiobuf_init(struct bio *bio)
 
 /*
  * The BIOs added to the nestedio have already been started, remove the
- * count that placeheld our mbio and biodone() it if the count would
+ * count that placeholder our mbio and biodone() it if the count would
  * transition to 0.
  */
 void

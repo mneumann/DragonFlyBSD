@@ -67,9 +67,9 @@
  * closed ring.
  *
  * For transmission, the driver creates a linked list of 'super descriptors'
- * which each contain several individual descriptors linked toghether.
+ * which each contain several individual descriptors linked together.
  * Each 'super descriptor' contains WB_MAXFRAGS descriptors, which we
- * abuse as fragment pointers. This allows us to use a buffer managment
+ * abuse as fragment pointers. This allows us to use a buffer management
  * scheme very similar to that used in the ThunderLAN and Etherlink XL
  * drivers.
  *
@@ -1341,7 +1341,7 @@ wb_start(struct ifnet *ifp, struct ifaltq_subque *ifsq)
 	 * Place the request for the upload interrupt
 	 * in the last descriptor in the chain. This way, if
 	 * we're chaining several packets at once, we'll only
-	 * get an interupt once for the whole chain rather than
+	 * get an interrupt once for the whole chain rather than
 	 * once for each packet.
 	 */
 	WB_TXCTL(cur_tx) |= WB_TXCTL_FINT;

@@ -792,7 +792,7 @@ nfs_loadattrcache(struct vnode *vp, struct mbuf **mdp, caddr_t *dposp,
 			/*
 			 * Get rid of all the junk we had before and just
 			 * set NRMODIFIED if NLMODIFIED is 0.  Depend on
-			 * occassionally flushing our dirty buffers to
+			 * occasionally flushing our dirty buffers to
 			 * clear both the NLMODIFIED and NRMODIFIED flags.
 			 */
 			if ((np->n_flag & NLMODIFIED) == 0)
@@ -1064,7 +1064,7 @@ nfs_namei(struct nlookupdata *nd, struct ucred *cred, int nflags,
 	}
 
 	/*
-	 * Set return directory.  Reference to dp is implicitly transfered 
+	 * Set return directory.  Reference to dp is implicitly transferred
 	 * to the returned pointer.  This must be set before we potentially
 	 * goto out below.
 	 */
@@ -1161,7 +1161,7 @@ nfs_namei(struct nlookupdata *nd, struct ucred *cred, int nflags,
 	error = nlookup(nd);
 
 	/*
-	 * If no error occured return the requested dvpp and vpp.  If
+	 * If no error occurred return the requested dvpp and vpp.  If
 	 * NLC_CREATE was specified nd->nl_nch may represent a negative
 	 * cache hit in which case we do not attempt to obtain the vp.
 	 */

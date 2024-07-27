@@ -278,7 +278,7 @@ fp_read(file_t fp, void *buf, size_t nbytes, ssize_t *res, int all,
 	error = ESPIPE;
 
     /*
-     * If an error occured but some data was read, silently forget the
+     * If an error occurred but some data was read, silently forget the
      * error.  However, if this is a non-blocking descriptor and 'all'
      * was specified, return an error even if some data was read (this
      * is considered a bug in the caller for using an illegal combination

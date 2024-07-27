@@ -29,7 +29,7 @@
 	  point.
 
 	* Detect out-of-sync mirrors that are out of sync due to a system
-	  crash occuring prior to a synchronization point (i.e. when the
+	  crash occurring prior to a synchronization point (i.e. when the
 	  drives themselves are just fine).  When this case occurs either
 	  copy is valid and one must be selected, but then the selected
 	  copy must be resynchronized to the other drive in the mirror
@@ -70,11 +70,11 @@
 				    been completely synchronized to both
 				    drives).
 
-	  MEDIA_READ_DEGRADED	0: No I/O read error occured on this segment
-				1: I/O read error(s) occured on this segment
+	  MEDIA_READ_DEGRADED	0: No I/O read error occurred on this segment
+				1: I/O read error(s) occurred on this segment
 
-	  MEDIA_WRITE_DEGRADED	0: No I/O write error occured on this segment
-				1: I/O write error(s) occured on this segment
+	  MEDIA_WRITE_DEGRADED	0: No I/O write error occurred on this segment
+				1: I/O write error(s) occurred on this segment
 
 	  MEDIA_MASTER		0: Normal operation
 
@@ -266,7 +266,7 @@
 	When formatting a new mirror or when a drive is torn out and a new
 	drive is added the drive(s) in question must be formatted.  To
 	avoid actually writing to all sectors of the drive, which would
-	take too long on multi-terabyte drives and create unnecesary
+	take too long on multi-terabyte drives and create unnecessary
 	writes on things like SSDs we instead of an UNINITIALIZED flag
 	state in the descriptor.
 

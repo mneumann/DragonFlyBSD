@@ -389,7 +389,7 @@ hpfs_bmlookup (
 
 step2:
 	/*
-	 * Lookup all bands begining from cband, lookup for first block
+	 * Lookup all bands beginning from cband, lookup for first block
 	 */
 	cband = (lsn >> 14);
 	dprintf(("hpfs_bmlookup: Step2: band 0x%x (0x%lx)\n",
@@ -747,7 +747,7 @@ hpfs_update (
 }
 
 /*
- * Truncate file to specifed size. hpfsnode have to be locked.
+ * Truncate file to specified size. hpfsnode have to be locked.
  */
 int
 hpfs_truncate (
@@ -791,7 +791,7 @@ hpfs_truncate (
 }
 
 /*
- * Enlarge file to specifed size. hpfsnode have to be locked.
+ * Enlarge file to specified size. hpfsnode have to be locked.
  */
 int
 hpfs_extend (

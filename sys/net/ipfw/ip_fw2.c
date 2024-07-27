@@ -5831,7 +5831,7 @@ ipfw_ctl_get_rules(struct sockopt *sopt)
 		netisr_domsg_global(&nm.base);
 
 		/*
-		 * The # of states may be shrinked after the snapshot
+		 * The # of states may be shrunk after the snapshot
 		 * of the state count was taken.  To give user a correct
 		 * state count, nm->state_cnt is used to recalculate
 		 * the actual size.

@@ -894,11 +894,11 @@ atiixp_intr(void *p)
 #if 0
 	if (status & ATI_REG_ISR_IN_XRUN) {
 		device_printf(sc->dev,
-			"Recieve IN XRUN interrupt\n");
+			"Receive IN XRUN interrupt\n");
 	}
 	if (status & ATI_REG_ISR_OUT_XRUN) {
 		device_printf(sc->dev,
-			"Recieve OUT XRUN interrupt\n");
+			"Receive OUT XRUN interrupt\n");
 	}
 #endif
 

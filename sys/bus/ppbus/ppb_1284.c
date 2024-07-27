@@ -50,7 +50,7 @@
 /*
  * do_1284_wait()
  *
- * Wait for the peripherial up to 40ms
+ * Wait for the peripheral up to 40ms
  */
 static int
 do_1284_wait(device_t bus, char mask, char status)
@@ -69,7 +69,7 @@ do_peripheral_wait(device_t bus, char mask, char status)
 /*
  * ppb_1284_reset_error()
  *
- * Unconditionaly reset the error field
+ * Unconditionally reset the error field
  */
 static int
 ppb_1284_reset_error(device_t bus, int state)
@@ -96,14 +96,14 @@ ppb_1284_get_state(device_t bus)
 /*
  * ppb_1284_set_state()
  *
- * Change IEEE1284 state if no error occured
+ * Change IEEE1284 state if no error occurred
  */
 int
 ppb_1284_set_state(device_t bus, int state)
 {
 	struct ppb_data *ppb = DEVTOSOFTC(bus);
 
-	/* call ppb_1284_reset_error() if you absolutly want to change
+	/* call ppb_1284_reset_error() if you absolutely want to change
 	 * the state from PPB_ERROR to another */
 	if ((ppb->state != PPB_ERROR) &&
 			(ppb->error == PPB_NO_ERROR)) {
@@ -497,7 +497,7 @@ nibble_1284_inbyte(device_t bus, char *buffer)
 		/* Event 10 - ack, nibble received */
 		ppb_wctr(bus, nINIT & ~(AUTOFEED | STROBE | SELECTIN));
 
-		/* Event 11 - wait ack from peripherial */
+		/* Event 11 - wait ack from peripheral */
 		if ((error = do_1284_wait(bus, nACK, nACK))) {
 			ppb_1284_set_error(bus, PPB_TIMEOUT, 11);
 			goto error;
@@ -817,7 +817,7 @@ ppb_1284_terminate(device_t bus)
 #endif
 
 	/* do not reset error here to keep the error that
-	 * may occured before the ppb_1284_terminate() call */
+	 * may occurred before the ppb_1284_terminate() call */
 	ppb_1284_set_state(bus, PPB_TERMINATION);
 
 #ifdef PERIPH_1284

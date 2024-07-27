@@ -355,7 +355,7 @@ typedef struct {
 typedef struct {
 	bdaddr_t	bdaddr; /* remote unit address */
 	u_int16_t	lcid;   /* local channel ID */
-	u_int16_t	psm;    /* Procotol/Service Multiplexor */
+	u_int16_t	psm;    /* Protocol/Service Multiplexor */
 	u_int8_t	ident;  /* indentifier */
 	u_int8_t	unused; /* place holder */
 } ng_l2cap_l2ca_con_ind_ip;

@@ -35,7 +35,7 @@
  */
 
 
-/* bit's defination */
+/* bit's definition */
 
 #define TWS_BIT0                              0x00000001
 #define TWS_BIT1                              0x00000002

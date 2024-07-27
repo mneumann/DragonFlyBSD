@@ -32,7 +32,7 @@
  * SUCH DAMAGE.
  */
 /*
- * Each mount point may have zero or more independantly configured journals
+ * Each mount point may have zero or more independently configured journals
  * attached to it.  Each journal is represented by a memory FIFO and worker
  * thread.  Journal events are streamed through the FIFO to the thread,
  * batched up (typically on one-second intervals), and written out by the
@@ -579,7 +579,7 @@ jreclist_init(struct mount *mp, struct jrecord_list *jreclist,
 
 /*
  * Terminate the journaled transactions started by jreclist_init().  If
- * an error occured, the transaction records will be aborted.
+ * an error occurred, the transaction records will be aborted.
  */
 static
 void
@@ -614,7 +614,7 @@ jreclist_done(struct mount *mp, struct jrecord_list *jreclist, int error)
 }
 
 /*
- * This procedure writes out UNDO records for available reversable
+ * This procedure writes out UNDO records for available reversible
  * journals.
  *
  * XXX could use improvement.  There is no need to re-read the file
@@ -775,7 +775,7 @@ done:
  * Writes are particularly difficult to deal with because a single write may
  * represent a hundred megabyte buffer or more, and both writes and truncations
  * require the 'old' data to be written out as well as the new data if the
- * log is reversable.  Other issues:
+ * log is reversible.  Other issues:
  *
  * - How to deal with operations on unlinked files (no path available),
  *   but which may still be filesystem visible due to hard links.

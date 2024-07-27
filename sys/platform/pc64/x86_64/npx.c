@@ -205,7 +205,7 @@ npxexit(void)
  * 1b   Stack overflow
  * 1c   Operand of unsupported format
  * 1d   SNaN operand.
- * 2  QNaN operand (not an exception, irrelavant here)
+ * 2  QNaN operand (not an exception, irrelevant here)
  * 3  Any other invalid-operation not mentioned above or zero divide
  *      (FP_X_INV, FP_X_DZ)
  * 4  Denormal operand (FP_X_DNML)
@@ -506,7 +506,7 @@ fpusave(union savefpu *addr, uint64_t mask)
  * Save the FP state to the mcontext structure.
  *
  * WARNING: If you want to try to npxsave() directly to mctx->mc_fpregs,
- * then it MUST be 16-byte aligned.  Currently this is not guarenteed.
+ * then it MUST be 16-byte aligned.  Currently this is not guaranteed.
  */
 void
 npxpush(mcontext_t *mctx)

@@ -72,7 +72,7 @@ ar9300_alloc_generic_timer(struct ath_hal *ah, HAL_GEN_TIMER_DOMAIN tsf)
         avail_timer_end = AR_NUM_GEN_TIMERS;
     }
 
-    /* Find the first availabe timer index */
+    /* Find the first available timer index */
     i = avail_timer_start;
     mask = ahp->ah_avail_gen_timers >> i;
     for ( ; mask && (i < avail_timer_end) ; mask >>= 1, i++ ) {

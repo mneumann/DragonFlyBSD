@@ -1338,7 +1338,7 @@ SYSCTL_INT(_kern, OID_AUTO, bioq_reorder_minor_bytes,
 /*
  * Order I/Os.  Generally speaking this code is designed to make better
  * use of drive zone caches.  A drive zone cache can typically track linear
- * reads or writes for around 16 zones simultaniously.
+ * reads or writes for around 16 zones simultaneously.
  *
  * Read prioritization issues:  It is possible for hundreds of megabytes worth
  * of writes to be queued asynchronously.  This creates a huge bottleneck
@@ -1392,7 +1392,7 @@ bioqdisksort(struct bio_queue_head *bioq, struct bio *bio)
 	case BUF_CMD_WRITE:
 		/*
 		 * Writes are always appended.  If no writes were previously
-		 * queued or an ordered tail insertion occured the transition
+		 * queued or an ordered tail insertion occurred the transition
 		 * field will be NULL.
 		 */
 		TAILQ_INSERT_TAIL(&bioq->queue, bio, bio_act);

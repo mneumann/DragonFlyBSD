@@ -313,7 +313,7 @@ arp_rtrequest(int req, struct rtentry *rt)
 		 * The route is adjusted to point at lo0 and the expiration
 		 * timer is disabled.
 		 *
-		 * NOTE: This prevents locally targetted traffic from going
+		 * NOTE: This prevents locally targeted traffic from going
 		 *	 out the hardware interface, which is inefficient
 		 *	 and might not work if the hardware cannot listen
 		 *	 to its own transmitted packets.   Setting
@@ -1064,7 +1064,7 @@ match:
 
 	/*
 	 * When arp_restricted_match is true and the ARP response is not
-	 * specifically targetted to me, ignore it.  Otherwise the entry
+	 * specifically targeted to me, ignore it.  Otherwise the entry
 	 * timeout may be updated for an old MAC.
 	 */
 	if (arp_restricted_match && itaddr.s_addr != myaddr.s_addr) {
@@ -1245,7 +1245,7 @@ in_arpreply(struct mbuf *m, in_addr_t taddr, in_addr_t myaddr)
 	switch (ifp->if_type) {
 	case IFT_ETHER:
 		/*
-		 * May not be correct for types not explictly
+		 * May not be correct for types not explicitly
 		 * listed, but it is our best guess.
 		 */
 	default:

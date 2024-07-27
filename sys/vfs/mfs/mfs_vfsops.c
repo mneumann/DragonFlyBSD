@@ -166,7 +166,7 @@ mfsstrategy(struct dev_strategy_args *ap)
 		if (boff > mfsp->mfs_size || (bp->b_flags & B_BNOCLIP))
 			goto bad;
 		/*
-		 * Return EOF by completing the I/O with 0 bytes transfered.
+		 * Return EOF by completing the I/O with 0 bytes transferred.
 		 * Set B_INVAL to indicate that any data in the buffer is not
 		 * valid.
 		 */

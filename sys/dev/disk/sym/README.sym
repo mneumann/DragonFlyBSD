@@ -62,7 +62,7 @@ README.sym
 This file was bundled with the `sym' driver source files, when
 the driver was in development stage and not included yet into
 the FreeBSD repository. It described how to install the driver,
-gave informations on driver features and summerized important
+gave informations on driver features and summarized important
 changes between versions. These informations are now available
 using `man sym' for driver usage and features description, and
 `cvs log' for driver changes.

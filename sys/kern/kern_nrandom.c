@@ -111,7 +111,7 @@
  * o SEED_NANOUP() -> NANOUP_EVENT() function rename.
  * o Make NANOUP_EVENT() handle the time-buffering directly so that all
  *   time-stamp-events use this single time-buffer (including keyboard).
- *   This removes dependancy on "time_second" Kernel variable.
+ *   This removes dependency on "time_second" Kernel variable.
  * o Removed second-time-buffer code in rnddev_add_interrupt_OR_read (void).
  * o Rewrote the time-buffering algorithm in NANOUP_EVENT() to use a
  *   randomised time-delay range.

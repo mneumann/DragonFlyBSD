@@ -1472,7 +1472,7 @@ rmc_dropall(struct rm_class *cl)
  * void
  * rmc_delay_action(struct rm_class *cl) - This function is the generic CBQ
  *	delay action routine.  It is invoked via rmc_under_limit when the
- *	packet is discoverd to be overlimit.
+ *	packet is discovered to be overlimit.
  *
  *	If the delay action is result of borrow class being overlimit, then
  *	delay for the offtime of the borrowing class that is overlimit.
@@ -1548,7 +1548,7 @@ rmc_delay_action(struct rm_class *cl, struct rm_class *borrow)
  *	by raising IPL to splimp so that's what's implemented here.  On a
  *	different system this would probably need to be changed.
  *
- *	Since this function is called from an independant timeout, we
+ *	Since this function is called from an independent timeout, we
  *	have to set up the lock conditions expected for the ALTQ operation.
  *	Note that the restart will probably fall through to an if_start.
  *

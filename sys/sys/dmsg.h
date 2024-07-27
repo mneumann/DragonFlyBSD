@@ -176,10 +176,10 @@
  * The actual unaligned size of the in-band data is encoded in the aux_bytes
  * field in this case.  Maximum data sizes are negotiated during registration.
  *
- * Auxillary data can be in-band or out-of-band.  In-band data sets aux_descr
+ * Auxiliary data can be in-band or out-of-band.  In-band data sets aux_descr
  * equal to 0.  Any out-of-band data must be negotiated by the SPAN protocol.
  *
- * Auxillary data, whether in-band or out-of-band, must be at-least 64-byte
+ * Auxiliary data, whether in-band or out-of-band, must be at-least 64-byte
  * aligned.  The aux_bytes field contains the actual byte-granular length
  * and not the aligned length.  The crc is against the aligned length (so
  * a faster crc algorithm can be used, theoretically).
@@ -193,12 +193,12 @@
  * in HW.  The CRC endian is based on the magic number field and may have
  * to be byte-swapped, too (which is also easy to do in HW).
  *
- * aux_crc is calculated over the entire, ALIGNED auxillary data.
+ * aux_crc is calculated over the entire, ALIGNED auxiliary data.
  *
  *			SHARED MEMORY IMPLEMENTATIONS
  *
  * Shared-memory implementations typically use a pipe to transmit the extended
- * message header and shared memory to store any auxilary data.  Auxillary
+ * message header and shared memory to store any auxiliary data.  Auxiliary
  * data in one-way (non-transactional) messages is typically required to be
  * inline.  CRCs are still recommended and required at the beginning, but
  * may be negotiated away later.
@@ -220,8 +220,8 @@ struct dmsg_hdr {
 	uint64_t	link_verifier;	/* 18 link verifier */
 
 	uint32_t	cmd;		/* 20 flags | cmd | hdr_size / ALIGN */
-	uint32_t	aux_crc;	/* 24 auxillary data crc */
-	uint32_t	aux_bytes;	/* 28 auxillary data length (bytes) */
+	uint32_t	aux_crc;	/* 24 auxiliary data crc */
+	uint32_t	aux_bytes;	/* 28 auxiliary data length (bytes) */
 	uint32_t	error;		/* 2C error code or 0 */
 	uint64_t	aux_descr;	/* 30 negotiated OOB data descr */
 	uint32_t	reserved38;	/* 38 */

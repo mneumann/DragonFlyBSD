@@ -121,7 +121,7 @@ METHOD void driver_added {
 # device instances. If place is non-NULL, the new device will be
 # added after the last existing child with the same order.
 #
-# bus is an entity which may iterate up through the bus heirarchy
+# bus is an entity which may iterate up through the bus hierarchy
 # while parent is the parent device under which the child should be
 # added.
 #

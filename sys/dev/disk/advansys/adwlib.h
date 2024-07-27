@@ -562,7 +562,7 @@ typedef enum {
 	ADW_FENONE	  = 0x0000,
 	ADW_ULTRA	  = 0x0001,	/* Supports 20MHz Transfers */
 	ADW_ULTRA2	  = 0x0002,	/* Supports 40MHz Transfers */
-	ADW_DT		  = 0x0004,	/* Supports Double Transistion REQ/ACK*/
+	ADW_DT		  = 0x0004,	/* Supports Double Transition REQ/ACK*/
 	ADW_WIDE  	  = 0x0008,	/* Wide Channel */
 	ADW_ASC3550_FE	  = ADW_ULTRA,	
 	ADW_ASC38C0800_FE = ADW_ULTRA2,

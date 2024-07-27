@@ -698,7 +698,7 @@ _kmalloc_obj(unsigned long size, struct malloc_type *type, int flags)
 		for (n = ttl = 0; n < ncpus; ++n)
 			ttl += type->ks_use[n].memuse;
 		type->ks_loosememuse = ttl;	/* not MP synchronized */
-		if ((ssize_t)ttl < 0)		/* deal with occassional race */
+		if ((ssize_t)ttl < 0)		/* deal with occasional race */
 			ttl = 0;
 		if (ttl >= type->ks_limit) {
 			if (flags & M_NULLOK)

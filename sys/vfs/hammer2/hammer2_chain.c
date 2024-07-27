@@ -392,7 +392,7 @@ hammer2_chain_unhold(hammer2_chain_t *chain)
 		} else {
 			/*
 			 * This situation can easily occur on SMP due to
-			 * the gap inbetween the 1->0 transition and the
+			 * the gap in-between the 1->0 transition and the
 			 * final unlock.  We cannot safely block on the
 			 * mutex because lockcnt might go above 1.
 			 *
@@ -1158,7 +1158,7 @@ hammer2_chain_unlock(hammer2_chain_t *chain)
 		} else {
 			/*
 			 * This situation can easily occur on SMP due to
-			 * the gap inbetween the 1->0 transition and the
+			 * the gap in-between the 1->0 transition and the
 			 * final unlock.  We cannot safely block on the
 			 * mutex because lockcnt might go above 1.
 			 *
@@ -1801,7 +1801,7 @@ hammer2_chain_modify(hammer2_chain_t *chain, hammer2_tid_t mtid,
 		hammer2_adjreadcounter(chain->bref.type, chain->bytes);
 
 		/*
-		 * If an I/O error occurs make sure callers cannot accidently
+		 * If an I/O error occurs make sure callers cannot accidentally
 		 * modify the old buffer's contents and corrupt the filesystem.
 		 *
 		 * NOTE: hammer2_io_data() call issues bkvasync()
@@ -3979,7 +3979,7 @@ hammer2_chain_create_indirect(hammer2_chain_t *parent,
 		 *	    and invalidate the base pointer.
 		 *
 		 * WARNING! Parent must already be marked modified, so we
-		 *	    can assume that chain_delete always suceeds.
+		 *	    can assume that chain_delete always succeeds.
 		 *
 		 * WARNING! hammer2_chain_repchange() does not have to be
 		 *	    called (and doesn't work anyway because we are
@@ -4029,7 +4029,7 @@ next_key_spinlocked:
 			     0);
 
 	/*
-	 * Make sure flushes propogate after our manual insertion.
+	 * Make sure flushes propagate after our manual insertion.
 	 */
 	hammer2_chain_setflush(ichain);
 	hammer2_chain_setflush(parent);
@@ -4473,7 +4473,7 @@ hammer2_chain_indkey_file(hammer2_chain_t *parent, hammer2_key_t *keyp,
  * (filenames hardlinked to inodes).
  *
  * Because directory keys are hashed we generally try to cut the space in
- * half.  We accomodate the inode index (which tends to have linearly
+ * half.  We accommodate the inode index (which tends to have linearly
  * increasing inode numbers) by ensuring that the keyspace is at least large
  * enough to fill up the indirect block being created.
  */
@@ -4643,7 +4643,7 @@ hammer2_chain_indkey_dir(hammer2_chain_t *parent, hammer2_key_t *keyp,
  * (filenames hardlinked to inodes).
  *
  * Because directory keys are hashed we generally try to cut the space in
- * half.  We accomodate the inode index (which tends to have linearly
+ * half.  We accommodate the inode index (which tends to have linearly
  * increasing inode numbers) by ensuring that the keyspace is at least large
  * enough to fill up the indirect block being created.
  */

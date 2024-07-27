@@ -639,7 +639,7 @@ AAA
 			}
 
 			/*
-			 * PPPOE_SERVICE advertisments are set up
+			 * PPPOE_SERVICE advertisements are set up
 			 * on sessions that are in PRIMED state.
 			 */
 			if (msg->header.cmd == NGM_PPPOE_SERVICE) {
@@ -1379,7 +1379,7 @@ quit:
 
 /*
  * Do local shutdown processing..
- * If we are a persistant device, we might refuse to go away, and
+ * If we are a persistent device, we might refuse to go away, and
  * we'd only remove our links and reset ourself.
  */
 static int

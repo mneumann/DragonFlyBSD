@@ -111,7 +111,7 @@ SYSCTL_INT(_vfs_nfs, OID_AUTO, soreserve, CTLFLAG_RW, &nfs_soreserve, 0,
 /*
  * nfssvc_args(int flag, caddr_t argp)
  *
- * Nfs server psuedo system call for the nfsd's
+ * Nfs server pseudo system call for the nfsd's
  * Based on the flag value it either:
  * - adds a socket to the selection list
  * - remains in the kernel as an nfsd

@@ -2961,7 +2961,7 @@ ar9300_fill_capability_info(struct ath_hal *ah)
         ar9300_eeprom_get_num_ant_config(ahp, HAL_FREQ_BAND_2GHZ);
 
     /* STBC supported */
-    p_cap->halRxStbcSupport = 1; /* number of streams for STBC recieve. */
+    p_cap->halRxStbcSupport = 1; /* number of streams for STBC receive. */
     if (AR_SREV_HORNET(ah) || AR_SREV_POSEIDON(ah) || AR_SREV_APHRODITE(ah)) {
         p_cap->halTxStbcSupport = 0;
     } else {

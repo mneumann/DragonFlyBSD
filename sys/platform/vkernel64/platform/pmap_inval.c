@@ -95,9 +95,9 @@ pmap_inval_cpu(struct pmap *pmap, vm_offset_t va, size_t bytes)
  * modified/access status.
  *
  * Clearing the field first (basically clearing VPTE_V) prevents any
- * new races from occuring while we invalidate the TLB (i.e. the pmap
+ * new races from occurring while we invalidate the TLB (i.e. the pmap
  * on the real cpu), then clear it again to clean out any race that
- * might have occured before the invalidation completed.
+ * might have occurred before the invalidation completed.
  */
 void
 pmap_inval_pte(volatile vpte_t *ptep, struct pmap *pmap, vm_offset_t va)
@@ -237,7 +237,7 @@ pmap_clean_pte(volatile vpte_t *ptep, struct pmap *pmap, vm_offset_t va,
  * This is a combination of pmap_inval_pte() and pmap_clean_pte().
  * Firts prevent races with the 'A' and 'M' bits, then clean out
  * the tlb (the real cpu's pmap), then incorporate any races that
- * may have occured in the mean time, and finally zero out the pte.
+ * may have occurred in the mean time, and finally zero out the pte.
  */
 vpte_t
 pmap_inval_loadandclear(volatile vpte_t *ptep, struct pmap *pmap,

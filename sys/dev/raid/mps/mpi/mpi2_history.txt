@@ -245,7 +245,7 @@ mpi2_init.h
  *  05-21-08  02.00.05  Fixed typo in name of Mpi2SepRequest_t.
  *  10-02-08  02.00.06  Removed Untagged and No Disconnect values from SCSI IO
  *                      Control field Task Attribute flags.
- *                      Moved LUN field defines to mpi2.h becasue they are
+ *                      Moved LUN field defines to mpi2.h because they are
  *                      common to many structures.
  *  05-06-09  02.00.07  Changed task management type of Query Unit Attention to
  *                      Query Asynchronous Event.
@@ -296,7 +296,7 @@ mpi2_ioc.h
  *                      Removed define MPI2_IOCFACTS_PROTOCOL_SMP_TARGET.
  *                      Added MaxVolumes and MaxPersistentEntries fields to
  *                      IOCFacts reply.
- *                      Added ProtocalFlags and IOCCapabilities fields to
+ *                      Added ProtocolFlags and IOCCapabilities fields to
  *                      MPI2_FW_IMAGE_HEADER.
  *                      Removed MPI2_PORTENABLE_FLAGS_ENABLE_SINGLE_PORT.
  *  03-03-08  02.00.07  Fixed MPI2_FW_IMAGE_HEADER by changing Reserved26 to

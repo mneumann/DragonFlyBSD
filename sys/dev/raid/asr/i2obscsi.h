@@ -93,7 +93,7 @@
 
 /*****************************************************************************
  *
- *    I2OBSCSI.h -- I2O Base SCSI Device Class Message defintion file
+ *    I2OBSCSI.h -- I2O Base SCSI Device Class Message definition file
  *
  *	This file contains information presented in Chapter 6, Section 6 & 7 of
  *	the I2O Specification.

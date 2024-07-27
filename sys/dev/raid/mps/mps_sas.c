@@ -2177,7 +2177,7 @@ mpssas_direct_drive_io(struct mpssas_softc *sassc, struct mps_command *cm,
 			 * Check if the I/O crosses a stripe boundary.  If not,
 			 * translate the virtual LBA to a physical LBA and set
 			 * the DevHandle for the PhysDisk to be used.  If it
-			 * does cross a boundry, do normal I/O.  To get the
+			 * does cross a boundary, do normal I/O.  To get the
 			 * right DevHandle to use, get the map number for the
 			 * column, then use that map number to look up the
 			 * DevHandle of the PhysDisk.
@@ -2255,7 +2255,7 @@ mpssas_direct_drive_io(struct mpssas_softc *sassc, struct mps_command *cm,
 				 * If not, translate the virtual LBA to a
 				 * physical LBA and set the DevHandle for the
 				 * PhysDisk to be used.  If it does cross a
-				 * boundry, do normal I/O.  To get the right
+				 * boundary, do normal I/O.  To get the right
 				 * DevHandle to use, get the map number for the
 				 * column, then use that map number to look up
 				 * the DevHandle of the PhysDisk.
@@ -2333,7 +2333,7 @@ mpssas_direct_drive_io(struct mpssas_softc *sassc, struct mps_command *cm,
 				 * If not, translate the virtual LBA to a
 				 * physical LBA and set the DevHandle for the
 				 * PhysDisk to be used.  If it does cross a
-				 * boundry, do normal I/O.  To get the right
+				 * boundary, do normal I/O.  To get the right
 				 * DevHandle to use, get the map number for the
 				 * column, then use that map number to look up
 				 * the DevHandle of the PhysDisk.

@@ -446,7 +446,7 @@ camellia_setup128(const unsigned char *key, uint32_t *subkey)
     uint32_t subR[26];
 
     /*
-     *  k == kll || klr || krl || krr (|| is concatination)
+     *  k == kll || klr || krl || krr (|| is concatenation)
      */
     kll = GETU32(key     );
     klr = GETU32(key +  4);
@@ -654,7 +654,7 @@ camellia_setup256(const unsigned char *key, uint32_t *subkey)
 
     /*
      *  key = (kll || klr || krl || krr || krll || krlr || krrl || krrr)
-     *  (|| is concatination)
+     *  (|| is concatenation)
      */
 
     kll  = GETU32(key     );

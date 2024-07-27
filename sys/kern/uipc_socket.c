@@ -914,7 +914,7 @@ restart:
 		    }
 		    /*
 		     * XXX all the SS_CANTSENDMORE checks previously
-		     * done could be out of date.  We could have recieved
+		     * done could be out of date.  We could have received
 		     * a reset packet in an interrupt or maybe we slept
 		     * while doing page faults in uiomove() etc. We could
 		     * probably recheck again inside the splnet() protection
@@ -1207,7 +1207,7 @@ restart:
 
 		    /*
 		     * XXX all the SS_CANTSENDMORE checks previously
-		     * done could be out of date.  We could have recieved
+		     * done could be out of date.  We could have received
 		     * a reset packet in an interrupt or maybe we slept
 		     * while doing page faults in uiomove() etc. We could
 		     * probably recheck again inside the splnet() protection

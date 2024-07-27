@@ -88,7 +88,7 @@ ffs_update(struct vnode *vp, int waitfor)
 
 	/*
 	 * The vnode type is usually set to VBAD if an unrecoverable I/O
-	 * error has occured (such as when reading the inode).  Clear the
+	 * error has occurred (such as when reading the inode).  Clear the
 	 * modified bits but do not write anything out in this case.
 	 */
 	if (vp->v_type == VBAD)

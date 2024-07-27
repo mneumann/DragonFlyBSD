@@ -2244,7 +2244,7 @@ isp_allocate_xs_tgt(ispsoftc_t *isp, void *xs, uint32_t *handlep)
 	hdp->handle |= (ISP_HANDLE_TARGET << ISP_HANDLE_USAGE_SHIFT);
 	/*
 	 * Target handles for SCSI cards are only 16 bits, so
-	 * sequence number protection will be ommitted.
+	 * sequence number protection will be omitted.
 	 */
 	if (IS_FC(isp)) {
 		hdp->handle |= (isp->isp_seqno++ << ISP_HANDLE_SEQ_SHIFT);

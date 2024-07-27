@@ -52,7 +52,7 @@ pci_hostb_probe(device_t dev)
 
 	switch (id) {
 
-	/* VIA VT82C596 Power Managment Function */
+	/* VIA VT82C596 Power Management Function */
 	case 0x30501106:
 		return (ENXIO);
 

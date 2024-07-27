@@ -1091,7 +1091,7 @@ hammer2_ioctl_bulkfree_scan(hammer2_inode_t *ip, void *data)
 
 	/*
 	 * Bulkfree has to be serialized to guarantee at least one sync
-	 * inbetween bulkfrees.
+	 * in-between bulkfrees.
 	 */
 	error = lockmgr(&hmp->bflock, LK_EXCLUSIVE | LK_PCATCH);
 	if (error)

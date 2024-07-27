@@ -405,7 +405,7 @@ accepted:
 
 done:
 	/*
-	 * If an error occured clear the reserved descriptor, else associate
+	 * If an error occurred clear the reserved descriptor, else associate
 	 * nfp with it.
 	 *
 	 * Note that *res is normally ignored if an error is returned but

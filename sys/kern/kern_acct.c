@@ -229,7 +229,7 @@ acct_process(struct proc *p)
 	acct.ac_utime = encode_comp_t(ru.ru_utime.tv_sec, ru.ru_utime.tv_usec);
 	acct.ac_stime = encode_comp_t(ru.ru_stime.tv_sec, ru.ru_stime.tv_usec);
 
-	/* (3) The elapsed time the commmand ran (and its starting time) */
+	/* (3) The elapsed time the command ran (and its starting time) */
 	acct.ac_btime = p->p_start.tv_sec;
 	microtime(&tmp);
 	timevalsub(&tmp, &p->p_start);

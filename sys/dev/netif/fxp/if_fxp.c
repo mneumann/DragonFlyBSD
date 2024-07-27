@@ -990,7 +990,7 @@ fxp_eeprom_putword(struct fxp_softc *sc, int offset, u_int16_t data)
  *
  * 559's can have either 64-word or 256-word EEPROMs, the 558
  * datasheet only talks about 64-word EEPROMs, and the 557 datasheet
- * talks about the existance of 16 to 256 word EEPROMs.
+ * talks about the existence of 16 to 256 word EEPROMs.
  *
  * The only known sizes are 64 and 256, where the 256 version is used
  * by CardBus cards to store CIS information.
@@ -1464,7 +1464,7 @@ fxp_tick(void *xsc)
 	    sp->rx_rnr_errors +
 	    sp->rx_overrun_errors);
 	/*
-	 * If any transmit underruns occured, bump up the transmit
+	 * If any transmit underruns occurred, bump up the transmit
 	 * threshold by another 512 bytes (64 * 8).
 	 */
 	if (sp->tx_underruns) {
@@ -1475,7 +1475,7 @@ fxp_tick(void *xsc)
 
 	/*
 	 * Release any xmit buffers that have completed DMA. This isn't
-	 * strictly necessary to do here, but it's advantagous for mbufs
+	 * strictly necessary to do here, but it's advantageous for mbufs
 	 * with external storage to be released in a timely manner rather
 	 * than being defered for a potentially long time. This limits
 	 * the delay to a maximum of one second.
@@ -1509,7 +1509,7 @@ fxp_tick(void *xsc)
 	 * then assume the receiver has locked up and attempt to clear
 	 * the condition by reprogramming the multicast filter. This is
 	 * a work-around for a bug in the 82557 where the receiver locks
-	 * up if it gets certain types of garbage in the syncronization
+	 * up if it gets certain types of garbage in the synchronization
 	 * bits prior to the packet header. This bug is supposed to only
 	 * occur in 10Mbps mode, but has been seen to occur in 100Mbps
 	 * mode as well (perhaps due to a 10/100 speed transition).

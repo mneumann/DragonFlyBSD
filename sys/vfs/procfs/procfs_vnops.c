@@ -855,7 +855,7 @@ procfs_lookup(struct vop_old_lookup_args *ap)
 	else
 		error = EROFS;
 	/*
-	 * If no error occured *vpp will hold a referenced locked vnode.
+	 * If no error occurred *vpp will hold a referenced locked vnode.
 	 * dvp was passed to us locked and *vpp must be returned locked.
 	 * If *vpp != dvp then we should unlock dvp if (1) this is not the
 	 * last component or (2) CNP_LOCKPARENT is not set.

@@ -138,8 +138,8 @@ ntfs_findvattr(struct ntfsmount *ntmp, struct ntnode *ip,
 }
 
 /*
- * Search attribute specifed in ntnode (load ntnode if nessecary).
- * If not found but ATTR_A_ATTRLIST present, read it in and search throught.
+ * Search attribute specified in ntnode (load ntnode if necessary).
+ * If not found but ATTR_A_ATTRLIST present, read it in and search thought.
  * VOP_VGET node needed, and lookup througth it's ntnode (load if nessesary).
  *
  * ntnode should be locked
@@ -783,7 +783,7 @@ ntfs_frele(struct fnode *fp)
 /*
  * Lookup attribute name in format: [[:$ATTR_TYPE]:$ATTR_NAME],
  * $ATTR_TYPE is searched in attrdefs read from $AttrDefs.
- * If $ATTR_TYPE nott specifed, ATTR_A_DATA assumed.
+ * If $ATTR_TYPE nott specified, ATTR_A_DATA assumed.
  */
 static int
 ntfs_ntlookupattr(struct ntfsmount *ntmp, const char *name, int namelen,
@@ -832,7 +832,7 @@ ntfs_ntlookupattr(struct ntfsmount *ntmp, const char *name, int namelen,
 }
 
 /*
- * Lookup specifed node for filename, matching cnp,
+ * Lookup specified node for filename, matching cnp,
  * return fnode filled.
  */
 int
@@ -1068,7 +1068,7 @@ ntfs_isnamepermitted(struct ntfsmount *ntmp, struct attr_indexentry *iep)
  * Read ntfs dir like stream of attr_indexentry, not like btree of them.
  * This is done by scaning $BITMAP:$I30 for busy clusters and reading them.
  * Ofcouse $INDEX_ROOT:$I30 is read before. Last read values are stored in
- * fnode, so we can skip toward record number num almost immediatly.
+ * fnode, so we can skip toward record number num almost immediately.
  * Anyway this is rather slow routine. The problem is that we don't know
  * how many records are there in $INDEX_ALLOCATION:$I30 block.
  */

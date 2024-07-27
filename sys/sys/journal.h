@@ -52,7 +52,7 @@
  * when calculating skips.  The top level raw record has a header and a
  * trailer to allow both forwards and backwards scanning of the journal.
  * The alignment requirement allows the worker thread FIFO reservation
- * API to operate efficiently, amoung other things.
+ * API to operate efficiently, among other things.
  *
  * Logical data stream records are usually no larger then the journal's
  * in-memory FIFO, since the journal's transactional APIs return contiguous
@@ -90,7 +90,7 @@
  * Stream id's 0x0100-0x1FFF typically represent short-lived transactions
  * (i.e. an id may be reused once the previous use has completed).  The
  * journaling system runs through these id's sequentially which means that
- * the journaling code can handle up to 8192-256 = 7936 simultanious
+ * the journaling code can handle up to 8192-256 = 7936 simultaneous
  * transactions at any given moment.
  *
  * The sequence number field is context-sensitive.  It is typically used by
@@ -185,10 +185,10 @@ struct journal_ackrecord {
  * sub-records and may contain multiple, possibly nested sub-transactions.
  * multiple sub-transactions occur when a VFS operation cannot be represented
  * by a single command.  This is typically the case when a journal is 
- * configured to be reversable because UNDO sequences almost always have to
+ * configured to be reversible because UNDO sequences almost always have to
  * be specified in such cases.  For example, if you ftruncate() a file the
  * journal might have to write out a sequence of WRITE records representing
- * the lost data, otherwise the journal would not be reversable.
+ * the lost data, otherwise the journal would not be reversible.
  * Sub-transactions within a particular stream do not have their own sequence
  * number field and thus may not be parallelized (the protocol is already
  * complex enough!).

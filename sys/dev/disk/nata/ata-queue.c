@@ -653,7 +653,7 @@ ata_sort_queue(struct ata_channel *ch, struct ata_request *request)
     } else {
 	/*
 	 * Writes are always appended.  If no writes were previously
-	 * queued or an ordered tail insertion occured the transition
+	 * queued or an ordered tail insertion occurred the transition
 	 * field will be NULL.
 	 */
 	TAILQ_INSERT_TAIL(&ch->ata_queue, request, chain);

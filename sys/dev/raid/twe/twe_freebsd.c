@@ -921,7 +921,7 @@ twe_allocate_request(struct twe_softc *sc, int tag)
      * TWE requires requests to be 512-byte aligned.  Depend on malloc()
      * guarenteeing alignment for power-of-2 requests.  Note that the old
      * (FreeBSD-4.x) malloc code aligned all requests, but the new slab
-     * allocator only guarentees same-size alignment for power-of-2 requests.
+     * allocator only guarantees same-size alignment for power-of-2 requests.
      */
     aligned_size = (sizeof(struct twe_request) + TWE_ALIGNMASK) &
 	~TWE_ALIGNMASK;
@@ -954,7 +954,7 @@ twe_free_request(struct twe_request *tr)
  * Map/unmap (tr)'s command and data in the controller's addressable space.
  *
  * These routines ensure that the data which the controller is going to try to
- * access is actually visible to the controller, in a machine-independant 
+ * access is actually visible to the controller, in a machine-independent
  * fashion.  Due to a hardware limitation, I/O buffers must be 512-byte aligned
  * and we take care of that here as well.
  */
@@ -1103,7 +1103,7 @@ twe_map_request(struct twe_request *tr)
 	/* 
 	 * Data must be 512-byte aligned; allocate a fixup buffer if it's not.
 	 *
-	 * DragonFly's malloc only guarentees alignment for requests which
+	 * DragonFly's malloc only guarantees alignment for requests which
 	 * are power-of-2 sized.
 	 */
 	if (((vm_offset_t)tr->tr_data % TWE_ALIGNMENT) != 0) {

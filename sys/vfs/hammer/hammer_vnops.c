@@ -162,7 +162,7 @@ static int hammer_vop_strategy_write(struct vop_strategy_args *ap);
  * hammer_vop_fsync { vp, waitfor }
  *
  * fsync() an inode to disk and wait for it to be completely committed
- * such that the information would not be undone if a crash occured after
+ * such that the information would not be undone if a crash occurred after
  * return.
  *
  * NOTE: HAMMER's fsync()'s are going to remain expensive until we implement
@@ -3130,7 +3130,7 @@ hammer_vop_bmap(struct vop_bmap_args *ap)
 
 	/*
 	 * Returning EOPNOTSUPP simply prevents the direct-IO optimization
-	 * from occuring.
+	 * from occurring.
 	 */
 	disk_offset = base_disk_offset + (ap->a_loffset - base_offset);
 

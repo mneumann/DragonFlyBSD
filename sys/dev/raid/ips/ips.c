@@ -111,7 +111,7 @@ ips_cmd_dmaload(void *cmdptr, bus_dma_segment_t *segments, int segnum,
 
 }
 
-/* is locking needed? what locking guarentees are there on removal? */
+/* is locking needed? what locking guarantees are there on removal? */
 static int
 ips_cmdqueue_free(ips_softc_t *sc)
 {
@@ -379,7 +379,7 @@ ips_adapter_init(ips_softc_t *sc)
 
 	DEVICE_PRINTF(1, sc->dev, "initializing\n");
 	if (bus_dma_tag_create(	/* parent    */	sc->adapter_dmatag,
-				/* alignemnt */	1,
+				/* alignment */	1,
 				/* boundary  */	0,
 				/* lowaddr   */	BUS_SPACE_MAXADDR_32BIT,
 				/* highaddr  */	BUS_SPACE_MAXADDR,
@@ -394,7 +394,7 @@ ips_adapter_init(ips_softc_t *sc)
 		goto error;
 	}
 	if (bus_dma_tag_create(	/* parent    */	sc->adapter_dmatag,
-				/* alignemnt */	1,
+				/* alignment */	1,
 				/* boundary  */	0,
 				/* lowaddr   */	BUS_SPACE_MAXADDR_32BIT,
 				/* highaddr  */	BUS_SPACE_MAXADDR,
@@ -634,7 +634,7 @@ ips_copperhead_queue_init(ips_softc_t *sc)
 	int error;
 
 	if (bus_dma_tag_create(	/* parent    */	sc->adapter_dmatag,
-				/* alignemnt */	1,
+				/* alignment */	1,
 				/* boundary  */	0,
 				/* lowaddr   */	BUS_SPACE_MAXADDR_32BIT,
 				/* highaddr  */	BUS_SPACE_MAXADDR,

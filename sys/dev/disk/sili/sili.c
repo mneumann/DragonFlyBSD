@@ -535,7 +535,7 @@ sili_port_state_machine(struct sili_port *ap, int initial)
 
 		/*
 		 * Do at least one loop, then stop if no more state changes
-		 * have occured.  The PM might not generate a new
+		 * have occurred.  The PM might not generate a new
 		 * notification until we clear the entire bitmap.
 		 */
 		if (loop && data == 0)
@@ -618,7 +618,7 @@ sili_port_state_machine(struct sili_port *ap, int initial)
 			 * Acquire exclusive access to the port while we
 			 * are doing this.  This prevents command-completion
 			 * from queueing commands for non-polled targets
-			 * inbetween our probe steps.  We need to do this
+			 * in-between our probe steps.  We need to do this
 			 * because the reset probes can generate severe PHY
 			 * and protocol errors and soft-brick the port.
 			 */
@@ -1296,7 +1296,7 @@ sili_unload_prb(struct sili_ccb *ccb)
  * timeout is in ms and only counts once the command gets on-chip.
  *
  * Returns ATA_S_* state, compare against ATA_S_COMPLETE to determine
- * that no error occured.
+ * that no error occurred.
  *
  * NOTE: If the caller specifies a NULL timeout function the caller is
  *	 responsible for clearing hardware state on failure, but we will
@@ -1966,7 +1966,7 @@ fatal:
 	switch(need) {
 	case NEED_HOTPLUG_INSERT:
 		/*
-		 * A hot-plug insertion event has occured and all
+		 * A hot-plug insertion event has occurred and all
 		 * outstanding commands have already been revoked.
 		 *
 		 * Don't recurse if this occurs while we are
@@ -1982,7 +1982,7 @@ fatal:
 		break;
 	case NEED_HOTPLUG_REMOVE:
 		/*
-		 * A hot-plug removal event has occured and all
+		 * A hot-plug removal event has occurred and all
 		 * outstanding commands have already been revoked.
 		 *
 		 * Don't recurse if this occurs while we are
@@ -2420,7 +2420,7 @@ sili_ata_cmd_done(struct sili_ccb *ccb)
 
 /*
  * Timeout from callout, MPSAFE - nothing can mess with the CCB's flags
- * while the callout is runing.
+ * while the callout is running.
  *
  * We can't safely get the port lock here or delay, we could block
  * the callout thread.

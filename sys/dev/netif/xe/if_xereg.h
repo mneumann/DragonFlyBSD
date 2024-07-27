@@ -100,7 +100,7 @@
 #define DINGO_ECOR_IOB_SHIFT	0x03
 #define DINGO_ECOR_IRQ_STSCHG	0x20	/* 1 = Route interrupts to -STSCHG pin, else use -INT pin */
 #define DINGO_ECOR_IRQ_LEVEL	0x40	/* 1 = Level-triggered interrupts, else edge-triggered */
-#define DINGO_ECOR_SRESET	0x80	/* 1 = Soft reset Ethernet adpater.  Must write to 0 */
+#define DINGO_ECOR_SRESET	0x80	/* 1 = Soft reset Ethernet adapter.  Must write to 0 */
 
 /* DINGO_ECSR bits */
 #define DINGO_ECSR_INT_ACK	0x01	/* 1 = Host must acknowledge interrupts (Clear ECSR_INT bit) */
@@ -634,7 +634,7 @@
 #define PHY_BMSR		0x01	/* Basic Mode Status Register */
 #define	PHY_ID1			0x02	/* PHY ID 1 */
 #define	PHY_ID2			0x03	/* PHY ID 2 */
-#define PHY_ANAR		0x04	/* Auto-Negotiation Advertisment Register */
+#define PHY_ANAR		0x04	/* Auto-Negotiation Advertisement Register */
 #define PHY_LPAR		0x05	/* Auto-Negotiation Link Partner Ability Register */
 #define PHY_ANER		0x06	/* Auto-Negotiation Expansion Register */
 

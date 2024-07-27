@@ -405,7 +405,7 @@ hammer_ioc_gethistory(hammer_transaction_t trans, hammer_inode_t ip,
 
 /*
  * Add the scanned element to the ioctl return structure.  Some special
- * casing is required for regular files to accomodate how data ranges are
+ * casing is required for regular files to accommodate how data ranges are
  * stored on-disk.
  */
 static void

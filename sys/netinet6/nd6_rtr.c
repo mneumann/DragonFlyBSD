@@ -420,7 +420,7 @@ bad:
 }
 
 /*
- * default router list proccessing sub routines
+ * default router list processing sub routines
  */
 
 #if 0
@@ -1099,7 +1099,7 @@ prelist_update(struct nd_prefix *new, struct nd_defrouter *dr, struct mbuf *m)
 			 * When an interface connects to a new link, a new
 			 * randomized interface identifier should be generated
 			 * immediately together with a new set of temporary
-			 * addresses.  Thus, we specifiy 1 as the 2nd arg of
+			 * addresses.  Thus, we specify 1 as the 2nd arg of
 			 * in6_tmpifadd().
 			 */
 			if (ip6_use_tempaddr) {

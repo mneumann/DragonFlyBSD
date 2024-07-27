@@ -536,7 +536,7 @@ twe_ioctl(struct twe_softc *sc, u_long ioctlcmd, void *addr)
     case TWEIO_COMMAND:
 	/*
 	 * if there's a data buffer, allocate and copy it in.
-	 * Must be in multipled of 512 bytes.
+	 * Must be in multiples of 512 bytes.
 	 */
 	tr_length = roundup2(tu->tu_size, 512);
 	if (tr_length > 0) {
@@ -565,7 +565,7 @@ twe_ioctl(struct twe_softc *sc, u_long ioctlcmd, void *addr)
 
 	/*
 	 * if there's a data buffer, allocate and copy it in.
-	 * Must be in multipled of 512 bytes.
+	 * Must be in multiples of 512 bytes.
 	 */
 	tr->tr_length = tr_length;
 	tr->tr_data = data;

@@ -323,7 +323,7 @@ dummy_setrunqueue(struct lwp *lp)
  * thread this function is called with a non-NULL lp, otherwise it
  * will be called with a NULL lp.
  *
- * This routine is called at ESTCPUFREQ on each cpu independantly.
+ * This routine is called at ESTCPUFREQ on each cpu independently.
  *
  * This routine typically queues a reschedule request, which will cause
  * the scheduler's BLAH_select_curproc() to be called as soon as possible.
@@ -411,7 +411,7 @@ dummy_resetpriority(struct lwp *lp)
 	}
 
 	/*
-	 * td_upri has normal sense (higher numbers are more desireable),
+	 * td_upri has normal sense (higher numbers are more desirable),
 	 * so negate it.
 	 */
 	lp->lwp_thread->td_upri = -lp->lwp_priority;

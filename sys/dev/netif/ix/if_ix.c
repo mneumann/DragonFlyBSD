@@ -2209,7 +2209,7 @@ ix_init_tx_unit(struct ix_softc *sc)
 
 		IXGBE_WRITE_REG(hw, IXGBE_MTQC, IXGBE_MTQC_64Q_1PB);
 
-		/* Reenable aribter */
+		/* Reenable arbiter */
 		rttdcs &= ~IXGBE_RTTDCS_ARBDIS;
 		IXGBE_WRITE_REG(hw, IXGBE_RTTDCS, rttdcs);
 	}

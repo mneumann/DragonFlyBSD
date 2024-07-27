@@ -565,7 +565,7 @@ ahci_port_interrupt_enable(struct ahci_port *ap)
 }
 
 /*
- * Manage the agressive link power management capability.
+ * Manage the aggressive link power management capability.
  */
 void
 ahci_port_link_pwr_mgmt(struct ahci_port *ap, int link_pwr_mgmt)
@@ -764,7 +764,7 @@ ahci_port_state_machine(struct ahci_port *ap, int initial)
 
 		/*
 		 * Do at least one loop, then stop if no more state changes
-		 * have occured.  The PM might not generate a new
+		 * have occurred.  The PM might not generate a new
 		 * notification until we clear the entire bitmap.
 		 */
 		if (loop && data == 0)
@@ -847,7 +847,7 @@ ahci_port_state_machine(struct ahci_port *ap, int initial)
 			 * Acquire exclusive access to the port while we
 			 * are doing this.  This prevents command-completion
 			 * from queueing commands for non-polled targets
-			 * inbetween our probe steps.  We need to do this
+			 * in-between our probe steps.  We need to do this
 			 * because the reset probes can generate severe PHY
 			 * and protocol errors and soft-brick the port.
 			 */
@@ -2053,7 +2053,7 @@ ahci_unload_prdt(struct ahci_ccb *ccb)
  * timeout is in ms and only counts once the command gets on-chip.
  *
  * Returns ATA_S_* state, compare against ATA_S_COMPLETE to determine
- * that no error occured.
+ * that no error occurred.
  *
  * NOTE: If the caller specifies a NULL timeout function the caller is
  *	 responsible for clearing hardware state on failure, but we will
@@ -2793,7 +2793,7 @@ finish_error:
 		}
 		/*
 		 * NO ELSE... copy back is in the normal command completion
-		 * code and only if no error occured and ATA_F_AUTOSENSE
+		 * code and only if no error occurred and ATA_F_AUTOSENSE
 		 * was set.
 		 */
 	}
@@ -3006,7 +3006,7 @@ skip_pcs:
 	 * the commands related to that target.
 	 *
 	 * ci_saved contains the mask of active commands as of when the
-	 * error occured, prior to any port stops.
+	 * error occurred, prior to any port stops.
 	 */
 	if (ap->ap_state == AP_S_FATAL_ERROR) {
 fatal:
@@ -3042,7 +3042,7 @@ failall:
 		/*
 		 * Don't restart the port if our problems were deemed fatal.
 		 *
-		 * Also acknowlege all fatal interrupt sources to prevent
+		 * Also acknowledge all fatal interrupt sources to prevent
 		 * a livelock.
 		 */
 		if (ap->ap_state == AP_S_FATAL_ERROR) {
@@ -3167,7 +3167,7 @@ failall:
 		break;
 	case NEED_RESTART:
 		/*
-		 * A recoverable error occured and we can restart outstanding
+		 * A recoverable error occurred and we can restart outstanding
 		 * commands on the port.
 		 */
 		ci_saved &= ~ap->ap_expired;
@@ -3200,7 +3200,7 @@ failall:
 		break;
 	case NEED_HOTPLUG_INSERT:
 		/*
-		 * A hot-plug insertion event has occured and all
+		 * A hot-plug insertion event has occurred and all
 		 * outstanding commands have already been revoked.
 		 *
 		 * Don't recurse if this occurs while we are
@@ -3215,7 +3215,7 @@ failall:
 		break;
 	case NEED_HOTPLUG_REMOVE:
 		/*
-		 * A hot-plug removal event has occured and all
+		 * A hot-plug removal event has occurred and all
 		 * outstanding commands have already been revoked.
 		 *
 		 * Don't recurse if this occurs while we are
@@ -3722,7 +3722,7 @@ ahci_ata_cmd_done(struct ahci_ccb *ccb)
 
 /*
  * Timeout from callout, MPSAFE - nothing can mess with the CCB's flags
- * while the callout is runing.
+ * while the callout is running.
  *
  * We can't safely get the port lock here or delay, we could block
  * the callout thread.
@@ -3859,7 +3859,7 @@ ahci_ata_cmd_timeout(struct ahci_ccb *ccb)
 	 *
 	 * Finally, once the port has been restarted we can issue any
 	 * previously saved pending commands, and run the port interrupt
-	 * code to handle any completions which may have occured when
+	 * code to handle any completions which may have occurred when
 	 * we saved CI.
 	 */
 	if (ahci_pread(ap, AHCI_PREG_TFD) &

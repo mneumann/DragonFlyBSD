@@ -941,7 +941,7 @@ mpt_verify_mwce(struct mpt_softc *mpt, struct mpt_raid_volume *mpt_vol)
 			/*
 			 * Wait one more status update to see if
 			 * resyncing gets enabled.  It gets disabled
-			 * temporarilly when WCE is changed.
+			 * temporarily when WCE is changed.
 			 */
 			return;
 		}

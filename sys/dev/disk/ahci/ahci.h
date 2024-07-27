@@ -380,7 +380,7 @@ struct ahci_prdt {
 
 /*
  * The base command table structure is 128 bytes.  Each prdt is 16 bytes.
- * We need to accomodate a 2MB maximum I/O transfer size, which is at least
+ * We need to accommodate a 2MB maximum I/O transfer size, which is at least
  * 512 entries, plus one for page slop.
  *
  * Making the ahci_cmd_table 16384 bytes (a reasonable power of 2)

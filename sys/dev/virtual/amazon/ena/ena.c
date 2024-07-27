@@ -2754,7 +2754,7 @@ ena_check_and_collapse_mbuf(struct ena_ring *tx_ring, struct mbuf **mbuf)
 		return (ENOMEM);
 	}
 
-	/* If mbuf was collapsed succesfully, original mbuf is released. */
+	/* If mbuf was collapsed successfully, original mbuf is released. */
 	*mbuf = collapsed_mbuf;
 
 	return (0);

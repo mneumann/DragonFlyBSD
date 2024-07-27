@@ -142,7 +142,7 @@
 #define	TH_MIN		5	/* min threshold */
 #define	TH_MAX		15	/* max threshold */
 
-#define	RED_LIMIT	60	/* default max queue lenght */
+#define	RED_LIMIT	60	/* default max queue length */
 #define	RED_STATS		/* collect statistics */
 
 /*

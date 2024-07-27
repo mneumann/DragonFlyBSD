@@ -481,7 +481,7 @@ hpfs_vget(struct mount *mp, struct vnode *dvp, ino_t ino, struct vnode **vpp)
 	 * update reasons, and if parent is not in
 	 * hash, we have to lock node creation...
 	 * To solve this, we MALLOC, getnewvnode and init while
-	 * not locked (probability of node appearence
+	 * not locked (probability of node appearance
 	 * at that time is little, and anyway - we'll
 	 * check for it).
 	 */

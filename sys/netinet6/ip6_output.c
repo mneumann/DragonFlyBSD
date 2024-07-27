@@ -1084,7 +1084,7 @@ ip6_getpmtu(struct route_in6 *ro_pmtu, struct route_in6 *ro,
 			 * RFC2460 section 5, last paragraph:
 			 * if we record ICMPv6 too big message with
 			 * mtu < IPV6_MMTU, transmit packets sized IPV6_MMTU
-			 * or smaller, with framgent header attached.
+			 * or smaller, with fragment header attached.
 			 * (fragment header is needed regardless from the
 			 * packet size, for translators to identify packets)
 			 */

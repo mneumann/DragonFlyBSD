@@ -2275,7 +2275,7 @@ again:
 	/*
 	 * Set fdvp and tdvp.  We haven't done all the topology checks
 	 * so these can wind up NULL (e.g. if either fvp or tvp is a mount
-	 * point).  If we get through the checks these will be guarenteed
+	 * point).  If we get through the checks these will be guaranteed
 	 * to be non-NULL.
 	 *
 	 * Holding the children ncp's should be sufficient to prevent
@@ -3105,7 +3105,7 @@ again:
 	/*
 	 * For some reason FreeBSD's ufs_readdir() chooses to back the
 	 * directory offset up to a block boundary, so it is necessary to
-	 * skip over the records that preceed the requested offset. This
+	 * skip over the records that precede the requested offset. This
 	 * requires the assumption that file offset cookies monotonically
 	 * increase.
 	 */
@@ -3392,7 +3392,7 @@ again:
 	/*
 	 * For some reason FreeBSD's ufs_readdir() chooses to back the
 	 * directory offset up to a block boundary, so it is necessary to
-	 * skip over the records that preceed the requested offset. This
+	 * skip over the records that precede the requested offset. This
 	 * requires the assumption that file offset cookies monotonically
 	 * increase.
 	 */
@@ -3646,7 +3646,7 @@ nfsrv_commit(struct nfsrv_descript *nfsd, struct nfssvc_sock *slp,
 		off_t loffset;
 
 		/*
-		 * Align to iosize boundry, super-align to page boundry.
+		 * Align to iosize boundary, super-align to page boundary.
 		 */
 		if (off & iomask) {
 			cnt += off & iomask;

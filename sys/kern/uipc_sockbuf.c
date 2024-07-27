@@ -78,7 +78,7 @@
  * mbuf chain is appended as a new record.  M_EOR is usually just set
  * in the last mbuf of the last record's mbuf chain (see sbcompress()),
  * but this may be changed in the future since there is no real need
- * to propogate the flag any more.
+ * to propagate the flag any more.
  */
 void
 sbappend(struct sockbuf *sb, struct mbuf *m)
@@ -267,7 +267,7 @@ sbappendaddr(struct sockbuf *sb, const struct sockaddr *asa, struct mbuf *m0,
 	sb->sb_lastrecord = m;
 
 	/*
-	 * Propogate M_EOR to the last mbuf and calculate sb_lastmbuf
+	 * Propagate M_EOR to the last mbuf and calculate sb_lastmbuf
 	 * so sbappend() can find it.
 	 */
 	eor = m->m_flags;
@@ -313,7 +313,7 @@ sbappendcontrol(struct sockbuf *sb, struct mbuf *m0, struct mbuf *control)
 	sb->sb_lastrecord = control;
 
 	/*
-	 * Propogate M_EOR to the last mbuf and calculate sb_lastmbuf
+	 * Propagate M_EOR to the last mbuf and calculate sb_lastmbuf
 	 * so sbappend() can find it.
 	 */
 	eor = m0->m_flags;
@@ -425,7 +425,7 @@ sbcompress(struct sockbuf *sb, struct mbuf *m, struct mbuf *tailm)
 	}
 
 	/*
-	 * Propogate EOR to the last mbuf
+	 * Propagate EOR to the last mbuf
 	 */
 	if (eor) {
 		if (tailm)

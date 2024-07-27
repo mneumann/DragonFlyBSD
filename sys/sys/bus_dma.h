@@ -299,7 +299,7 @@ bus_dmamem_coherent_any(bus_dma_tag_t parent, bus_size_t alignment,
 			bus_addr_t *busaddr);
 
 /*
- * Perform a syncronization operation on the given map.
+ * Perform a synchronization operation on the given map.
  */
 void _bus_dmamap_sync(bus_dma_tag_t, bus_dmamap_t, bus_dmasync_op_t);
 #define bus_dmamap_sync(dmat, dmamap, op) 		\

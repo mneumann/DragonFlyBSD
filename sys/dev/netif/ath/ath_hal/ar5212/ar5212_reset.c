@@ -28,7 +28,7 @@
 
 #include "ah_eeprom_v3.h"
 
-/* Additional Time delay to wait after activiting the Base band */
+/* Additional Time delay to wait after activating the Base band */
 #define BASE_ACTIVATE_DELAY	100	/* 100 usec */
 #define PLL_SETTLE_DELAY	300	/* 300 usec */
 

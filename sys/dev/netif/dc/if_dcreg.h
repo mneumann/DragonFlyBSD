@@ -994,7 +994,7 @@ struct dc_softc {
 #define DC_CSID_VENDOR		0x0000FFFF
 #define DC_CSID_DEVICE		0xFFFF0000
 
-/* PCI cababilities pointer */
+/* PCI capabilities pointer */
 #define DC_CCAP_OFFSET		0x000000FF
 
 /* PCI interrupt config register */

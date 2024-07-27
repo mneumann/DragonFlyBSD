@@ -288,7 +288,7 @@ struct tcpcb {
 
 	TAILQ_ENTRY(tcpcb) t_outputq;	/* tcp_output needed list */
 
-	/* bandwith limitation */
+	/* bandwidth limitation */
 	u_long	snd_bandwidth;		/* calculated bandwidth or 0 */
 	u_long	snd_bwnd;		/* bandwidth-controlled window */
 	int	t_bw_rtttime;		/* used for bandwidth calculation */

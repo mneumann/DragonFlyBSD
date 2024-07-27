@@ -128,7 +128,7 @@ typedef struct _Command
 	/* called when this command is finished */
 	void (* HPTLIBAPI pfnCompletion)(_VBUS_ARG PCommand pCmd);
 
-	/* pointer to origional command */
+	/* pointer to original command */
 	void *pOrgCommand;
 
 
@@ -238,7 +238,7 @@ DPC_ROUTINE;
  * Maximum command blocks needed for each VBus:
  *   Each OS command requests 1+MAX_MEMBERS*2 command blocks (RAID1/0 case)
  *   This space is allocated by platform dependent part, either static or
- *   dynamic, continuous or non-continous.
+ *   dynamic, continuous or non-continuous.
  *   The code only needs _vbus_(pFreeCommands) to be set.
  *
  * PendingRoutines[] size:

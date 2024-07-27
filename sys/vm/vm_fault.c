@@ -371,7 +371,7 @@ virtual_copy_ok(struct faultstate *fs)
 /*
  * vm_fault:
  *
- * Handle a page fault occuring at the given address, requiring the given
+ * Handle a page fault occurring at the given address, requiring the given
  * permissions, in the map specified.  If successful, the page is inserted
  * into the associated physical map.
  *

@@ -851,7 +851,7 @@ again:
 	case DMSGF_CREATE:
 	case DMSGF_CREATE | DMSGF_DELETE:
 		/*
-		 * New persistant command received.
+		 * New persistent command received.
 		 */
 		if (state != &iocom->state0) {
 			kdio_printf(iocom, 1, "%s\n",

@@ -1582,7 +1582,7 @@ sis_intr(void *arg)
 	sc = arg;
 	ifp = &sc->arpcom.ac_if;
 
-	/* Supress unwanted interrupts */
+	/* Suppress unwanted interrupts */
 	if (!(ifp->if_flags & IFF_UP)) {
 		sis_stop(sc);
 		return;

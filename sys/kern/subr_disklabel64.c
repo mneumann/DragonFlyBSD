@@ -140,7 +140,7 @@ l64_freedisklabel(disklabel_t *lpp)
  * Attempt to read a disk label from a device.  64 bit disklabels are
  * sector-agnostic and begin at offset 0 on the device.
  *
- * Returns NULL on sucess, and an error string on failure.
+ * Returns NULL on success, and an error string on failure.
  */
 static const char *
 l64_readdisklabel(cdev_t dev, struct diskslice *sp, disklabel_t *lpp,

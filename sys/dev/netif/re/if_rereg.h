@@ -106,7 +106,7 @@ struct re_desc {
 #define RE_TDESC_STAT_LINKFAIL	0x00200000	/* link faulure */
 #define RE_TDESC_STAT_OWINCOL	0x00400000	/* out-of-window collision */
 #define RE_TDESC_STAT_TXERRSUM	0x00800000	/* transmit error summary */
-#define RE_TDESC_STAT_UNDERRUN	0x02000000	/* TX underrun occured */
+#define RE_TDESC_STAT_UNDERRUN	0x02000000	/* TX underrun occurred */
 #define RE_TDESC_STAT_OWN	0x80000000
 
 /*

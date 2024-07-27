@@ -372,7 +372,7 @@ typedef struct hammer_inode {
 	 * When a demark is created to synchronize an inode to
 	 * disk, certain fields are copied so the front-end VOPs
 	 * can continue to run in parallel with the synchronization
-	 * occuring in the background.
+	 * occurring in the background.
 	 */
 	int		sync_flags;		/* to-sync flags cache */
 	off_t		sync_trunc_off;		/* to-sync truncation */
@@ -422,7 +422,7 @@ typedef struct hammer_inode {
 #define HAMMER_INODE_RECSW	0x0400	/* waiting on data record flush */
 #define HAMMER_INODE_DONDISK	0x0800	/* data records may be on disk */
 #define HAMMER_INODE_BUFS	0x1000	/* dirty high level bps present */
-#define HAMMER_INODE_REFLUSH	0x2000	/* flush on dependancy / reflush */
+#define HAMMER_INODE_REFLUSH	0x2000	/* flush on dependency / reflush */
 #define HAMMER_INODE_RECLAIM	0x4000	/* trying to reclaim */
 #define HAMMER_INODE_FLUSHW	0x8000	/* someone waiting for flush */
 
@@ -626,7 +626,7 @@ typedef struct hammer_io {
 	 */
 	u_int		modified : 1;	/* bp's data was modified */
 	u_int		released : 1;	/* bp released (w/ B_LOCKED set) */
-	u_int		waitdep : 1;	/* flush waits for dependancies */
+	u_int		waitdep : 1;	/* flush waits for dependencies */
 	u_int		recovered : 1;	/* has recovery ref */
 	u_int		waitmod : 1;	/* waiting for modify_refs */
 	u_int		reclaim : 1;	/* reclaim requested */
@@ -731,7 +731,7 @@ typedef struct hammer_node_lock {
  * the direct-write mechanism.
  *
  * The structure is also used to hold off on reallocations of
- * big-blocks from the freemap until flush dependancies have
+ * big-blocks from the freemap until flush dependencies have
  * been dealt with.
  */
 typedef struct hammer_reserve {

@@ -584,7 +584,7 @@ ng_fec_ether_setmulti(struct ifnet *ifp)
 }
 
 /*
- * Pass an ioctl command down to all the underyling interfaces in a
+ * Pass an ioctl command down to all the underlying interfaces in a
  * bundle. Used for setting flags.
  */
 

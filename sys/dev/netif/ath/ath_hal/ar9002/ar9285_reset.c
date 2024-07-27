@@ -46,7 +46,7 @@
 #define IS_EEP_MINOR_V2(_ah)	(EEP_MINOR(_ah) >= AR5416_EEP_MINOR_VER_2)
 #define IS_EEP_MINOR_V3(_ah)	(EEP_MINOR(_ah) >= AR5416_EEP_MINOR_VER_3)
 
-/* Additional Time delay to wait after activiting the Base band */
+/* Additional Time delay to wait after activating the Base band */
 #define BASE_ACTIVATE_DELAY	100	/* 100 usec */
 #define PLL_SETTLE_DELAY	300	/* 300 usec */
 #define RTC_PLL_SETTLE_DELAY    1000    /* 1 ms     */

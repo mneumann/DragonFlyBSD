@@ -679,7 +679,7 @@ u_int32_t ar9300_mci_wait_for_gpm(struct ath_hal *ah, u_int8_t gpm_type,
              * Since BT's calibration doesn't happen that often, we'll
              * let BT completes calibration then we continue to wait 
              * for cal_grant from BT.
-             * Orginal: Wait BT_CAL_GRANT.
+             * Original: Wait BT_CAL_GRANT.
              * New: Receive BT_CAL_REQ -> send WLAN_CAL_GRANT -> wait
              * BT_CAL_DONE -> Wait BT_CAL_GRANT.
              */

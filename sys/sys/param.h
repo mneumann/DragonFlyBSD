@@ -314,8 +314,8 @@
 #define PWAKEUP_MYCPU	0x00004000	/* wakeup on current cpu only */
 #define PWAKEUP_ONE	0x00008000	/* argument to wakeup: only one */
 #define PDOMAIN_MASK	0xFFFF0000	/* address domains for wakeup */
-#define PDOMAIN_UMTX	0x00010000	/* independant domain for UMTX */
-#define PDOMAIN_XLOCK	0x00020000	/* independant domain for fifo_lock */
+#define PDOMAIN_UMTX	0x00010000	/* independent domain for UMTX */
+#define PDOMAIN_XLOCK	0x00020000	/* independent domain for fifo_lock */
 #define PDOMAIN_FBSD0	0x01000000	/* freebsd sleepq queues */
 #define PDOMAIN_FBSDINC	0x00010000	/* freebsd sleepq queue 1 */
 #define PWAKEUP_ENCODE(domain, cpu)	((domain) | (cpu))
@@ -464,7 +464,7 @@
  * MBUF Management.
  *
  * Because many drivers can't deal with multiple DMA segments all mbufs
- * must avoid crossing a page boundary.  While we can accomodate mbufs
+ * must avoid crossing a page boundary.  While we can accommodate mbufs
  * which are not a power-of-2 sized kmalloc() will only guarantee
  * non-crossing alignment if we use a power-of-2.  256 is no longer large
  * enough due to m_hdr and m_pkthdr bloat.

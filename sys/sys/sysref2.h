@@ -72,7 +72,7 @@ sysref_get(struct sysref *sr)
 }
 
 /*
- * 1->0 transitions, and transitions occuring with negative ref counts,
+ * 1->0 transitions, and transitions occurring with negative ref counts,
  * require special handling.  All other transitions can be done with a
  * trivial locked bus cycle.
  */

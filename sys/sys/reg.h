@@ -34,7 +34,7 @@
  * $DragonFly: src/sys/sys/reg.h,v 1.3 2007/02/03 17:05:59 corecode Exp $
  */
 /*
- * Machine independant interface to abstract cpu registers that a process
+ * Machine independent interface to abstract cpu registers that a process
  * might have to manipulate (reg, fpreg, and dbreg structures).
  */
 

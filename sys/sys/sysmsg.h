@@ -49,7 +49,7 @@
 
 /*
  * The sysmsg holds the kernelland version of a system call's arguments
- * and return value.  It typically preceeds the syscall arguments in sysunion
+ * and return value.  It typically precedes the syscall arguments in sysunion
  * (see sys/sysunion.h).
  *
  * WARNING: fds must be long so it translates to two 64 bit registers

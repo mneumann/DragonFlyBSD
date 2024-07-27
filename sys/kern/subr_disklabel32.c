@@ -184,7 +184,7 @@ l32_freedisklabel(disklabel_t *lpp)
 /*
  * Attempt to read a disk label from a device.
  *
- * Returns NULL on sucess, and an error string on failure
+ * Returns NULL on success, and an error string on failure
  */
 static const char *
 l32_readdisklabel(cdev_t dev, struct diskslice *sp, disklabel_t *lpp,
@@ -498,7 +498,7 @@ l32_makevirginlabel(disklabel_t lpx, struct diskslices *ssp,
 	}
 
 	/*
-	 * Set or Modify the partition sizes to accomodate the slice,
+	 * Set or Modify the partition sizes to accommodate the slice,
 	 * since we started with a copy of the virgin label stored
 	 * in the whole-disk-slice and we are probably not a
 	 * whole-disk slice.

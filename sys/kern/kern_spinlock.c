@@ -224,7 +224,7 @@ _spin_lock_contested(struct spinlock *spin, const char *ident, int value)
 
 		/*
 		 * If the low bits are zero, try to acquire the exclusive lock
-		 * by transfering our high bit reservation to the low bits.
+		 * by transferring our high bit reservation to the low bits.
 		 *
 		 * NOTE: Avoid unconditional atomic op by testing ovalue,
 		 *	 otherwise we get cache bus armageddon.

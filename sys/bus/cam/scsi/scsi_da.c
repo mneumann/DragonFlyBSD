@@ -1542,7 +1542,7 @@ dastart(struct cam_periph *periph, union ccb *start_ccb)
 		}
 
 		/*
-		 * Block out any asyncronous callbacks
+		 * Block out any asynchronous callbacks
 		 * while we touch the pending ccb list.
 		 */
 		if (start_ccb) {
@@ -1753,7 +1753,7 @@ dadone(struct cam_periph *periph, union ccb *done_ccb)
 		 * A completed read must wake up on either pending reads
 		 * or writes due to TPS balancing.
 		 *
-		 * Block out any asyncronous callbacks while we touch the
+		 * Block out any asynchronous callbacks while we touch the
 		 * pending ccb list.
 		 */
 		LIST_REMOVE(&done_ccb->ccb_h, periph_links.le);

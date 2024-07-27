@@ -442,7 +442,7 @@ udav_init(struct usb_ether *ue)
 	/* Initialize RX control register */
 	UDAV_SETBIT(sc, UDAV_RCR, UDAV_RCR_DIS_LONG | UDAV_RCR_DIS_CRC);
 
-	/* load multicast filter and update promiscious mode bit */
+	/* load multicast filter and update promiscuous mode bit */
 	udav_setpromisc(ue);
 
 	/* enable RX */

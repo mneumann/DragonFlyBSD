@@ -33,7 +33,7 @@ struct snd_clone_entry;
 struct snd_clone;
 
 /*
- * 750 milisecond default deadline. Short enough to not cause excessive
+ * 750 millisecond default deadline. Short enough to not cause excessive
  * garbage collection, long enough to indicate stalled VFS.
  */
 #define SND_CLONE_DEADLINE_DEFAULT	750

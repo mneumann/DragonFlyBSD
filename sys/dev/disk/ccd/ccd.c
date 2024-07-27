@@ -250,7 +250,7 @@ getccdbuf(void)
 	initbufbio(&cbp->cb_buf);
 
 	/*
-	 * independant struct buf initialization
+	 * independent struct buf initialization
 	 */
 	buf_dep_init(&cbp->cb_buf);
 	BUF_LOCK(&cbp->cb_buf, LK_EXCLUSIVE);
@@ -524,7 +524,7 @@ ccdinit(struct ccddevice *ccd, char **cpaths, struct ucred *cred)
 
 	/*
 	 * If uniform interleave is desired set all sizes to that of
-	 * the smallest component.  This will guarentee that a single
+	 * the smallest component.  This will guarantee that a single
 	 * interleave table is generated.
 	 *
 	 * Lost space must be taken into account when calculating the
@@ -541,7 +541,7 @@ ccdinit(struct ccddevice *ccd, char **cpaths, struct ucred *cred)
 			 * Check to see if an even number of components
 			 * have been specified.  The interleave must also
 			 * be non-zero in order for us to be able to 
-			 * guarentee the topology.
+			 * guarantee the topology.
 			 */
 			if (cs->sc_nccdisks % 2) {
 				kprintf("ccd%d: mirroring requires an even number of disks\n", ccd->ccd_unit );
@@ -1187,7 +1187,7 @@ ccdiodone(struct bio *bio)
 #endif
 
 	/*
-	 * If an error occured, report it.  If this is a mirrored 
+	 * If an error occurred, report it.  If this is a mirrored 
 	 * configuration and the first of two possible reads, do not
 	 * set the error in the bp yet because the second read may
 	 * succeed.
@@ -1246,7 +1246,7 @@ ccdiodone(struct bio *bio)
 			/*
 			 * When reading, either dispose of the second buffer
 			 * or initiate I/O on the second buffer if an error 
-			 * occured with this one.
+			 * occurred with this one.
 			 */
 			if ((cbp->cb_pflags & CCDPF_MIRROR_DONE) == 0) {
 				if (cbp->cb_buf.b_flags & B_ERROR) {
@@ -1268,7 +1268,7 @@ ccdiodone(struct bio *bio)
 	}
 
 	/*
-	 * Use our saved b_bufsize to determine if an unexpected EOF occured.
+	 * Use our saved b_bufsize to determine if an unexpected EOF occurred.
 	 */
 	count = cbp->cb_buf.b_bufsize;
 	putccdbuf(cbp);
@@ -1345,7 +1345,7 @@ ccdioctl(struct dev_ioctl_args *ap)
 
 		/*
 		 * Allocate space for and copy in the array of
-		 * componet pathnames and device numbers.
+		 * component pathnames and device numbers.
 		 */
 		cpp = kmalloc(ccio->ccio_ndisks * sizeof(char *),
 		    M_DEVBUF, M_WAITOK);

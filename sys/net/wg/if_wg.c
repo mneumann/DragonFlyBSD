@@ -643,7 +643,7 @@ wg_peer_destroy(struct wg_peer *peer)
 
 	/*
 	 * Disable remote and timers.  This will prevent any new handshakes
-	 * from occuring.
+	 * from occurring.
 	 */
 	noise_remote_disable(peer->p_remote);
 	wg_timers_disable(peer);

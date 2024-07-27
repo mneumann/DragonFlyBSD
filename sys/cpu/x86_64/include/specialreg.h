@@ -544,12 +544,12 @@
 #define		SPEC_CTRL_IBRS		0x00000001
 #define		SPEC_CTRL_STIBP		0x00000002
 #define		SPEC_CTRL_SSBD		0x00000004
-#define		SPEC_CTRL_DUMMY1	0x00010000 /* ficticious */
-#define		SPEC_CTRL_DUMMY2	0x00020000 /* ficticious */
-#define		SPEC_CTRL_DUMMY3	0x00040000 /* ficticious */
-#define		SPEC_CTRL_DUMMY4	0x00080000 /* ficticious */
-#define		SPEC_CTRL_DUMMY5	0x00100000 /* ficticious */
-#define		SPEC_CTRL_DUMMY6	0x00200000 /* ficticious */
+#define		SPEC_CTRL_DUMMY1	0x00010000 /* fictitious */
+#define		SPEC_CTRL_DUMMY2	0x00020000 /* fictitious */
+#define		SPEC_CTRL_DUMMY3	0x00040000 /* fictitious */
+#define		SPEC_CTRL_DUMMY4	0x00080000 /* fictitious */
+#define		SPEC_CTRL_DUMMY5	0x00100000 /* fictitious */
+#define		SPEC_CTRL_DUMMY6	0x00200000 /* fictitious */
 
 #define	MSR_PRED_CMD		0x049	/* IBPB Spectre mitigation */
 
@@ -699,7 +699,7 @@
 #define	PCR0_RSTK		0x01	/* Enables return stack */
 #define	PCR0_BTB		0x02	/* Enables branch target buffer */
 #define	PCR0_LOOP		0x04	/* Enables loop */
-#define	PCR0_AIS		0x08	/* Enables all instrcutions stalled to serialize pipe. */
+#define	PCR0_AIS		0x08	/* Enables all instructions stalled to serialize pipe. */
 #define	PCR0_MLR		0x10	/* Enables reordering of misaligned loads */
 #define	PCR0_BTBRT		0x40	/* Enables BTB test register. */
 #define	PCR0_LSSER		0x80	/* Disable reorder */
@@ -805,7 +805,7 @@
 
 /*
  * The region control registers specify the attributes associated with
- * the ARRx addres regions.
+ * the ARRx address regions.
  */
 #define	RCR0	0xdc
 #define	RCR1	0xdd

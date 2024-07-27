@@ -108,10 +108,10 @@ SYSCTL_INT(_debug, OID_AUTO, batchfreevnodes, CTLFLAG_RW,
 
 static long auxrecovervnodes1;
 SYSCTL_INT(_debug, OID_AUTO, auxrecovervnodes1, CTLFLAG_RW,
-        &auxrecovervnodes1, 0, "vnlru auxillary vnodes recovered");
+        &auxrecovervnodes1, 0, "vnlru auxiliary vnodes recovered");
 static long auxrecovervnodes2;
 SYSCTL_INT(_debug, OID_AUTO, auxrecovervnodes2, CTLFLAG_RW,
-        &auxrecovervnodes2, 0, "vnlru auxillary vnodes recovered");
+        &auxrecovervnodes2, 0, "vnlru auxiliary vnodes recovered");
 
 #ifdef TRACKVNODE
 static u_long trackvnode;
@@ -959,7 +959,7 @@ skip:
 		}
 
 		/*
-		 * Do not reclaim/reuse a vnode while auxillary refs exists.
+		 * Do not reclaim/reuse a vnode while auxiliary refs exists.
 		 * This includes namecache refs due to a related ncp being
 		 * locked or having children, a VM object association, or
 		 * other hold users.
@@ -1128,7 +1128,7 @@ allocvnode(int lktimeout, int lkflags)
 #endif
 
 		/*
-		 * Do not reclaim/reuse a vnode while auxillary refs exists.
+		 * Do not reclaim/reuse a vnode while auxiliary refs exists.
 		 * This includes namecache refs due to a related ncp being
 		 * locked or having children, a VM object association, or
 		 * other hold users.

@@ -417,7 +417,7 @@ nd6_options(union nd_opts *ndopts)
 		default:
 			/*
 			 * Unknown options must be silently ignored,
-			 * to accomodate future extension to the protocol.
+			 * to accommodate future extension to the protocol.
 			 */
 			nd6log((LOG_DEBUG,
 			    "nd6_options: unsupported option %d - "
@@ -1464,7 +1464,7 @@ nd6_ioctl(u_long cmd, caddr_t data, struct ifnet *ifp)
 		 * obsolete API, use sysctl under net.inet6.icmp6
 		 */
 		/*
-		 * XXX meaning of fields, especialy "raflags", is very
+		 * XXX meaning of fields, especially "raflags", is very
 		 * differnet between RA prefix list and RR/static prefix list.
 		 * how about separating ioctls into two?
 		 */
@@ -1532,7 +1532,7 @@ nd6_ioctl(u_long cmd, caddr_t data, struct ifnet *ifp)
 	case SIOCSIFINFO_IN6:
 		/*
 		 * used to change host variables from userland.
-		 * intented for a use on router to reflect RA configurations.
+		 * intended for a use on router to reflect RA configurations.
 		 */
 		/* 0 means 'unspecified' */
 		if (ndi->ndi.linkmtu != 0) {
@@ -1560,7 +1560,7 @@ nd6_ioctl(u_long cmd, caddr_t data, struct ifnet *ifp)
 	case SIOCSIFINFO_FLAGS:
 		if ((ndi->ndi.flags & ND6_IFF_AUTO_LINKLOCAL) &&
 		    !(ND_IFINFO(ifp)->flags & ND6_IFF_AUTO_LINKLOCAL)) {
-			/* auto_linklocal 0->1 transision */
+			/* auto_linklocal 0->1 transition */
 			ND_IFINFO(ifp)->flags |= ND6_IFF_AUTO_LINKLOCAL;
 			in6_ifattach(ifp, NULL);
 		}
@@ -1700,7 +1700,7 @@ nd6_cache_lladdr(struct ifnet *ifp, struct in6_addr *from, char *lladdr,
 	 * Validation about ifp->if_addrlen and lladdrlen must be done in
 	 * the caller.
 	 *
-	 * XXX If the link does not have link-layer adderss, what should
+	 * XXX If the link does not have link-layer address, what should
 	 * we do? (ifp->if_addrlen == 0)
 	 * Spec says nothing in sections for RA, RS and NA.  There's small
 	 * description on it in NS section (RFC 2461 7.2.3).

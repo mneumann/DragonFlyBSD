@@ -415,7 +415,7 @@ TrAmlTransformWalkEnd (
     void                    *Context)
 {
 
-    /* Save possible Externals list in the DefintionBlock Op */
+    /* Save possible Externals list in the DefinitionBlock Op */
 
     if (Op->Asl.ParseOpcode == PARSEOP_DEFINITION_BLOCK)
     {

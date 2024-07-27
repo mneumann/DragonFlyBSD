@@ -796,7 +796,7 @@ hammer2_xop_feed(hammer2_xop_head_t *xop, hammer2_chain_t *chain,
 	uint64_t mask;
 
 	/*
-	 * Early termination (typicaly of xop_readir)
+	 * Early termination (typically of xop_readir)
 	 */
 	if (hammer2_xop_active(xop) == 0) {
 		error = HAMMER2_ERROR_ABORTED;

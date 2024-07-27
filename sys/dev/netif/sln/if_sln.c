@@ -1027,7 +1027,7 @@ sln_media_intr(struct sln_softc *sc)
 	PDEBUG("mii_stat:0x%lx\n", phys[1]);
 
 	if (0 == (phys[1] & SL_MIISTAT_LINK)) {
-		kprintf("media is unconnect,linked down,or uncompatible\n");
+		kprintf("media is unconnect,linked down,or incompatible\n");
 		sc->connect = 0;
 		sln_mii_cmd(sc, SL_MII0_SCAN, phys);
 		/* disable tx/rx */

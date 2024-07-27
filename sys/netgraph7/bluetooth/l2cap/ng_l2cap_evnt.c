@@ -947,7 +947,7 @@ ng_l2cap_process_discon_rsp(ng_l2cap_con_p con, u_int8_t ident)
 	}
 
 	/*
-	 * Looks like we have successfuly disconnected channel, so notify 
+	 * Looks like we have successfully disconnected channel, so notify
 	 * upper layer. If command timeout already happened then ignore
 	 * response.
 	 */

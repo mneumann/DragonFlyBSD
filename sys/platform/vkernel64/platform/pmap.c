@@ -541,7 +541,7 @@ pmap_bootstrap(vm_paddr_t *firstaddr, int64_t ptov_offset)
  *	Initialize the pmap module.
  *	Called by vm_init, to initialize any structures that the pmap
  *	system needs to map virtual memory.
- *	pmap_init has been enhanced to support in a fairly consistant
+ *	pmap_init has been enhanced to support in a fairly consistent
  *	way, discontiguous physical memory.
  */
 void
@@ -616,7 +616,7 @@ pmap_init2(void)
  * such pages in this maps should always use pmap_k*() functions and not
  * be managed anyhow.
  *
- * XXX User and kernel address spaces are independant for virtual kernels,
+ * XXX User and kernel address spaces are independent for virtual kernels,
  * this function only applies to the kernel pmap.
  */
 static void
@@ -2632,7 +2632,7 @@ pmap_copy(pmap_t dst_pmap, pmap_t src_pmap, vm_offset_t dst_addr,
 	vm_size_t len, vm_offset_t src_addr)
 {
 	/*
-	 * XXX BUGGY.  Amoung other things srcmpte is assumed to remain
+	 * XXX BUGGY.  Among other things srcmpte is assumed to remain
 	 * valid through blocking calls, and that's just not going to
 	 * be the case.
 	 *

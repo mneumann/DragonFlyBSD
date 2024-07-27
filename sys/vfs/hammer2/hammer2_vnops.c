@@ -87,7 +87,7 @@ hammer2_vop_inactive(struct vop_inactive_args *ap)
 	}
 
 	/*
-	 * Aquire the inode lock to interlock against vp updates via
+	 * Acquire the inode lock to interlock against vp updates via
 	 * the inode path and file deletions and such (which can be
 	 * namespace-only operations that might not hold the vnode).
 	 */
@@ -552,7 +552,7 @@ done:
 	 * to trim the related data chains, otherwise a later expansion can
 	 * cause havoc.
 	 *
-	 * If an extend occured that changed the DIRECTDATA state, we must
+	 * If an extend occurred that changed the DIRECTDATA state, we must
 	 * call inode_chain_sync now in order to prepare the inode's indirect
 	 * block table.
 	 *

@@ -92,7 +92,7 @@
 
 /*****************************************************************************
  *
- *    i2oadptr.h -- I2O Adapter Class Message defintion file
+ *    i2oadptr.h -- I2O Adapter Class Message definition file
  *
  *
  *  Revision History:

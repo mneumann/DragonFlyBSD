@@ -82,7 +82,7 @@
  ****************************************************************/
 
 /*********************************************************************
- * I2OMsg.h -- I2O Message defintion file
+ * I2OMsg.h -- I2O Message definition file
  *
  * This file contains information presented in Chapter 3, 4 and 6 of
  * the I2O(tm) Specification and most of the I2O Global defines and
@@ -129,7 +129,7 @@ PRAGMA_PACK_PUSH
 
 /****************************************************************************/
 
-/* Common functions accross all classes. */
+/* Common functions across all classes. */
 
 #define	   I2O_PRIVATE_MESSAGE			       0xFF
 

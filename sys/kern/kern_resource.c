@@ -994,7 +994,7 @@ uifind(uid_t uid)
 }
 
 /*
- * Helper funtion to remove a uidinfo whos reference count may
+ * Helper function to remove a uidinfo whos reference count may
  * have transitioned to 0.  The reference count is likely 0
  * on-call.
  */

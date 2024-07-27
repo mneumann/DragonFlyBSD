@@ -333,7 +333,7 @@ ppiread(struct dev_read_args *ap)
 	switch (ppb_1284_get_state(ppbus)) {
 	case PPB_PERIPHERAL_IDLE:
 		ppb_peripheral_terminate(ppbus, 0);
-		/* fall throught */
+		/* fall through */
 
 	case PPB_FORWARD_IDLE:
 		/* if can't negotiate NIBBLE mode then try BYTE mode,

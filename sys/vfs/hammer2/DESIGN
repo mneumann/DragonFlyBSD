@@ -431,7 +431,7 @@ of physical memory.  Buffer cache overhead is significantly lower with H2
 than with H1 (and orders of magnitude lower than ZFS).
 
 At some point I intend to implement a shortcut to make fsync()'s run fast,
-and that is to allow deep updates to blockrefs to shortcut to auxillary
+and that is to allow deep updates to blockrefs to shortcut to auxiliary
 space in the volume header to satisfy the fsync requirement.  The related
 blockref is then recorded when the filesystem is mounted after a crash and
 the update chain is reconstituted when a matching blockref is encountered
@@ -857,7 +857,7 @@ This may seem complex, but 'forking a copy' is actually a virtually free
 operation.  The top-level inode (under the super-root), on-media, is simply
 copied to a new inode and poof, we have an unchanging snapshot to work with.
 
-	- Making a snapshot is fast... almost instantanious.
+	- Making a snapshot is fast... almost instantaneous.
 
 	- Snapshots are used for various purposes, including synchronization
 	  of out-of-date nodes.
@@ -982,7 +982,7 @@ The solutions (for modifying transactions):
       However, replaying/revalidating the log cannot necessarily guarantee
       success.  If the masters lose synchronization due to network issues
       between masters (or if the client was mounted fully-async), or if enough
-      masters crash simultaniously such that a quorum fails to flush even
+      masters crash simultaneously such that a quorum fails to flush even
       after the phase-2 ack, then it is possible that by the time a client
       is able to replay/revalidate, some other client has squeeded in and
       committed something that would conflict.

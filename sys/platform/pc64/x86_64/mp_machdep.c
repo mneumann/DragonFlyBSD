@@ -931,7 +931,7 @@ smp_smurf_idleinvlclr(cpumask_t *mask)
 /*
  * Issue cpu_invltlb() across all cpus except the current cpu.
  *
- * This function will arrange to avoid idle cpus, but still gurantee that
+ * This function will arrange to avoid idle cpus, but still guarantee that
  * invltlb is run on them when they wake up prior to any scheduling or
  * nominal interrupt.
  */

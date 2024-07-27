@@ -196,7 +196,7 @@ gre_input2(struct mbuf *m ,int hlen, u_char proto)
 
 /*
  * input routine for IPPRPOTO_MOBILE
- * This is a little bit diffrent from the other modes, as the
+ * This is a little bit different from the other modes, as the
  * encapsulating header was not prepended, but instead inserted
  * between IP header and payload
  */

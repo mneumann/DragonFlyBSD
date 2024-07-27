@@ -39,7 +39,7 @@
  *
  * A slab allocator reserves a ZONE for each chunk size, then lays the
  * chunks out in an array within the zone.  Allocation and deallocation
- * is nearly instantanious, and fragmentation/overhead losses are limited
+ * is nearly instantaneous, and fragmentation/overhead losses are limited
  * to a fixed worst-case amount.
  *
  * The downside of this slab implementation is in the chunk size
@@ -867,7 +867,7 @@ _kmalloc(unsigned long size, struct malloc_type *type, int flags)
 	for (i = ttl = 0; i < ncpus; ++i)
 	    ttl += type->ks_use[i].memuse;
 	type->ks_loosememuse = ttl;	/* not MP synchronized */
-	if ((ssize_t)ttl < 0)		/* deal with occassional race */
+	if ((ssize_t)ttl < 0)		/* deal with occasional race */
 		ttl = 0;
 	if (ttl >= type->ks_limit) {
 	    if (flags & M_NULLOK) {
@@ -1087,7 +1087,7 @@ _kmalloc(unsigned long size, struct malloc_type *type, int flags)
 #endif
 
 	/*
-	 * Guarentee power-of-2 alignment for power-of-2-sized chunks.
+	 * Guarantee power-of-2 alignment for power-of-2-sized chunks.
 	 * Otherwise properly align the data according to the chunk size.
 	 */
 	if (powerof2(size))

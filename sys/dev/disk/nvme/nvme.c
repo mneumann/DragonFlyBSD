@@ -156,7 +156,7 @@ nvme_alloc_subqueue(nvme_softc_t *sc, uint16_t qid)
 	/*
 	 * dma memory for enough PRPs to map MAXPHYS bytes of memory per
 	 * request.  A MAXPHYS buffer which begins partially straddling
-	 * a page boundary can still be accomodated because we have an
+	 * a page boundary can still be accommodated because we have an
 	 * additional PRP entry in cmd.head.
 	 */
 	if (error == 0) {
@@ -438,7 +438,7 @@ nvme_get_request(nvme_subqueue_t *queue, uint8_t opcode,
 	lockmgr(&queue->lk, LK_EXCLUSIVE);
 
 	/*
-	 * Make sure the submission queue has room to accomodate the
+	 * Make sure the submission queue has room to accommodate the
 	 * request.  Requests can be completed out of order so the
 	 * submission ring could still be full even though we have
 	 * requests available.
@@ -599,7 +599,7 @@ nvme_poll_request(nvme_request_t *req)
 
 /*
  * Put request away, making it available for reuse.  If this is an admin
- * request its auxillary data page is also being released for reuse.
+ * request its auxiliary data page is also being released for reuse.
  *
  * Caller does NOT have to hold the queue lock.
  */

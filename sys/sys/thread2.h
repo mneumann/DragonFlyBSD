@@ -161,7 +161,7 @@ _debug_crit_exit(thread_t td, const char *id)
 
 /*
  * Critical sections prevent preemption, but allowing explicit blocking
- * and thread switching.  Any interrupt occuring while in a critical
+ * and thread switching.  Any interrupt occurring while in a critical
  * section is made pending and returns immediately.  Interrupts are not
  * physically disabled.
  *

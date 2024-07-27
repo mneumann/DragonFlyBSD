@@ -195,11 +195,11 @@ _lwkt_enqueue(thread_t td)
 	    atomic_set_int(&gd->gd_reqflags, RQF_RUNNING);
 	} else {
 	    /*
-	     * NOTE: td_upri - higher numbers more desireable, same sense
+	     * NOTE: td_upri - higher numbers more desirable, same sense
 	     *	     as td_pri (typically reversed from lwp_upri).
 	     *
 	     *	     In the equal priority case we want the best selection
-	     *	     at the beginning so the less desireable selections know
+	     *	     at the beginning so the less desirable selections know
 	     *	     that they have to setrunqueue/go-to-another-cpu, even
 	     *	     though it means switching back to the 'best' selection.
 	     *	     This also avoids degenerate situations when many threads

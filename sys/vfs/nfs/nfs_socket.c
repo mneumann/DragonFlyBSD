@@ -805,7 +805,7 @@ nfs_reply(struct nfsmount *nmp, struct nfsreq *myrep)
 		 * race conditions during a reconnect.
 		 *
 		 * If nfs_rcvlock() returns EALREADY, that means that
-		 * the reply has already been recieved by another
+		 * the reply has already been received by another
 		 * process and we can return immediately.  In this
 		 * case, the lock is not taken to avoid races with
 		 * other processes.
@@ -1345,7 +1345,7 @@ nfs_request_try(struct nfsreq *rep)
 
 	/*
 	 * Release the lock.  The only remote action that may have occurred
-	 * would have been the setting of rep->r_mrep.  If this occured
+	 * would have been the setting of rep->r_mrep.  If this occurred
 	 * and the request was async we have to move it to the reader
 	 * thread's queue for action.
 	 *
@@ -2190,10 +2190,10 @@ nfs_rcvlock(struct nfsmount *nmp, struct nfsreq *rep)
 			break;
 
 		/*
-		 * If our reply was recieved while we were sleeping,
+		 * If our reply was received while we were sleeping,
 		 * then just return without taking the lock to avoid a
 		 * situation where a single iod could 'capture' the
-		 * recieve lock.
+		 * receive lock.
 		 */
 		if (rep && rep->r_mrep != NULL) {
 			error = EALREADY;
@@ -2234,7 +2234,7 @@ nfs_rcvunlock(struct nfsmount *nmp)
  * we cannot afford to overwrite them.
  *
  * We would prefer to avoid this situation entirely.  The situation does
- * not occur with NFS/UDP and is supposed to only occassionally occur
+ * not occur with NFS/UDP and is supposed to only occasionally occur
  * with TCP.  Use vfs.nfs.realign_count and realign_test to check this.
  *
  * NOTE!  M_NOWAIT cannot be used here.  The mbufs must be acquired
@@ -2582,7 +2582,7 @@ nfsrv_rcv(struct socket *so, void *arg, int waitflag)
 	 * prevents a memory crunch for other protocols.
 	 *
 	 * Note that the same service socket can be dispatched to several
-	 * nfs servers simultaniously.  The tcp protocol callback calls us
+	 * nfs servers simultaneously.  The tcp protocol callback calls us
 	 * with M_NOWAIT.  nfsd calls us with M_WAITOK (typically).
 	 */
 	if (NFSRV_RECLIMIT(slp))
@@ -2902,7 +2902,7 @@ nfsrv_dorec(struct nfssvc_sock *slp, struct nfsd *nfsd,
  * Try to assign service sockets to nfsd threads based on the number
  * of new rpc requests that have been queued on the service socket.
  *
- * If no nfsd's are available or additonal requests are pending, set the
+ * If no nfsd's are available or additional requests are pending, set the
  * NFSD_CHECKSLP flag so that one of the running nfsds will go look for
  * the work in the nfssvc_sock list when it is finished processing its
  * current work.  This flag is only cleared when an nfsd can not find

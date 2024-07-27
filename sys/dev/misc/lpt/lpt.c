@@ -115,7 +115,7 @@ struct lpt_data {
 	u_char	sc_control;
 	char	sc_flags;
 #define	LP_UNITMASK	0x03	/* up to 4 units */
-#define	LP_POS_INIT	0x04	/* if we are a postive init signal */
+#define	LP_POS_INIT	0x04	/* if we are a positive init signal */
 #define	LP_POS_ACK	0x08	/* if we are a positive going ack */
 #define	LP_NO_PRIME	0x10	/* don't prime the printer at all */
 #define	LP_PRIMEOPEN	0x20	/* prime on every open */
@@ -269,7 +269,7 @@ lpt_port_test(device_t ppbus, u_char data, u_char mask)
  *
  *	2) You should be able to write to and read back the same value
  *	   to the control port lower 5 bits, the upper 3 bits are reserved
- *	   per the IBM PC technical reference manauls and different boards
+ *	   per the IBM PC technical reference manuals and different boards
  *	   do different things with them.  Do an alternating zeros, alternating
  *	   ones, walking zero, and walking one test to check for stuck bits.
  *

@@ -129,7 +129,7 @@ static void vm_contig_pg_free(vm_pindex_t start, u_long size);
  * Do a thorough cleanup of the specified 'queue', which can be either
  * PQ_ACTIVE or PQ_INACTIVE by doing a walkthrough.  If the page is not
  * marked dirty, it is shoved into the page cache, provided no one has
- * currently aqcuired it, otherwise localized action per object type
+ * currently acquired it, otherwise localized action per object type
  * is taken for cleanup:
  *
  * 	In the OBJT_VNODE case, the whole page range is cleaned up

@@ -77,7 +77,7 @@ hci_route_lookup(bdaddr_t *src, bdaddr_t *dest)
 
 	/*
 	 * Now check all the memos to see if there has been an
-	 * inquiry repsonse..
+	 * inquiry response..
 	 */
 	TAILQ_FOREACH(unit, &hci_unit_list, hci_next) {
 		if ((unit->hci_flags & BTF_UP) == 0)

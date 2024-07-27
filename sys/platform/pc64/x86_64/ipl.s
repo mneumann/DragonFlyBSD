@@ -110,7 +110,7 @@ fastunpend_count:	.long	0
 	 *	  PCPU(intr_nesting_level) is an interrupt nesting count.
 	 *
 	 *	- We have to be careful in regards to local interrupts
-	 *	  occuring simultaniously with our doreti and splz 
+	 *	  occurring simultaneously with our doreti and splz
 	 *	  processing.
 	 *
 	 *	- Interrupts must be enabled when calling higher level

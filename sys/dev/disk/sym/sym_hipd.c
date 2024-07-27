@@ -5274,7 +5274,7 @@ static void sym_sir_task_recovery(hcb_p np, int num)
  *  - dp_ofs = 0
  *    no residual to send first.
  *
- *  The function sym_evaluate_dp() accepts an arbitray
+ *  The function sym_evaluate_dp() accepts an arbitrary
  *  offset (basically from the MDP message) and returns
  *  the corresponding values of dp_sg and dp_ofs.
  */

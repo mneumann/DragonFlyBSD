@@ -223,7 +223,7 @@ typedef struct vm_map_backing *vm_map_backing_t;
  */
 struct vm_map_entry {
 	RB_ENTRY(vm_map_entry) rb_entry;
-	union vm_map_aux aux;		/* auxillary data */
+	union vm_map_aux aux;		/* auxiliary data */
 	struct vm_map_backing ba;	/* backing object chain */
 	vm_eflags_t	eflags;		/* map entry flags */
 	vm_maptype_t	maptype;	/* type of VM mapping */

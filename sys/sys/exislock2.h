@@ -193,7 +193,7 @@ exis_cache(exislock_t *xlk, long n)
 /*
  * The current state of the structure is ignored and the srtucture is
  * placed in a CACHED(0) state.  It will automatically sequence through
- * the NOTCACHED and TERMINATE states as psuedo_ticks increments.
+ * the NOTCACHED and TERMINATE states as pseudo_ticks increments.
  *
  * The NOTCACHED state is an indeterminant state, since the pseudo_ticks
  * counter might already be armed for increment, it can increment at least

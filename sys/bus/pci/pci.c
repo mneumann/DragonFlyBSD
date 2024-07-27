@@ -1894,7 +1894,7 @@ pci_msi_device_blacklisted(device_t dev)
 }
 
 /*
- * Determine if MSI is blacklisted globally on this sytem.  Currently,
+ * Determine if MSI is blacklisted globally on this system.  Currently,
  * we just check for blacklisted chipsets as represented by the
  * host-PCI bridge at device 0:0:0.  In the future, it may become
  * necessary to check other system attributes, such as the kenv values
@@ -1930,7 +1930,7 @@ pci_msi_blacklisted(void)
  * Attempt to allocate count MSI messages on start_cpuid.
  *
  * If start_cpuid < 0, then the MSI messages' target CPU will be
- * selected automaticly.
+ * selected automatically.
  *
  * If the caller explicitly specified the MSI messages' target CPU,
  * i.e. start_cpuid >= 0, then we will try to allocate the count MSI
@@ -3133,7 +3133,7 @@ pci_attach(device_t dev)
 	int busno, domain;
 
 	/*
-	 * Since there can be multiple independantly numbered PCI
+	 * Since there can be multiple independently numbered PCI
 	 * busses on systems with multiple PCI domains, we can't use
 	 * the unit number to decide which bus we are probing. We ask
 	 * the parent pcib what our domain and bus numbers are.
@@ -4328,7 +4328,7 @@ pci_cfg_save(device_t dev, struct pci_devinfo *dinfo, int setstate)
 			if (cls == PCIC_STORAGE)
 				return;
 			/*FALLTHROUGH*/
-		case 2:		/* Agressive about what to power down */
+		case 2:		/* Aggressive about what to power down */
 			if (cls == PCIC_DISPLAY || cls == PCIC_MEMORY ||
 			    cls == PCIC_BASEPERIPH)
 				return;

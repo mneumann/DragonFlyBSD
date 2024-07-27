@@ -680,7 +680,7 @@ hammer2_bulkfree_pass(hammer2_dev_t *hmp, hammer2_chain_t *vchain,
 		/*
 		 * If the complete scan succeeded we can synchronize our
 		 * in-memory freemap against live storage.  If an abort
-		 * occured we cannot safely synchronize our partially
+		 * occurred we cannot safely synchronize our partially
 		 * filled-out in-memory freemap.
 		 *
 		 * We still synchronize on CHECK failures.  That is, we still

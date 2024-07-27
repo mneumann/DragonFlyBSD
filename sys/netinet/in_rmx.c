@@ -587,11 +587,11 @@ in_ifadown_force(struct ifaddr *ifa, int delete)
 		return 1;
 
 	/*
-	 * XXX individual requests are not independantly chained,
+	 * XXX individual requests are not independently chained,
 	 * which means that the per-cpu route tables will not be
 	 * consistent in the middle of the operation.  If routes
 	 * related to the interface are manipulated while we are
-	 * doing this the inconsistancy could trigger a panic.
+	 * doing this the inconsistency could trigger a panic.
 	 */
 	netmsg_init(&msg.base, NULL, &curthread->td_msgport, MSGF_PRIORITY,
 	    in_ifadown_dispatch);

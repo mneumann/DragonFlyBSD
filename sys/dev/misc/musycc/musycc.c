@@ -748,7 +748,7 @@ musycc_intr0_rx_eom(struct softc *sc, int ch)
 			/* Receive error, print some useful info */
 			kprintf("%s %s: RX 0x%08x ", sch->sc->nodename,
 			    sch->hookname, status);
-			/* Don't print a lot, just the begining will do */
+			/* Don't print a lot, just the beginning will do */
 			if (m->m_len > 16)
 				m->m_len = m->m_pkthdr.len = 16;
 			m_print(m);

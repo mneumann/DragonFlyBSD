@@ -1666,7 +1666,7 @@ enum CQFW_CONFIG_NUMBER {
 };
 
 /**
- * @brief Function Capabilites
+ * @brief Function Capabilities
  * This field contains the flags indicating the capabilities of
  * the SLI Host’s PCI function.
  */

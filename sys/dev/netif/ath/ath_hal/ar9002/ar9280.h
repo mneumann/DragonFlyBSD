@@ -22,7 +22,7 @@
 
 /*
  * This is a chip thing, but it's used here as part of the
- * ath_hal_9280 struct; so it's convienent to locate the
+ * ath_hal_9280 struct; so it's convenient to locate the
  * define here.
  */
 #define AR9280_TX_GAIN_TABLE_SIZE               22

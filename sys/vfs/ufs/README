@@ -261,7 +261,7 @@ Additional notes from Feb 13
 
 When removing huge directories of files, it is possible to get
 the incore state arbitrarily far ahead of the disk. Maintaining
-all the associated depedency information can exhaust the kernel
+all the associated dependency information can exhaust the kernel
 malloc arena. To avoid this senario, I have put some limits on
 the soft update code so that it will not be allowed to rampage
 through all of the kernel memory. I enclose below the relevant

@@ -110,7 +110,7 @@ get_next_valid_apicid(int curr_apicid)
  * - cur_level : the current level of the tree
  * - node : the current node
  * - last_free_node : the last free node in the global array.
- * - cpuid : basicly this are the ids of the leafs
+ * - cpuid : basically this are the ids of the leafs
  */
 static void
 build_topology_tree(int *children_no_per_level,

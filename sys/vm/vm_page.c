@@ -614,7 +614,7 @@ vm_numa_organize(vm_paddr_t ran_beg, vm_paddr_t bytes, int physid)
  * slowly.
  *
  * This situation can occur when memory sticks are not entirely populated,
- * populated at different densities, or in naturally assymetric systems
+ * populated at different densities, or in naturally asymmetric systems
  * such as the 2990WX.  There could very well be many vm_page_queues[]
  * entries with *NO* pages assigned to them.
  *
@@ -2154,7 +2154,7 @@ _vm_page_list_find2(int bq1, int bq2, int index)
 
 /*
  * This version checks two queues at the same time, widening its search
- * as we progress.  prefering basequeue1
+ * as we progress.  preferring basequeue1
  * and starting on basequeue2 after exhausting the first set.  The idea
  * is to try to stay localized to the cpu.
  */
@@ -3578,7 +3578,7 @@ vm_page_dontneed(vm_page_t m)
 	dnw = ++dnweight;
 
 	/*
-	 * occassionally leave the page alone
+	 * occasionally leave the page alone
 	 */
 	if ((dnw & 0x01F0) == 0 ||
 	    m->queue - m->pc == PQ_INACTIVE ||

@@ -406,7 +406,7 @@ tcp_timer_persist_handler(struct tcpcb *tp)
 	ostate = tp->t_state;
 #endif
 	/*
-	 * Persistance timer into zero window.
+	 * Persistence timer into zero window.
 	 * Force a byte to be output, if possible.
 	 */
 	tcpstat.tcps_persisttimeo++;
@@ -638,12 +638,12 @@ tcp_timer_rexmt_handler(struct tcpcb *tp)
 	 * almost immediately.  To get more time between
 	 * drops but still "push" the network to take advantage
 	 * of improving conditions, we switch from exponential
-	 * to linear window opening at some threshhold size.
-	 * For a threshhold, we use half the current window
+	 * to linear window opening at some threshold size.
+	 * For a threshold, we use half the current window
 	 * size, truncated to a multiple of the mss.
 	 *
 	 * (the minimum cwnd that will give us exponential
-	 * growth is 2 mss.  We don't allow the threshhold
+	 * growth is 2 mss.  We don't allow the threshold
 	 * to go below this.)
 	 */
 	{

@@ -238,7 +238,7 @@ _prop_rb_tree_insert_node(struct rb_tree *rbt, void *object)
 		KASSERT(rb_tree_check_node(rbt, self, NULL, true));
 	}
 
-	/* Succesfully inserted, return our node pointer. */
+	/* Successfully inserted, return our node pointer. */
 	return object;
 }
 
@@ -484,14 +484,14 @@ rb_tree_swap_prune_and_rebalance(struct rb_tree *rbt, struct rb_node *self,
 
 	if (standin_father == self) {
 		/*
-		 * As a child of self, any childen would be opposite of
+		 * As a child of self, any children would be opposite of
 		 * our parent.
 		 */
 		KASSERT(RB_SENTINEL_P(standin->rb_nodes[standin_other]));
 		standin_son = standin->rb_nodes[standin_which];
 	} else {
 		/*
-		 * Since we aren't a child of self, any childen would be
+		 * Since we aren't a child of self, any children would be
 		 * on the same side as our parent.
 		 */
 		KASSERT(RB_SENTINEL_P(standin->rb_nodes[standin_which]));

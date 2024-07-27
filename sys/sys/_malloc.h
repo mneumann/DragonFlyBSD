@@ -131,7 +131,7 @@ struct kmalloc_mgt {
  * WARNING: __cachealign typically represents 64 byte alignment, so
  *	    this structure may be larger than expected.
  *
- * WARNING: loosememuse is transfered to ks_loosememuse and zerod
+ * WARNING: loosememuse is transferred to ks_loosememuse and zerod
  *	    often (e.g. uses atomic_swap_long()).  It allows pcpu
  *	    updates to be taken into account without causing lots
  *	    of cache ping-pongs

@@ -182,7 +182,7 @@ loopdebug(const char *msg, pmap_inval_info_t *info)
 
 	/*
 	 * Don't kprintf() anything if the pmap inval watchdog gets hit.
-	 * DRM can cause an occassional watchdog hit (at least with a 1/16
+	 * DRM can cause an occasional watchdog hit (at least with a 1/16
 	 * second watchdog), and attempting to kprintf to the KVM frame buffer
 	 * from Xinvltlb, which ignores critical sections, can implode the
 	 * system.

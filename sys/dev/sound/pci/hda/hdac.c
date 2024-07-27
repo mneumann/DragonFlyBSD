@@ -454,7 +454,7 @@ hdac_reset(struct hdac_softc *sc, int wakeup)
 /****************************************************************************
  * int hdac_get_capabilities(struct hdac_softc *);
  *
- * Retreive the general capabilities of the hdac;
+ * Retrieve the general capabilities of the hdac;
  *	Number of Input Streams
  *	Number of Output Streams
  *	Number of bidirectional Streams

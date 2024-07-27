@@ -57,7 +57,7 @@
  *	operations guaranteed by the filesystem during recovery.
  *
  *	REDO generation is optional, and can also be started and then
- *	later stopped due to excessive write()s inbetween fsyncs, or not
+ *	later stopped due to excessive write()s between fsyncs, or not
  *	started at all.  Because of this the recovery code must determine
  *	when REDOs are valid and when they are not.  Additional records are
  *	generated to help figure it out.
@@ -767,7 +767,7 @@ fatal:
 
 /*
  * Scan backwards from *scan_offsetp, return the FIFO record prior to the
- * record at *scan_offsetp or NULL if an error occured.
+ * record at *scan_offsetp or NULL if an error occurred.
  *
  * On return *scan_offsetp will be the offset of the returned record.
  */
@@ -819,7 +819,7 @@ hammer_recover_scan_rev(hammer_mount_t hmp, hammer_volume_t root_volume,
 
 /*
  * Scan forwards from *scan_offsetp, return the FIFO record or NULL if
- * an error occured.
+ * an error occurred.
  *
  * On return *scan_offsetp will be the offset of the record following
  * the returned record.
@@ -1017,7 +1017,7 @@ hammer_check_tail_signature(hammer_mount_t hmp, hammer_fifo_tail_t tail,
 		return(1);
 
 	/*
-	 * Calculate the begining offset and make sure the record does
+	 * Calculate the beginning offset and make sure the record does
 	 * not cross a buffer boundary.
 	 */
 	beg_off = end_off - tail->tail_size;

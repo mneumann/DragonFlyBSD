@@ -710,7 +710,7 @@ skip_ws_det:
             /* if we're turning off ANI, reset regs back to INI settings */
             if (ah->ah_config.ath_hal_enable_ani) {
                 HAL_ANI_CMD savefunc = ahp->ah_ani_function;
-                /* temporarly allow all functions so we can reset */
+                /* temporary allow all functions so we can reset */
                 ahp->ah_ani_function = HAL_ANI_ALL;
                 HALDEBUG(ah, HAL_DEBUG_ANI,
                     "%s: disable all ANI functions\n", __func__);

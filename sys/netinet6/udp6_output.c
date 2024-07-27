@@ -101,7 +101,7 @@
 #include <net/net_osdep.h>
 
 /*
- * UDP protocol inplementation.
+ * UDP protocol implementation.
  * Per RFC 768, August, 1980.
  */
 

@@ -194,7 +194,7 @@ bre5(struct request *rq,
 
 	/*
 	 * The number of sectors to transfer in this stripe
-	 * is the minumum of the amount remaining to transfer
+	 * is the minimum of the amount remaining to transfer
 	 * and the amount left in this stripe.
 	 */
 	m.stripesectors = umin(diskend - *diskaddr,

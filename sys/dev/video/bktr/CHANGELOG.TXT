@@ -331,7 +331,7 @@
 
 1.68    25 May 1999 Roger Hardiman <roger@freebsd.org>
                     Due to differences in PCI bus implementations from various
-                    motherboard chipset manufactuers, the Bt878/Bt879 has 3
+                    motherboard chipset manufacturers, the Bt878/Bt879 has 3
                     PCI bus compatibility modes. These are
                       NORMAL PCI 2.1  for proper PCI 2.1 compatible chipsets.
                       INTEL 430 FX    for the Intel 430 FX chipset.

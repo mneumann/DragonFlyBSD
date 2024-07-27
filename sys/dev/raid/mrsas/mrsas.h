@@ -720,7 +720,7 @@ typedef struct _LD_LOAD_BALANCE_INFO
     u_int64_t     last_accessed_block[2];
 } LD_LOAD_BALANCE_INFO, *PLD_LOAD_BALANCE_INFO;
 
-/* SPAN_SET is info caclulated from span info from Raid map per ld */
+/* SPAN_SET is info calculated from span info from Raid map per ld */
 typedef struct _LD_SPAN_SET {
     u_int64_t  log_start_lba;
     u_int64_t  log_end_lba;
@@ -1449,7 +1449,7 @@ struct mrsas_ctrl_prop {
     u_int8_t abortCCOnError;  // set TRUE to abort CC on detecting an inconsistency
     u_int8_t loadBalanceMode;     // load balance mode (MR_LOAD_BALANCE_MODE)
     u_int8_t disableAutoDetectBackplane;  // 0 - use auto detect logic of backplanes 
-                                          // like SGPIO, i2c SEP using h/w mechansim 
+                                          // like SGPIO, i2c SEP using h/w mechanism
                                           // like GPIO pins.
                                           // 1 - disable auto detect SGPIO,
                                           // 2 - disable i2c SEP auto detect

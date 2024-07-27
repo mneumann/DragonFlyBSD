@@ -152,7 +152,7 @@ MALLOC_DEFINE(M_NETGRAPH_PPP, "netgraph_ppp", "netgraph ppp node");
 				    ((s) | ~MP_LONG_SEQ_MASK)		\
 				    : ((s) & MP_LONG_SEQ_MASK))
 
-/* Comparision of MP sequence numbers. Note: all sequence numbers
+/* Comparison of MP sequence numbers. Note: all sequence numbers
    except priv->xseq are stored with the sign bit extended. */
 #define MP_SHORT_SEQ_DIFF(x,y)	MP_SHORT_EXTEND((x) - (y))
 #define MP_LONG_SEQ_DIFF(x,y)	MP_LONG_EXTEND((x) - (y))
@@ -1488,8 +1488,8 @@ done:
  *	discarded, their missing fragments are declared lost and MSEQ
  *	is increased.
  *
- *    o If we recieve a fragment with seq# < MSEQ, we throw it away
- *	because we've already delcared it lost.
+ *    o If we receive a fragment with seq# < MSEQ, we throw it away
+ *	because we've already declared it lost.
  *
  * This assumes linkNum != NG_PPP_BUNDLE_LINKNUM.
  */
@@ -2163,7 +2163,7 @@ deliver:
  * algorithm is optimal, in that no other scheduling could result in any
  * packet arriving any sooner unless packets are delivered out of order.
  *
- * Suppose link i has bandwidth b_i (in tens of bytes per milisecond) and
+ * Suppose link i has bandwidth b_i (in tens of bytes per millisecond) and
  * latency l_i (in miliseconds). Consider the function function f_i(t)
  * which is equal to the number of bytes that will have arrived at
  * the peer after t miliseconds if we start writing continuously at
@@ -2223,7 +2223,7 @@ deliver:
  * number of links that receive a non-zero number of bytes.
  *
  * Since latency is measured in miliseconds, the "resolution" of this
- * algorithm is one milisecond.
+ * algorithm is one millisecond.
  *
  * To avoid this algorithm altogether, configure all links to have the
  * same latency and bandwidth.

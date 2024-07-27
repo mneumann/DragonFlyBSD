@@ -671,7 +671,7 @@ vnode_pager_putpages(vm_object_t object, vm_page_t *m, int count,
  * own vnodes if they fail to implement VOP_PUTPAGES.
  *
  * This is typically called indirectly via the pageout daemon and
- * clustering has already typically occured, so in general we ask the
+ * clustering has already typically occurred, so in general we ask the
  * underlying filesystem to write the data out asynchronously rather
  * then delayed.
  */
@@ -706,7 +706,7 @@ vnode_pager_generic_putpages(struct vnode *vp, vm_page_t *m, int bytecount,
 
 	/*
 	 * If the page-aligned write is larger then the actual file we
-	 * have to invalidate pages occuring beyond the file EOF.
+	 * have to invalidate pages occurring beyond the file EOF.
 	 *
 	 * If the file EOF resides in the middle of a page we still clear
 	 * all of that page's dirty bits later on.  If we didn't it would

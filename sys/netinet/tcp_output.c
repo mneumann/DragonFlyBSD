@@ -341,7 +341,7 @@ again:
 	 * to snd_max after the fast-retransmit.
 	 *
 	 * A negative length can also occur when we are in the
-	 * TCPS_SYN_RECEIVED state due to a simultanious connect where
+	 * TCPS_SYN_RECEIVED state due to a simultaneous connect where
 	 * our SYN has not been acked yet.
 	 *
 	 * In the normal retransmit-FIN-only case, however, snd_nxt will
@@ -378,7 +378,7 @@ again:
 	if (len < 0) {
 		/*
 		 * A negative len can occur if our FIN has been sent but not
-		 * acked, or if we are in a simultanious connect in the
+		 * acked, or if we are in a simultaneous connect in the
 		 * TCPS_SYN_RECEIVED state with our SYN sent but not yet
 		 * acked.
 		 *
@@ -389,7 +389,7 @@ again:
 		 * persist timer.
 		 *
 		 * However, if we are in the TCPS_SYN_RECEIVED state
-		 * (the SYN case) we will be in a simultanious connect and
+		 * (the SYN case) we will be in a simultaneous connect and
 		 * the window may be zero degeneratively.  In this case we
 		 * do not want to shift to the persist timer after the SYN
 		 * or the SYN+ACK transmission.
@@ -433,14 +433,14 @@ again:
 	 * and does at most one step per received ACK.  This fast
 	 * scaling has the drawback of growing the send buffer beyond
 	 * what is strictly necessary to make full use of a given
-	 * delay*bandwith product.  However testing has shown this not
+	 * delay*bandwidth product.  However testing has shown this not
 	 * to be much of an problem.  At worst we are trading wasting
-	 * of available bandwith (the non-use of it) for wasting some
+	 * of available bandwidth (the non-use of it) for wasting some
 	 * socket buffer memory.
 	 *
 	 * The criteria for shrinking the buffer is based solely on
 	 * the inflight code (snd_bwnd).  If inflight is disabled,
-	 * the buffer will not be shrinked.  Note that snd_bwnd already
+	 * the buffer will not be shrunk.  Note that snd_bwnd already
 	 * has a fudge factor.  Our test adds a little hysteresis.
 	 */
 	if (tcp_do_autosndbuf && (so->so_snd.ssb_flags & SSB_AUTOSIZE)) {
@@ -611,7 +611,7 @@ again:
 
 		/*
 		 * This ack case typically occurs when the user has drained
-		 * the TCP socket buffer sufficiently to warrent an ack
+		 * the TCP socket buffer sufficiently to warrant an ack
 		 * containing a 'pure window update'... that is, an ack that
 		 * ONLY updates the tcp window.
 		 *
@@ -681,7 +681,7 @@ again:
 	 *
 	 * Don't try to set the persist state if we are in TCPS_SYN_RECEIVED
 	 * with data pending.  This situation can occur during a
-	 * simultanious connect.
+	 * simultaneous connect.
 	 */
 	if (so->so_snd.ssb_cc > 0 &&
 	    tp->t_state != TCPS_SYN_RECEIVED &&
@@ -1340,7 +1340,7 @@ tcp_setpersist(struct tcpcb *tp)
 	if (tcp_callout_active(tp, tp->tt_rexmt))
 		panic("tcp_setpersist: retransmit pending");
 	/*
-	 * Start/restart persistance timer.
+	 * Start/restart persistence timer.
 	 */
 	TCPT_RANGESET(tt, t * tcp_backoff[tp->t_rxtshift], TCPTV_PERSMIN,
 		      TCPTV_PERSMAX);

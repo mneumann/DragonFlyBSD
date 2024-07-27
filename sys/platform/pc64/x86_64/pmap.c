@@ -891,7 +891,7 @@ create_pagetables(vm_paddr_t *firstaddr)
 
 	/*
 	 * Starting at KERNBASE - map all 2G worth of page table pages.
-	 * KERNBASE is offset -2G from the end of kvm.  This will accomodate
+	 * KERNBASE is offset -2G from the end of kvm.  This will accommodate
 	 * all KVM allocations above KERNBASE, including the SYSMAPs below.
 	 *
 	 * We do this by allocating 2*512 PT pages.  Each PT page can map
@@ -1399,7 +1399,7 @@ smap_smep_enable(void)
  *
  * Called by vm_init, to initialize any structures that the pmap
  * system needs to map virtual memory.  pmap_init has been enhanced to
- * support in a fairly consistant way, discontiguous physical memory.
+ * support in a fairly consistent way, discontiguous physical memory.
  */
 void
 pmap_init(void)
@@ -3051,7 +3051,7 @@ pmap_release_pv(pv_entry_t pv, pv_entry_t pvp, pmap_inval_bulk_t *bulk)
 
 	/*
 	 * For page table pages (other than the top-level page),
-	 * remove and free the vm_page.  The representitive mapping
+	 * remove and free the vm_page.  The representative mapping
 	 * removed above by pmap_remove_pv_pte() did not undo the
 	 * last wire_count so we have to do that as well.
 	 */
@@ -3168,7 +3168,7 @@ pmap_remove_pv_pte(pv_entry_t pv, pv_entry_t pvp, pmap_inval_bulk_t *bulk,
 		/*
 		 * Remove a PD page from the PDP
 		 *
-		 * SIMPLE PMAP NOTE: Non-existant pvp's are ok in the case
+		 * SIMPLE PMAP NOTE: Non-existent pvp's are ok in the case
 		 *		     of a simple pmap because it stops at
 		 *		     the PD page.
 		 */
@@ -3634,7 +3634,7 @@ _pv_alloc(pmap_t pmap, vm_pindex_t pindex, int *isnew PMAP_DEBUG_DECL)
 			/*
 			 * We need to block if someone is holding our
 			 * placemarker.  As long as we determine the
-			 * placemarker has not been aquired we do not
+			 * placemarker has not been acquired we do not
 			 * need to get it as acquision also requires
 			 * the pmap spin lock.
 			 *
@@ -3738,7 +3738,7 @@ _pv_get(pmap_t pmap, vm_pindex_t pindex, vm_pindex_t **pmarkp PMAP_DEBUG_DECL)
 		if (pv == NULL) {
 			/*
 			 * Block if there is ANY placemarker.  If we are to
-			 * return it, we must also aquire the spot, so we
+			 * return it, we must also acquire the spot, so we
 			 * have to block even if the placemarker is held on
 			 * a different address.
 			 *
@@ -3940,7 +3940,7 @@ pv_unlock(pv_entry_t pv)
  * and the hold count drops to zero we will free it.
  *
  * Caller should not hold any spin locks.  We are protected from hold races
- * by virtue of holds only occuring only with a pmap_spin or vm_page_spin
+ * by virtue of holds only occurring only with a pmap_spin or vm_page_spin
  * lock held.  A pv cannot be located otherwise.
  */
 static
@@ -4424,7 +4424,7 @@ pmap_scan_callback(pv_entry_t pv, void *data)
 		 * WARNING! pt_pv can also be NULL due to a pv creation
 		 *	    race where we find it to be NULL and then
 		 *	    later see a pte_pv.  But its possible the pt_pv
-		 *	    got created inbetween the two operations, so
+		 *	    got created between the two operations, so
 		 *	    we must check.
 		 *
 		 *	    XXX This should no longer be the case because
@@ -6339,7 +6339,7 @@ pmap_setlwpvm(struct lwp *lp, struct vmspace *newvm)
  * The cpumask is needed by the host pager to properly invalidate the
  * host TLB when paging out the backing memory of a guest VM.
  *
- * NOTE: The scheduler might somtimes overload multiple vCPUs on the
+ * NOTE: The scheduler might sometimes overload multiple vCPUs on the
  *       same physical cpu, so operating is not quite as simple as
  *       calling add_cpu/del_cpu in the core vmrun routines.
  */

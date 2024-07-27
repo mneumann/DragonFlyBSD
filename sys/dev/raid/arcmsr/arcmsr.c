@@ -4362,7 +4362,7 @@ static u_int32_t arcmsr_initialize(device_t dev)
 		}
 	}
 	if(bus_dma_tag_create(  /*PCI parent*/		bus_get_dma_tag(dev),
-				/*alignemnt*/		1,
+				/*alignment*/		1,
 				/*boundary*/		0,
 				/*lowaddr*/		BUS_SPACE_MAXADDR,
 				/*highaddr*/		BUS_SPACE_MAXADDR,

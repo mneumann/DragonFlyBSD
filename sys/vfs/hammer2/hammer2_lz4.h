@@ -59,7 +59,7 @@ LZ4_decompress_safe() :
      (necessarily <= maxOutputSize)
      If the source stream is malformed or too large, the function will
      stop decoding and return a negative result.
-     This function is protected against any kind of buffer overflow attemps 
+     This function is protected against any kind of buffer overflow attempts
      (never writes outside of output buffer, and never reads outside of 
      input buffer). It is therefore protected against malicious data packets
 */

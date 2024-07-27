@@ -662,7 +662,7 @@ cluster_readcb(struct vnode *vp, off_t filesize, off_t loffset, int blksize,
 		 * to do (maxra) and where to start (loffset).
 		 *
 		 * Shortcut the scan.  Typically the way this works is that
-		 * we've built up all the blocks inbetween except for the
+		 * we've built up all the blocks between except for the
 		 * last in previous iterations, so if the second-to-last
 		 * block is present we just skip ahead to it.
 		 *
@@ -1121,7 +1121,7 @@ cluster_callback(struct bio *bio)
 	int bpflags;
 
 	/*
-	 * Must propogate errors to all the components.  A short read (EOF)
+	 * Must propagate errors to all the components.  A short read (EOF)
 	 * is a critical error.
 	 */
 	if (bp->b_flags & B_ERROR) {

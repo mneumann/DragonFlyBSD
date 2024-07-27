@@ -43,7 +43,7 @@
  * bktr_audio : This deals with controlling the audio on TV cards,
  *                controlling the Audio Multiplexer (audio source selector).
  *                controlling any MSP34xx stereo audio decoders.
- *                controlling any DPL35xx dolby surroud sound audio decoders.
+ *                controlling any DPL35xx dolby surround sound audio decoders.
  *                initialising TDA98xx audio devices.
  *
  */
@@ -110,7 +110,7 @@ set_audio( bktr_ptr_t bktr, int cmd )
 	else
 #endif /* AUDIOMUX_DISCOVER */
 
-	/* check for existance of audio MUXes */
+	/* check for existence of audio MUXes */
 	if ( !bktr->card.audiomuxs[ 4 ] )
 		return( -1 );
 
@@ -449,7 +449,7 @@ void msp_read_id( bktr_ptr_t bktr ){
  * For the MSP3430G, we use fast autodetect mode
  * For the MSP3410/3415 there are two schemes for this
  *  a) Fast autodetection - the chip is put into autodetect mode, and the function
- *     returns immediatly. This works in most cases and is the Default Mode.
+ *     returns immediately. This works in most cases and is the Default Mode.
  *  b) Slow mode. The function sets the MSP3410/3415 chip, then waits for feedback from 
  *     the chip and re-programs it if needed.
  */
@@ -476,7 +476,7 @@ void msp_autodetect( bktr_ptr_t bktr ) {
   }
 
 
-  /* MSP3415D SPECIAL CASE Use the Tuner's Mono audio ouput for the MSP */
+  /* MSP3415D SPECIAL CASE Use the Tuner's Mono audio output for the MSP */
   /* (for Hauppauge 44xxx card with Tuner Type 0x2a) */
   else if (  ( (strncmp("3415D", bktr->msp_version_string, 5) == 0)
                &&(bktr->msp_use_mono_source == 1)
@@ -539,7 +539,7 @@ void msp_autodetect( bktr_ptr_t bktr ) {
         msp_dpl_write(bktr, bktr->msp_addr, 0x12, 0x0008,0x0020);/* Loudspeaker set stereo*/
         /*
           set spatial effect strength to 50% enlargement
-          set spatial effect mode b, stereo basewidth enlargment only
+          set spatial effect mode b, stereo basewidth enlargement only
         */
         msp_dpl_write(bktr, bktr->msp_addr, 0x12, 0x0005,0x3f28);
       } else if (stereo > 0x8000) {    /* bilingual mode */
@@ -551,7 +551,7 @@ void msp_autodetect( bktr_ptr_t bktr ) {
         msp_dpl_write(bktr, bktr->msp_addr, 0x12, 0x0008,0x0030);/* Loudspeaker */
         /*
           set spatial effect strength to 50% enlargement
-          set spatial effect mode a, stereo basewidth enlargment
+          set spatial effect mode a, stereo basewidth enlargement
           and pseudo stereo effect with automatic high-pass filter
         */
         msp_dpl_write(bktr, bktr->msp_addr, 0x12, 0x0005,0x3f08);

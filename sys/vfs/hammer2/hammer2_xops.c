@@ -964,7 +964,7 @@ done:
 /*
  * Generic scan
  *
- * WARNING! Fed chains must be locked shared so ownership can be transfered
+ * WARNING! Fed chains must be locked shared so ownership can be transferred
  *	    and to prevent frontend/backend stalls that would occur with an
  *	    exclusive lock.  The shared lock also allows chain->data to be
  *	    retained.
@@ -1295,7 +1295,7 @@ hammer2_xop_inode_create_ins(hammer2_xop_t *arg, void *scratch, int clindex)
 
 	/*
 	 * This create call will insert the non-NULL chain into parent.
-	 * Most of the auxillary fields are ignored since the chain already
+	 * Most of the auxiliary fields are ignored since the chain already
 	 * exists.
 	 */
 	error = hammer2_chain_create(&parent, &chain, NULL, xop->head.ip1->pmp,

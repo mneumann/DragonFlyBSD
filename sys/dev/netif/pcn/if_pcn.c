@@ -907,7 +907,7 @@ pcn_intr(void *arg)
 	sc = arg;
 	ifp = &sc->arpcom.ac_if;
 
-	/* Supress unwanted interrupts */
+	/* Suppress unwanted interrupts */
 	if (!(ifp->if_flags & IFF_UP)) {
 		pcn_stop(sc);
 		return;

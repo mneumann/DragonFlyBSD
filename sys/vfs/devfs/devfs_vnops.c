@@ -1435,7 +1435,7 @@ devfs_fo_stat(struct file *fp, struct stat *sb, struct ucred *cred)
 
 	/*
 	 * A VCHR and VBLK device may track the last access and last modified
-	 * time independantly of the filesystem.  This is particularly true
+	 * time independently of the filesystem.  This is particularly true
 	 * because device read and write calls may bypass the filesystem.
 	 */
 	if (vp->v_type == VCHR || vp->v_type == VBLK) {
@@ -1879,7 +1879,7 @@ devfs_spec_strategy_done(struct bio *nbio)
 
 	if (nbp->b_flags & B_ERROR) {
 		/*
-		 * An error terminates the chain, propogate the error back
+		 * An error terminates the chain, propagate the error back
 		 * to the original bp
 		 */
 		bp->b_flags |= B_ERROR;
@@ -2121,7 +2121,7 @@ devfs_spec_getpages(struct vop_getpages_args *ap)
 
 	/*
 	 * If EOF is encountered we must zero-extend the result in order
-	 * to ensure that the page does not contain garabge.  When no
+	 * to ensure that the page does not contain garbage.  When no
 	 * error occurs, an early EOF is indicated if b_bcount got truncated.
 	 * b_resid is relative to b_bcount and should be 0, but some devices
 	 * might indicate an EOF with b_resid instead of truncating b_bcount.

@@ -259,7 +259,7 @@ nvme_pci_attach(device_t dev)
 	/*
 	 * Make sure the chip is disabled, which will reset all controller
 	 * registers except for the admin queue registers.  Device should
-	 * already be disabled so this is usually instantanious.  Use a
+	 * already be disabled so this is usually instantaneous.  Use a
 	 * fixed 5-second timeout in case it is not.  I'd like my other
 	 * reads to occur after the device has been disabled.
 	 */

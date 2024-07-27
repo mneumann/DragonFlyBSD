@@ -225,9 +225,9 @@ SYSCTL_INT(_debug, OID_AUTO, dfly_forkbias, CTLFLAG_RW,
  * weight5 - Weighting based on the relative amount of ram connected
  *	     to the node a cpu resides on.
  *
- *	     This value should remain fairly low to allow assymetric
+ *	     This value should remain fairly low to allow asymmetric
  *	     NUMA nodes to get threads scheduled to them.  Setting a very
- *	     high level will prevent scheduling on assymetric NUMA nodes
+ *	     high level will prevent scheduling on asymmetric NUMA nodes
  *	     with low amounts of directly-attached memory.
  *
  *	     Note that when testing e.g. N threads on a machine with N
@@ -1167,9 +1167,9 @@ dfly_resetpriority(struct lwp *lp)
 	 * in the kernel will get cpu some time, regardless of its upri,
 	 * but can decide not to instantly switch from one kernel or user
 	 * mode user thread to a kernel-mode user thread when it has a less
-	 * desireable user priority.
+	 * desirable user priority.
 	 *
-	 * td_upri has normal sense (higher values are more desireable), so
+	 * td_upri has normal sense (higher values are more desirable), so
 	 * negate it (this is a different field lp->lwp_priority)
 	 */
 	lp->lwp_thread->td_upri = -(newpriority & usched_dfly_swmask);
@@ -1235,7 +1235,7 @@ dfly_resetpriority(struct lwp *lp)
 	/*
 	 * Determine if we need to reschedule the target cpu.  This only
 	 * occurs if the LWP is already on a scheduler queue, which means
-	 * that idle cpu notification has already occured.  At most we
+	 * that idle cpu notification has already occurred.  At most we
 	 * need only issue a need_user_resched() on the appropriate cpu.
 	 *
 	 * The LWP may be owned by a CPU different from the current one,
@@ -1246,7 +1246,7 @@ dfly_resetpriority(struct lwp *lp)
 	 * which are harmless.
 	 *
 	 * If checkpri is 0 we are adjusting the priority of the current
-	 * process, possibly higher (less desireable), so ignore the upri
+	 * process, possibly higher (less desirable), so ignore the upri
 	 * check which will fail in that case.
 	 */
 	if (rcpu >= 0) {
@@ -1330,7 +1330,7 @@ dfly_forking(struct lwp *plp, struct lwp *lp)
 
 	/*
 	 * Put the child 4 queue slots (out of 32) higher than the parent
-	 * (less desireable than the parent).
+	 * (less desirable than the parent).
 	 */
 	lp->lwp_estcpu = ESTCPULIM(plp->lwp_estcpu +
 				   ESTCPUPPQ * usched_dfly_forkbias);
@@ -1388,7 +1388,7 @@ dfly_exiting(struct lwp *lp, struct proc *child_proc)
  *
  * Update the uload based on the state of the thread (whether it is going
  * to sleep or running again).  The uload is meant to be a longer-term
- * load and not an instantanious load.
+ * load and not an instantaneous load.
  */
 static void
 dfly_uload_update(struct lwp *lp)

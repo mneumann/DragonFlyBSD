@@ -226,7 +226,7 @@ struct adv_ccb_info {
 #define		ADV_CSW_SCSI_RESET_LATCH	0x0002
 #define		ADV_CSW_INT_PENDING		0x0001
 /*
- * XXX I don't understand the relevence of the naming
+ * XXX I don't understand the relevance of the naming
  * convention change here.  What does CIW stand for?
  * Perhaps this is to differentiate read and write
  * values?
@@ -588,7 +588,7 @@ struct adv_scsiq_1 {
 	u_int8_t		target_lun;	/* LUN - taken from our xs */
 
 	u_int32_t		data_addr;	/*
-						 * physical addres of first
+						 * physical address of first
 						 * (possibly only) segment
 						 * to transfer.
 						 */

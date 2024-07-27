@@ -1178,7 +1178,7 @@ mn_rx_intr(struct softc *sc, u_int32_t vector)
 
 
 /*
- * Interupt handler
+ * Interrupt handler
  */
 
 static void

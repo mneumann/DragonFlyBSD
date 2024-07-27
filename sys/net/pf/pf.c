@@ -2162,7 +2162,7 @@ pf_send_tcp(const struct pf_rule *r, sa_family_t af,
 	/*
 	 * Create outgoing mbuf.
 	 *
-	 * DragonFly doesn't zero the auxillary pkghdr fields, only fw_flags,
+	 * DragonFly doesn't zero the auxiliary pkghdr fields, only fw_flags,
 	 * so make sure pf.flags is clear.
 	 */
 	m = m_gethdr(M_NOWAIT, MT_HEADER);
@@ -2301,7 +2301,7 @@ pf_send_icmp(struct mbuf *m, u_int8_t type, u_int8_t code, sa_family_t af,
 	struct mbuf	*m0;
 
 	/*
-	 * DragonFly doesn't zero the auxillary pkghdr fields, only fw_flags,
+	 * DragonFly doesn't zero the auxiliary pkghdr fields, only fw_flags,
 	 * so make sure pf.flags is clear.
 	 */
 	if ((m0 = m_copym(m, 0, M_COPYALL, M_NOWAIT)) == NULL)
@@ -4552,7 +4552,7 @@ pf_tcp_track_full(struct pf_state_peer *src, struct pf_state_peer *dst,
 	 * (Selective ACK). We could optionally validate the SACK values
 	 * against the current ACK window, either forwards or backwards, but
 	 * I'm not confident that SACK has been implemented properly
-	 * everywhere. It wouldn't surprise me if several stacks accidently
+	 * everywhere. It wouldn't surprise me if several stacks accidentally
 	 * SACK too far backwards of previously ACKed data. There really aren't
 	 * any security implications of bad SACKing unless the target stack
 	 * doesn't validate the option length correctly. Someone trying to
@@ -6278,7 +6278,7 @@ pf_route6(struct mbuf **m, struct pf_rule *r, int dir, struct ifnet *oifp,
 	dst->sin6_addr = ip6->ip6_dst;
 
 	/*
-	 * DragonFly doesn't zero the auxillary pkghdr fields, only fw_flags,
+	 * DragonFly doesn't zero the auxiliary pkghdr fields, only fw_flags,
 	 * so make sure pf.flags is clear.
 	 *
 	 * Cheat. XXX why only in the v6 case???
@@ -6563,7 +6563,7 @@ pf_test(int dir, struct ifnet *ifp, struct mbuf **m0,
 	}
 
 	/*
-	 * DragonFly doesn't zero the auxillary pkghdr fields, only fw_flags,
+	 * DragonFly doesn't zero the auxiliary pkghdr fields, only fw_flags,
 	 * so make sure pf.flags is clear.
 	 */
 	if (m->m_pkthdr.fw_flags & PF_MBUF_TAGGED)
@@ -6896,7 +6896,7 @@ pf_test6(int dir, struct ifnet *ifp, struct mbuf **m0,
 	}
 
 	/*
-	 * DragonFly doesn't zero the auxillary pkghdr fields, only fw_flags,
+	 * DragonFly doesn't zero the auxiliary pkghdr fields, only fw_flags,
 	 * so make sure pf.flags is clear.
 	 */
 	if (m->m_pkthdr.fw_flags & PF_MBUF_TAGGED)

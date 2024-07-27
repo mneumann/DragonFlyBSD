@@ -1506,7 +1506,7 @@ stge_discard_rxbuf(struct stge_softc *sc, int idx)
 /*
  * It seems that TC9021's DMA engine has alignment restrictions in
  * DMA scatter operations. The first DMA segment has no address
- * alignment restrictins but the rest should be aligned on 4(?) bytes
+ * alignment restrictions but the rest should be aligned on 4(?) bytes
  * boundary. Otherwise it would corrupt random memory. Since we don't
  * know which one is used for the first segment in advance we simply
  * don't align at all.
@@ -1763,7 +1763,7 @@ stge_tick(void *arg)
 	stge_stats_update(sc);
 
 	/*
-	 * Relcaim any pending Tx descriptors to release mbufs in a
+	 * Reclaim any pending Tx descriptors to release mbufs in a
 	 * timely manner as we don't generate Tx completion interrupts
 	 * for every frame. This limits the delay to a maximum of one
 	 * second.

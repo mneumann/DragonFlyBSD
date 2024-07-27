@@ -558,7 +558,7 @@ ata_pci_dmainit(device_t dev)
 }
 
 /*
- * misc support fucntions
+ * misc support functions
  */
 int
 ata_legacy(device_t dev)

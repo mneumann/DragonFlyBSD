@@ -61,7 +61,7 @@
 /*
  * Execute ready systimers.  Called directly from the platform-specific
  * one-shot timer clock interrupt (e.g. clkintr()) or via an IPI.  May
- * be called simultaniously on multiple cpus and always operations on 
+ * be called simultaneously on multiple cpus and always operations on
  * the current cpu's queue.  Systimer functions are responsible for calling
  * hardclock, statclock, and other finely-timed routines.
  */

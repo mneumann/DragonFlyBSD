@@ -83,7 +83,7 @@
 #define INTSTAT_CNT	0x00000200
 #define INTSTAT_PREI	0x00000400
 #define INTSTAT_RCT	0x00000800	
-#define INTSTAT_FATAL	0x00001000	/* One of DPE,APE,PMA,PTA happend */	
+#define INTSTAT_FATAL	0x00001000	/* One of DPE,APE,PMA,PTA happened */	
 #define INTSTAT_UNUSED1	0x00002000
 #define INTSTAT_UNUSED2	0x00004000	
 #define INTSTAT_GP2	0x00008000	/* PHY Event */	
@@ -187,7 +187,7 @@
  */
 
 /* EPIC's hardware descriptors, must be aligned on dword in memory */
-/* NB: to make driver happy, this two structures MUST have thier sizes */
+/* NB: to make driver happy, this two structures MUST have their sizes */
 /* be divisor of PAGE_SIZE */
 struct epic_tx_desc {
 	volatile u_int16_t	status;
@@ -206,7 +206,7 @@ struct epic_rx_desc {
 };
 
 /* This structure defines EPIC's fragment list, maximum number of frags */
-/* is 63. Let use maximum, becouse size of struct MUST be divisor of */
+/* is 63. Let use maximum, because size of struct MUST be divisor of */
 /* PAGE_SIZE, and sometimes come mbufs with more then 30 frags */
 #define EPIC_MAX_FRAGS 63
 struct epic_frag_list {

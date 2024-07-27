@@ -458,7 +458,7 @@ extern const struct ng_parse_type ng_parse_bytearray_type;
 extern const struct ng_parse_type ng_parse_ng_mesg_type;
 
 /************************************************************************
-		CONVERSTION AND PARSING ROUTINES
+		CONVERSION AND PARSING ROUTINES
  ************************************************************************/
 
 /* Tokens for parsing structs and arrays */

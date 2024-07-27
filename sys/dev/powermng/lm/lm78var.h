@@ -50,8 +50,8 @@
  *
  * Several models exists.  The W83781D is mostly compatible with the
  * LM78, but has two extra temperatures.  Later models add extra
- * voltage sensors, fans and bigger fan divisors to accomodate slow
- * running fans.  To accomodate the extra sensors some models have
+ * voltage sensors, fans and bigger fan divisors to accommodate slow
+ * running fans.  To accommodate the extra sensors some models have
  * different memory banks.
  */
 

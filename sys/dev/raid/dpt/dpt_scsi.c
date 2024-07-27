@@ -92,7 +92,7 @@ struct dpt_softc_list dpt_softcs = TAILQ_HEAD_INITIALIZER(dpt_softcs);
 
 /*
  * These will have to be setup by parameters passed at boot/load time. For
- * perfromance reasons, we make them constants for the time being.
+ * performance reasons, we make them constants for the time being.
  */
 #define	dpt_min_segs	DPT_MAX_SEGS
 #define	dpt_max_segs	DPT_MAX_SEGS
@@ -577,7 +577,7 @@ dpt_detect_cache(dpt_softc_t *dpt, dpt_ccb_t *dccb, u_int32_t dccb_busaddr,
 	u_int8_t    status;
 
 	/*
-	 * Default setting, for best perfromance..
+	 * Default setting, for best performance..
 	 * This is what virtually all cards default to..
 	 */
 	dpt->cache_type = DPT_CACHE_WRITEBACK;
@@ -1797,7 +1797,7 @@ dpt_reset_hba(dpt_softc_t *dpt)
 	ccb->cp_msg[0] = HA_IDENTIFY_MSG | HA_DISCO_RECO;
 	ccb->cp_scsi_cmd = 0;  /* Should be ignored */
 
-	/* Lock up the submitted queue.  We are very persistant here */
+	/* Lock up the submitted queue.  We are very persistent here */
 	crit_enter();
 	while (dpt->queue_status & DPT_SUBMITTED_QUEUE_ACTIVE) {
 		DELAY(100);

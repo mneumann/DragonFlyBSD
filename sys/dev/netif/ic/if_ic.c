@@ -270,7 +270,7 @@ icintr (device_t dev, int event, char *ptr)
 
 	case INTR_STOP:
 
-	  /* if any error occured during transfert,
+	  /* if any error occurred during transfert,
 	   * drop the packet */
 	  if (sc->ic_iferrs)
 	    goto err;

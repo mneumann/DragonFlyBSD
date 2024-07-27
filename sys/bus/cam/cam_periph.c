@@ -1223,7 +1223,7 @@ camperiphdone(struct cam_periph *periph, union ccb *done_ccb)
 	/*
 	 * XXX This isn't appropriate in all cases.  Restructure,
 	 *     so that the retry count is only decremented on an
-	 *     actual retry.  Remeber that the orignal ccb had its
+	 *     actual retry.  Remember that the orignal ccb had its
 	 *     retry count dropped before entering recovery, so
 	 *     doing it again is a bug.
 	 */
@@ -1442,7 +1442,7 @@ camperiphscsisenseerror(union ccb *ccb, cam_flags camflags,
 		 * code assumes that only one recovery action is in progress
 		 * on a particular peripheral instance at any given time
 		 * (e.g. only one saved CCB for error recovery) so it is
-		 * imperitive that we don't violate this assumption.
+		 * imperative that we don't violate this assumption.
 		 */
 		error = ERESTART;
 	} else {
