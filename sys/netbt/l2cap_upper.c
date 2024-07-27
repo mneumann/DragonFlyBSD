@@ -359,7 +359,7 @@ l2cap_listen(struct l2cap_channel *chan)
  *	Note: I'm not sure how this will work out, but I think that
  *	if outgoing Retransmission Mode or Flow Control Mode is
  *	negotiated then this call will not be made until the SDU has
- *	been acknowleged by the peer L2CAP entity. For 'Best Effort'
+ *	been acknowledged by the peer L2CAP entity. For 'Best Effort'
  *	it will be made when the packet has cleared the controller
  *	buffers.
  *

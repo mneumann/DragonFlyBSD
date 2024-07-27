@@ -56,7 +56,7 @@ struct radix_node {
 			/* optional netmask; if present, point to the rn_key
 			 * of a node in the mask tree */
 			const u_char *rn_Mask;
-			/* chain of routes with the same key but differnt
+			/* chain of routes with the same key but different
 			 * netmasks. */
 			struct	radix_node *rn_Dupedkey;
 		} rn_leaf;

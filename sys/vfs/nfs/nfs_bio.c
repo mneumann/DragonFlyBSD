@@ -216,7 +216,7 @@ nfs_bioread(struct vnode *vp, struct uio *uio, int ioflag)
 		 * buffer based on an EOF condition we need to hold
 		 * nfs_rslock() through obtaining the buffer to prevent
 		 * a potential writer-appender from messing with n_size.
-		 * Otherwise we may accidently truncate the buffer and
+		 * Otherwise we may accidentally truncate the buffer and
 		 * lose dirty data.
 		 *
 		 * Note that bcount is *not* DEV_BSIZE aligned.
@@ -576,10 +576,10 @@ restart:
 
 	/*
 	 * We need to obtain the rslock if we intend to modify np->n_size
-	 * in order to guarentee the append point with multiple contending
-	 * writers, to guarentee that no other appenders modify n_size
+	 * in order to guarantee the append point with multiple contending
+	 * writers, to guarantee that no other appenders modify n_size
 	 * while we are trying to obtain a truncated buffer (i.e. to avoid
-	 * accidently truncating data written by another appender due to
+	 * accidentally truncating data written by another appender due to
 	 * the race), and to ensure that the buffer is populated prior to
 	 * our extending of the file.  We hold rslock through the entire
 	 * operation.
@@ -660,7 +660,7 @@ again:
 		 * that the buffer may have been set to B_CACHE by
 		 * nfs_meta_setsize() above or otherwise inherited the
 		 * flag, but if B_CACHE isn't set the buffer may be
-		 * uninitialized and must be zero'd to accomodate
+		 * uninitialized and must be zero'd to accommodate
 		 * future seek+write's.
 		 *
 		 * See the comments in kern/vfs_bio.c's getblk() for
@@ -1405,8 +1405,8 @@ nfs_readrpc_bio_done(nfsm_info_t info)
 	info->mrep = NULL;
 
 	/*
-	 * No error occured, if retlen is less then bcount and no EOF
-	 * and NFSv3 a zero-fill short read occured.
+	 * No error occurred, if retlen is less then bcount and no EOF
+	 * and NFSv3 a zero-fill short read occurred.
 	 *
 	 * For NFSv2 a short-read indicates EOF.
 	 */
@@ -1579,7 +1579,7 @@ nfs_writerpc_bio_done(nfsm_info_t info)
 			commit = fxdr_unsigned(int, *tl++);
 
 			/*
-			 * Return the lowest committment level
+			 * Return the lowest commitment level
 			 * obtained by any of the RPCs.
 			 */
 			if (iomode == NFSV3WRITE_FILESYNC)

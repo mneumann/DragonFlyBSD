@@ -544,7 +544,7 @@ init_sys_memory(char *imageFile)
 	 *
 	 * Don't iterate through a million files if we do not have write
 	 * access to the directory, stop if our open() failed on a
-	 * non-existant file.  Otherwise opens can fail for any number
+	 * non-existent file.  Otherwise opens can fail for any number
 	 */
 	if (imageFile == NULL) {
 		for (i = 0; i < 1000000; ++i) {
@@ -605,7 +605,7 @@ init_kern_memory(void)
 	 * offset KernelPTD.
 	 *
 	 * If the system kernel has a different MAXDSIZ, it might not
-	 * be possible to map kernel memory in its prefered location.
+	 * be possible to map kernel memory in its preferred location.
 	 * Try a number of different locations.
 	 */
 
@@ -1378,7 +1378,7 @@ init_netif(char *netifExp[], int netifExpNum)
 /*
  * Create the pid file and leave it open and locked while the vkernel is
  * running.  This allows a script to use /usr/bin/lockf to probe whether
- * a vkernel is still running (so as not to accidently kill an unrelated
+ * a vkernel is still running (so as not to accidentally kill an unrelated
  * process from a stale pid file).
  */
 static

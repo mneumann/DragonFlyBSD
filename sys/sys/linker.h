@@ -90,7 +90,7 @@ struct linker_file_ops {
     int			(*preload_finish)(linker_file_t);
 
     /*
-     * Unload a file, releasing dependancies and freeing storage.
+     * Unload a file, releasing dependencies and freeing storage.
      */
     void		(*unload)(linker_file_t);
 
@@ -115,8 +115,8 @@ struct linker_file {
     int			id;		/* unique id */
     caddr_t		address;	/* load address */
     size_t		size;		/* size of file */
-    int			ndeps;		/* number of dependancies */
-    linker_file_t*	deps;		/* list of dependancies */
+    int			ndeps;		/* number of dependencies */
+    linker_file_t*	deps;		/* list of dependencies */
     STAILQ_HEAD(, common_symbol) common; /* list of common symbols */
     TAILQ_HEAD(, module) modules;	/* modules in this file */
     TAILQ_ENTRY(linker_file) loaded;	/* preload dependency support */
@@ -205,7 +205,7 @@ linker_file_t linker_make_file(const char* _filename, void* _priv,
 int linker_file_unload(linker_file_t _file);
 
 /*
- * Add a dependancy to a file.
+ * Add a dependency to a file.
  */
 void linker_file_add_dependancy(linker_file_t _file, linker_file_t _dep);
 
@@ -219,9 +219,9 @@ int linker_load_dependencies(linker_file_t lf);
 int linker_file_foreach(linker_predicate_t *_predicate, void *_context);
 
 /*
- * Lookup a symbol in a file.  If deps is TRUE, look in dependancies
+ * Lookup a symbol in a file.  If deps is TRUE, look in dependencies
  * if not found in file.  The symbol's value is returned in the
- * caddr_t.  An error is returned, 0 if no error occured.
+ * caddr_t.  An error is returned, 0 if no error occurred.
  */
 int linker_file_lookup_symbol(linker_file_t _file, const char* _name,
 			    int _deps, caddr_t *);
@@ -267,7 +267,7 @@ int linker_ddb_symbol_values(c_linker_sym_t _sym, linker_symval_t *_symval);
 #define MODINFO_SIZE		0x0004		/* Size of module */
 #define MODINFO_EMPTY		0x0005		/* Has been deleted */
 #define MODINFO_ARGS		0x0006		/* Parameters string */
-#define MODINFO_METADATA	0x8000		/* Module-specfic */
+#define MODINFO_METADATA	0x8000		/* Module-specific */
 
 #define MODINFOMD_AOUTEXEC	0x0001		/* a.out exec header */
 #define MODINFOMD_ELFHDR	0x0002		/* ELF header */

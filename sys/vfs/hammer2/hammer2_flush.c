@@ -1340,7 +1340,7 @@ hammer2_xop_inode_flush(hammer2_xop_t *arg, void *scratch __unused, int clindex)
 
 #if 0
 			/*
-			 * Propogate upwards but only cross an inode boundary
+			 * Propagate upwards but only cross an inode boundary
 			 * for inodes associated with the current filesystem
 			 * sync.
 			 */

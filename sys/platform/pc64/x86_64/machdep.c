@@ -897,7 +897,7 @@ sendsig(sig_t catcher, int sig, sigset_t *mask, u_long code)
 
 /*
  * Sanitize the trapframe for a virtual kernel passing control to a custom
- * VM context.  Remove any items that would otherwise create a privilage
+ * VM context.  Remove any items that would otherwise create a privilege
  * issue.
  *
  * XXX at the moment we allow userland to set the resume flag.  Is this a
@@ -1114,7 +1114,7 @@ static void
 cpu_idle_default_hook(void)
 {
 	/*
-	 * We must guarentee that hlt is exactly the instruction
+	 * We must guarantee that hlt is exactly the instruction
 	 * following the sti.
 	 */
 	__asm __volatile("sti; hlt");
@@ -2977,7 +2977,7 @@ globaldata_find(int cpu)
  * This path should be safe from the SYSRET issue because only stopped threads
  * can have their %rip adjusted this way (and all heavy weight thread switches
  * clear QUICKREF and thus do not use SYSRET).  However, the code path is
- * convoluted so add a safety by forcing %rip to be cannonical.
+ * convoluted so add a safety by forcing %rip to be canonical.
  */
 int
 ptrace_set_pc(struct lwp *lp, unsigned long addr)

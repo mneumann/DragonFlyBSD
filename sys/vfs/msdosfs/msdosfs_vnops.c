@@ -1071,7 +1071,7 @@ abortit:
 
 	/*
 	 * tvp and tdvp are now locked again, the 'bad' target can be used
-	 * to clean them up again.  Delete an existant target and clean
+	 * to clean them up again.  Delete an existent target and clean
 	 * up tvp.  Set xp to NULL to indicate that tvp has been cleaned up.
 	 */
 	if (xp != NULL) {
@@ -1147,7 +1147,7 @@ abortit:
 	}
 
 	/*
-	 * No error occured.  tdvp, fdvp and fvp are all locked.  If
+	 * No error occurred.  tdvp, fdvp and fvp are all locked.  If
 	 * newparent was 0 be aware that fdvp == tdvp.  tvp has been cleaned
 	 * up.  ap->a_fvp is still refd.
 	 */

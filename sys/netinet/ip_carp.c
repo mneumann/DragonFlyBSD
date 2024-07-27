@@ -875,7 +875,7 @@ carp_detach(struct carp_softc *sc, boolean_t detach, boolean_t del_iaback)
 			/*
 			 * No more carp interfaces using
 			 * ifp as the backing interface,
-			 * move it out of promiscous mode.
+			 * move it out of promiscuous mode.
 			 */
 			ifpromisc(ifp, 0);
 		}
@@ -2014,7 +2014,7 @@ carp_config_vhaddr(struct carp_softc *sc, struct carp_vhaddr *vha,
 				if (ia_if->ia_flags & IFA_ROUTE) {
 					/*
 					 * Address with prefix route
-					 * is prefered
+					 * is preferred
 					 */
 					break;
 				}
@@ -2023,7 +2023,7 @@ carp_config_vhaddr(struct carp_softc *sc, struct carp_vhaddr *vha,
 				if (ia->ia_flags & IFA_ROUTE) {
 					/*
 					 * Address with prefix route
-					 * is prefered over others.
+					 * is preferred over others.
 					 */
 					ia_if = ia;
 				}

@@ -36,7 +36,7 @@
  * HAMMER B-Tree index
  *
  * HAMMER implements a modified B+Tree.  In documentation this will
- * simply be refered to as the HAMMER B-Tree.  Basically a HAMMER B-Tree
+ * simply be referred to as the HAMMER B-Tree.  Basically a HAMMER B-Tree
  * looks like a B+Tree (A B-Tree which stores its records only at the leafs
  * of the tree), but adds two additional boundary elements which describe
  * the left-most and right-most element a node is able to represent.  In
@@ -55,7 +55,7 @@
  * The radix for an internal node is 1 less then a leaf but we get a
  * number of significant benefits for our troubles.
  * The left-hand boundary (B in the left) is integrated into the first
- * element so it doesn't require 2 elements to accomodate boundaries.
+ * element so it doesn't require 2 elements to accommodate boundaries.
  *
  * The big benefit to using a B-Tree containing boundary information
  * is that it is possible to cache pointers into the middle of the tree
@@ -951,10 +951,10 @@ hammer_btree_delete(hammer_cursor_t cursor, int *ndelete)
  * actually doing the sarch.
  *
  * INSERTIONS: The search will split full nodes and leaves on its way down
- * and guarentee that the leaf it ends up on is not full.  If we run out
+ * and guarantee that the leaf it ends up on is not full.  If we run out
  * of space the search continues to the leaf, but ENOSPC is returned.
  *
- * The search is only guarenteed to end up on a leaf if an error code of 0
+ * The search is only guaranteed to end up on a leaf if an error code of 0
  * is returned, or if inserting and an error code of ENOENT is returned.
  * Otherwise it can stop at an internal node.  On success a search returns
  * a leaf node.
@@ -2811,7 +2811,7 @@ hammer_btree_unlock_children(hammer_mount_t hmp, hammer_node_lock_t parent,
 }
 
 /************************************************************************
- *			   MISCELLANIOUS SUPPORT 			*
+ *			   MISCELLANEOUS SUPPORT 			*
  ************************************************************************/
 
 /*
@@ -2884,7 +2884,7 @@ hammer_btree_chkts(hammer_tid_t asof, hammer_base_elm_t base)
 }
 
 /*
- * Create a separator half way inbetween key1 and key2.  For fields just
+ * Create a separator half way in-between key1 and key2.  For fields just
  * one unit apart, the separator will match key2.  key1 is on the left-hand
  * side and key2 is on the right-hand side.
  *

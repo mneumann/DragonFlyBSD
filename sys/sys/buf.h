@@ -105,7 +105,7 @@ typedef enum buf_cmd {
  *	strategy routines WILL NEVER ACCESS THIS FIELD.
  *
  *	b_bcount represents the I/O request size.  Unless B_NOBCLIP is set,
- *	the device chain is allowed to clip b_bcount to accomodate the device
+ *	the device chain is allowed to clip b_bcount to accommodate the device
  *	EOF.  Note that this is different from the byte oriented file EOF.
  *	If B_NOBCLIP is set, the device chain is required to generate an
  *	error if it would othrewise have to clip the request.  Buffers 
@@ -114,8 +114,8 @@ typedef enum buf_cmd {
  *	via returning a b_actual < b_bcount.  B_NOBCLIP only effects block
  *	oriented EOF clipping (b_bcount modifications).
  *
- *	b_actual represents the number of bytes of I/O that actually occured,
- *	whether an error occured or not.  b_actual must be initialized to 0
+ *	b_actual represents the number of bytes of I/O that actually occurred,
+ *	whether an error occurred or not.  b_actual must be initialized to 0
  *	prior to initiating I/O as the device drivers will assume it to
  *	start at 0.
  *

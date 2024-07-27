@@ -420,7 +420,7 @@ nlookup_zero(struct nlookupdata *nd)
 
 /*
  * Simple all-in-one nlookup.  Returns a locked namecache structure or NULL
- * if an error occured. 
+ * if an error occurred.
  *
  * Note that the returned ncp is not checked for permissions, though VEXEC
  * is checked on the directory path leading up to the result.  The caller
@@ -466,7 +466,7 @@ islastelement(const char *ptr)
  * the last element of the namecache lookup will be locked
  * exclusively.
  *
- * O_CREAT or O_TRUNC need the last element to be locked exlcusively.
+ * O_CREAT or O_TRUNC need the last element to be locked exclusively.
  * Intermediate elements are always locked shared.
  *
  * NOTE: Even if we return on-zero, an unresolved namecache record
@@ -497,12 +497,12 @@ wantsexcllock(struct nlookupdata *nd, int last_element)
  * permissions on the returned element.
  *
  * If NLC_CREATE is set the last directory must allow node creation,
- * and an error code of 0 will be returned for a non-existant
+ * and an error code of 0 will be returned for a non-existent
  * target (not ENOENT).
  *
  * If NLC_RENAME_DST is set the last directory mut allow node deletion,
  * plus the sticky check is made, and an error code of 0 will be returned
- * for a non-existant target (not ENOENT).
+ * for a non-existent target (not ENOENT).
  *
  * If NLC_DELETE is set the last directory mut allow node deletion,
  * plus the sticky check is made.
@@ -1398,7 +1398,7 @@ double_break:
  * of continuity in the namecache tree by connecting the ncp related to the
  * vnode under the mount to the ncp related to the mount's root vnode.
  *
- * If no error occured a locked, ref'd ncp is stored in *ncpp.
+ * If no error occurred a locked, ref'd ncp is stored in *ncpp.
  */
 int
 nlookup_mp(struct mount *mp, struct nchandle *nch)

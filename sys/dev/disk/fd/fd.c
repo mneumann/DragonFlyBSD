@@ -963,7 +963,7 @@ fd_probe(device_t dev)
 			/* anything responding? */
 			if (fd_sense_int(fdc, &st0, 0) == 0 &&
 			    (st0 & NE7_ST0_EC) == 0)
-				break; /* already probed succesfully */
+				break; /* already probed successfully */
 		}
 	}
 
@@ -2025,7 +2025,7 @@ fdstate(fdc_p fdc)
 				 * something is seriously messed up (like
 				 * broken hardware), we rather limit the
 				 * number of retries so the IO operation
-				 * doesn't block indefinately.
+				 * doesn't block indefinitely.
 				 */
 				if (fdc->dma_overruns++ < FDC_DMAOV_MAX) {
 					fdc->state = SEEKCOMPLETE;
@@ -2119,7 +2119,7 @@ fdstate(fdc_p fdc)
 		fd->track = 0;
 		/* Seek (probably) necessary */
 		fdc->state = DOSEEK;
-		return (1);	/* will return immediatly */
+		return (1);	/* will return immediately */
 	case MOTORWAIT:
 		if(fd->flags & FD_MOTOR_WAIT)
 		{
@@ -2137,7 +2137,7 @@ fdstate(fdc_p fdc)
 			 */
 			fdc->state = RESETCOMPLETE;
 		}
-		return (1);	/* will return immediatly */
+		return (1);	/* will return immediately */
 	default:
 		device_printf(fdc->fdc_dev, "unexpected FD int->");
 		if (fd_read_status(fdc, fd->fdsu) == 0)
@@ -2160,7 +2160,7 @@ fdstate(fdc_p fdc)
 		return (0);
 	}
 	/*XXX confusing: some branches return immediately, others end up here*/
-	return (1); /* Come back immediatly to new state */
+	return (1); /* Come back immediately to new state */
 }
 
 static int

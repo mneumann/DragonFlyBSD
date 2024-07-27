@@ -184,7 +184,7 @@ ppsioctl(struct dev_ioctl_args *ap)
 }
 
 /*
- * Becuase pps is a static device under any attached ppbus, and not scanned
+ * Because pps is a static device under any attached ppbus, and not scanned
  * by the ppbus, we need an identify function to create the device.
  */
 static device_method_t pps_methods[] = {

@@ -97,7 +97,7 @@ struct safe_operand {
  * ring entries only the ``particle descriptors'' (scatter/gather
  * lists) and the actual operand data are kept separate.  The
  * particle descriptors must also be organized in rings.  The
- * operand data can be located aribtrarily (modulo alignment constraints).
+ * operand data can be located arbitrarily (modulo alignment constraints).
  *
  * Note that the descriptor ring is mapped onto the PCI bus so
  * the hardware can DMA data.  This means the entire ring must be

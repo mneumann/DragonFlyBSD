@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	Machine independant code should not directly include this file.
+ *	Machine independent code should not directly include this file.
  */
 
 #ifndef	_MACHINE_THREAD_H_

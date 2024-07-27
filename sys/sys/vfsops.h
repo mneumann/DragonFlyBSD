@@ -39,7 +39,7 @@
  * In DragonFly the ultimate goal is to thread the VFS, which means that
  * the dispatch functions will eventually be called from the context of
  * a management thread rather then directly called by a process.  This
- * requires us to divorce direct process dependancies (in particular ioctl
+ * requires us to divorce direct process dependencies (in particular ioctl
  * and UIO's).  In addition, it is our intention to implement kernel
  * level cache management and coherency in the vop_*() interfacing
  * layer.

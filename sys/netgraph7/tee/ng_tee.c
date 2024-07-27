@@ -303,7 +303,7 @@ ng_tee_rcvdata(hook_p hook, item_p item)
 	hinfo->stats.inOctets += m->m_pkthdr.len;
 	hinfo->stats.inFrames++;
 
-	/* Duplicate packet if requried */
+	/* Duplicate packet if required */
 	if (hinfo->dup) {
 		struct mbuf *m2;
 

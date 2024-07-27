@@ -513,7 +513,7 @@ extern struct thread *emergpager;
 extern struct thread *updatethread;
 
 /*
- * Scheduler independant variables.  The primary scheduler polling frequency,
+ * Scheduler independent variables.  The primary scheduler polling frequency,
  * the maximum ESTCPU value, and the weighting factor for nice values.  A
  * cpu bound program's estcpu will increase to ESTCPUMAX - 1.
  */

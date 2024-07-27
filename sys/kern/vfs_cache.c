@@ -768,7 +768,7 @@ _cache_drop(struct namecache *ncp)
  * careful to avoid races if vhold() blocks in the future.
  *
  * Both ncp and par must be referenced and locked.  The reference is
- * transfered to the nchpp (and, most notably, NOT to the parent list).
+ * transferred to the nchpp (and, most notably, NOT to the parent list).
  *
  * NOTE: The hash table spinlock is held across this call, we can't do
  *	 anything fancy.
@@ -925,7 +925,7 @@ _cache_unlink_parent(struct namecache *par, struct namecache *ncp,
  * zero-termination of the string but it makes vop_compat_ncreate() easier.
  *
  * The returned ncp will be locked and referenced.  The ref is generally meant
- * to be transfered to the nchpp linkage.
+ * to be transferred to the nchpp linkage.
  */
 static struct namecache *
 cache_alloc(int nlen)
@@ -1635,9 +1635,9 @@ cache_clrmountpt(struct nchandle *nch)
  *
  * It is possible for cache_inval() to race a cache_resolve(), meaning that
  * the namecache entry may not actually be invalidated on return if it was
- * revalidated while recursing down into its children.  This code guarentees
+ * revalidated while recursing down into its children.  This code guarantees
  * that the node(s) will go through an invalidation cycle, but does not 
- * guarentee that they will remain in an invalidated state. 
+ * guarantee that they will remain in an invalidated state.
  *
  * Returns non-zero if a revalidation was detected during the invalidation
  * recursion, zero otherwise.  Note that since only the original ncp is
@@ -1808,7 +1808,7 @@ _cache_inval_internal(struct namecache *ncp, int flags, struct cinvtrack *track)
  * Returns non-zero if any namecache entries remain after the invalidation
  * loop completed.
  *
- * NOTE: Unlike the namecache topology which guarentees that ncp's will not
+ * NOTE: Unlike the namecache topology which guarantees that ncp's will not
  *	 be ripped out of the topology while held, the vnode's v_namecache
  *	 list has no such restriction.  NCP's can be ripped out of the list
  *	 at virtually any time if not locked, even if held.
@@ -3211,7 +3211,7 @@ cache_hysteresis(int critpath)
  * The returned entry will be in one of three states:  positive hit (non-null
  * vnode), negative hit (null vnode), or unresolved (NCF_UNRESOLVED is set).
  * Unresolved entries must be resolved through the filesystem to associate the
- * vnode and/or determine whether a positive or negative hit has occured.
+ * vnode and/or determine whether a positive or negative hit has occurred.
  *
  * It is not necessary to lock a directory in order to lock namespace under
  * that directory.  In fact, it is explicitly not allowed to do that.  A
@@ -3219,7 +3219,7 @@ cache_hysteresis(int critpath)
  * destroyed.
  *
  * The directory (par) may be unresolved, in which case any returned child
- * will likely also be marked unresolved.  Likely but not guarenteed.  Since
+ * will likely also be marked unresolved.  Likely but not guaranteed.  Since
  * the filesystem lookup requires a resolved directory vnode the caller is
  * responsible for resolving the namecache chain top-down.  This API 
  * specifically allows whole chains to be created in an unresolved state.
@@ -3594,7 +3594,7 @@ found:
 }
 
 /*
- * This is a non-blocking verison of cache_nlookup() used by
+ * This is a non-blocking version of cache_nlookup() used by
  * nfs_readdirplusrpc_uio().  It can fail for any reason and
  * will return nch.ncp == NULL in that case.
  */
@@ -3799,7 +3799,7 @@ cache_nlookup_nonlocked(struct nchandle *par_nch, struct nlcomponent *nlc)
 			 * that and it unlocked before our test) the flag
 			 * has been set.
 			 *
-			 * XXX check if superceeded by nc_generation XXX
+			 * XXX check if superseded by nc_generation XXX
 			 */
 			if (_cache_lockstatus(ncp) < 0 ||
 			    (ncp->nc_flag & (NCF_DESTROYED | NCF_UNRESOLVED)))
@@ -4287,7 +4287,7 @@ cache_resolve(struct nchandle *nch, u_int *genp, struct ucred *cred)
 restart:
 	/*
 	 * If the ncp is already resolved we have nothing to do.  However,
-	 * we do want to guarentee that a usable vnode is returned when
+	 * we do want to guarantee that a usable vnode is returned when
 	 * a vnode is present, so make sure it hasn't been reclaimed.
 	 */
 	if ((ncp->nc_flag & NCF_UNRESOLVED) == 0) {
@@ -4348,7 +4348,7 @@ restart:
 
 	/*
 	 * The vp's of the parent directories in the chain are held via vhold()
-	 * due to the existance of the child, and should not disappear. 
+	 * due to the existence of the child, and should not disappear.
 	 * However, there are cases where they can disappear:
 	 *
 	 *	- due to filesystem I/O errors.
@@ -4486,7 +4486,7 @@ cache_resolve_mp(struct mount *mp, int adjgen)
 
 	/*
 	 * If the ncp is already resolved we have nothing to do.  However,
-	 * we do want to guarentee that a usable vnode is returned when
+	 * we do want to guarantee that a usable vnode is returned when
 	 * a vnode is present, so make sure it hasn't been reclaimed.
 	 */
 	if ((ncp->nc_flag & NCF_UNRESOLVED) == 0) {
@@ -4573,7 +4573,7 @@ cache_resolve_dvp(struct nchandle *nch, struct ucred *cred, struct vnode **dvpp)
 	 * Resolve the parent dvp.
 	 *
 	 * The vp's of the parent directories in the chain are held via vhold()
-	 * due to the existance of the child, and should not disappear.
+	 * due to the existence of the child, and should not disappear.
 	 * However, there are cases where they can disappear:
 	 *
 	 *	- due to filesystem I/O errors.
@@ -5014,7 +5014,7 @@ vfs_cache_setroot(struct vnode *nvp, struct nchandle *nch)
  *
  * Note that the linkage between the vnode and its namecache entries will
  * be removed, but the namecache entries themselves might stay put due to
- * active references from elsewhere in the system or due to the existance of
+ * active references from elsewhere in the system or due to the existence of
  * the children.   The namecache topology is left intact even if we do not
  * know what the vnode association is.  Such entries will be marked
  * NCF_UNRESOLVED.

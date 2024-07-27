@@ -1778,7 +1778,7 @@ ar9300_get_bb_panic_info(struct ath_hal *ah, struct hal_bb_panic_info *bb_panic)
 
     /*
      * For signature 04000539 do not print anything.
-     * This is a very common occurence as a compromise between
+     * This is a very common occurrence as a compromise between
      * BB Panic and AH_FALSE detects (EV71009). It indicates 
      * radar hang, which can be cleared by reprogramming
      * radar related register and does not requre a chip reset 
@@ -2768,10 +2768,10 @@ HAL_STATUS ar9300_set_proxy_sta(struct ath_hal *ah, HAL_BOOL enable)
     }
     OS_REG_WRITE(ah, AR_AZIMUTH_MODE, val);
 
-    /* enable promiscous mode */
+    /* enable promiscuous mode */
     OS_REG_WRITE(ah, AR_RX_FILTER, 
         OS_REG_READ(ah, AR_RX_FILTER) | HAL_RX_FILTER_PROM);
-    /* enable promiscous in azimuth mode */
+    /* enable promiscuous in azimuth mode */
     OS_REG_WRITE(ah, AR_PCU_MISC_MODE2, AR_PCU_MISC_MODE2_PROM_VC_MODE);
     OS_REG_WRITE(ah, AR_MAC_PCU_LOGIC_ANALYZER, AR_MAC_PCU_LOGIC_ANALYZER_VC_MODE);
 
@@ -3258,7 +3258,7 @@ ar9300_set_smart_antenna(struct ath_hal *ah, HAL_BOOL enable)
         OS_REG_CLR_BIT(ah, AR_XRTO, AR_ENABLE_SMARTANTENNA);
     }
 
-    /* if scropion and smart antenna is enabled, write swcom1 with 0x440
+    /* if scorpion and smart antenna is enabled, write swcom1 with 0x440
      * and swcom2 with 0
      * FIXME Ideally these registers need to be made read from caldata.
      * Until the calibration team gets them, keep them along with board

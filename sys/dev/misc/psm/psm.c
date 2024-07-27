@@ -479,7 +479,7 @@ struct psm_softc {		/* Driver status information */
 	u_char		muxsave[3];	/* 3->6 byte proto conversion buffer */
 	int		muxtpbuttons;	/* Touchpad button state */
 	int		muxmsbuttons;	/* Mouse (trackpoint) button state */
-	struct timeval	muxmidtimeout;	/* middle button supression timeout */
+	struct timeval	muxmidtimeout;	/* middle button suppression timeout */
 	int		muxsinglesyna;	/* Probe result of single Synaptics */
 #ifdef EVDEV_SUPPORT
 	struct evdev_dev *evdev_a;	/* Absolute reporting device */
@@ -3697,7 +3697,7 @@ proc_synaptics_mux(struct psm_softc *sc, packetbuf_t *pb)
 	switch (pb->ipacket[0] & 0xc0) {
 	case 0x80:	/* First 3 bytes of Synaptics packet */
 		bcopy(pb->ipacket, sc->muxsave, 3);
-		/* Compute middle mouse button supression timeout. */
+		/* Compute middle mouse button suppression timeout. */
 		sc->muxmidtimeout.tv_sec  = 0;
 		sc->muxmidtimeout.tv_usec = 50000;	/* ~2-3 ints */
 		timevaladd(&sc->muxmidtimeout, &sc->lastsoftintr);
@@ -5842,7 +5842,7 @@ synaptics_sysctl_create_softbuttons_tree(struct psm_softc *sc)
 	    CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_ANYBODY,
 	    sc, SYNAPTICS_SYSCTL_SOFTBUTTON2_X,
 	    synaptics_sysctl, "I",
-	    "Horisontal position of 2-nd softbutton left edge (0-disable)");
+	    "Horizontal position of 2-nd softbutton left edge (0-disable)");
 
 	/* hw.psm.synaptics.softbutton3_x */
 	sc->syninfo.softbutton3_x = 3900;
@@ -5852,7 +5852,7 @@ synaptics_sysctl_create_softbuttons_tree(struct psm_softc *sc)
 	    CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_ANYBODY,
 	    sc, SYNAPTICS_SYSCTL_SOFTBUTTON3_X,
 	    synaptics_sysctl, "I",
-	    "Horisontal position of 3-rd softbutton left edge (0-disable)");
+	    "Horizontal position of 3-rd softbutton left edge (0-disable)");
 }
 
 static void
@@ -7181,7 +7181,7 @@ static void
 elantech_init_synaptics(struct psm_softc *sc)
 {
 
-	/* Set capabilites required by movement smother */
+	/* Set capabilities required by movement smother */
 	sc->synhw.infoMajor = sc->elanhw.hwversion;
 	sc->synhw.infoMinor = sc->elanhw.fwversion;
 	sc->synhw.infoXupmm = sc->elanhw.dpmmx;

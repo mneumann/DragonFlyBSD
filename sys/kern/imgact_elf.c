@@ -1146,7 +1146,7 @@ cb_put_fp(vm_map_entry_t entry, void *closure)
 			char *freepath, *fullpath;
 
 			/*
-			 * This is actually a relatively common occurance,
+			 * This is actually a relatively common occurrence,
 			 * so don't spew on the console by default.
 			 */
 			if (vn_fullpath(curproc, vp, &fullpath, &freepath, 0)) {

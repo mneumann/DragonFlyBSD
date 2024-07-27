@@ -910,7 +910,7 @@ sf_newbuf(struct sf_softc *sc, struct sf_rx_bufdesc_type0 *c,
  * it is marred by one truly stupid design flaw, which is that receive
  * buffer addresses must be aligned on a longword boundary. This forces
  * the packet payload to be unaligned, which is suboptimal on the x86 and
- * completely unuseable on the Alpha. Our only recourse is to copy received
+ * completely unusable on the Alpha. Our only recourse is to copy received
  * packets into properly aligned buffers before handing them off.
  */
 

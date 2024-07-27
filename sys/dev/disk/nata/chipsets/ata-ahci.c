@@ -81,7 +81,7 @@ ata_ahci_chipinit(device_t dev)
 						&ctlr->r_rid2, RF_ACTIVE)))
 	return ENXIO;
 
-    /* setup interrupt delivery if not done allready by a vendor driver */
+    /* setup interrupt delivery if not done already by a vendor driver */
     if (!ctlr->r_irq) {
 	if (ata_setup_interrupt(dev, ata_generic_intr)) {
 	    bus_release_resource(dev, ctlr->r_type2, ctlr->r_rid2, ctlr->r_res2);

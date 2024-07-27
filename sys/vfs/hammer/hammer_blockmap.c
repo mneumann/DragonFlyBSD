@@ -645,7 +645,7 @@ hammer_blockmap_reserve_complete(hammer_mount_t hmp, hammer_reserve_t resv)
 
 	/*
 	 * Setting append_off to the max prevents any new allocations
-	 * from occuring while we are trying to dispose of the reservation,
+	 * from occurring while we are trying to dispose of the reservation,
 	 * allowing us to safely delete any related HAMMER buffers.
 	 *
 	 * If we are unable to clean out all related HAMMER buffers we
@@ -861,9 +861,9 @@ hammer_blockmap_free(hammer_transaction_t trans,
 	 * NOTE: hammer_buffer's are only invalidated when the reservation
 	 * is completed, if the layer2 entry is still completely free at
 	 * that time.  Any allocations from the reservation that may have
-	 * occured in the mean time, or active references on the reservation
+	 * occurred in the mean time, or active references on the reservation
 	 * from new pending allocations, will prevent the invalidation from
-	 * occuring.
+	 * occurring.
 	 */
 	if (layer2->bytes_free == HAMMER_BIGBLOCK_SIZE) {
 		base_off = hammer_xlate_to_zone2(zone_offset &

@@ -1367,7 +1367,7 @@ s32 ixgbe_bypass_rw(struct ixgbe_hw *hw, u32 cmd, u32 *status)
  *
  * If we send a write we can't be sure it took until we can read back
  * that same register.  It can be a problem as some of the feilds may
- * for valid reasons change inbetween the time wrote the register and
+ * for valid reasons change in-between the time wrote the register and
  * we read it again to verify.  So this function check everything we
  * can check and then assumes it worked.
  *

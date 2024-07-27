@@ -1469,7 +1469,7 @@ ti_attach(device_t dev)
 	 * Get station address from the EEPROM. Note: the manual states
 	 * that the MAC address is at offset 0x8c, however the data is
 	 * stored as two longwords (since that's how it's loaded into
-	 * the NIC). This means the MAC address is actually preceeded
+	 * the NIC). This means the MAC address is actually preceded
 	 * by two zero bytes. We need to skip over those.
 	 */
 	if (ti_read_eeprom(sc, eaddr, TI_EE_MAC_OFFSET + 2, ETHER_ADDR_LEN)) {
@@ -1534,7 +1534,7 @@ ti_attach(device_t dev)
 		/*
 		 * Copper cards allow manual 10/100 mode selection,
 		 * but not manual 1000baseT mode selection. Why?
-		 * Becuase currently there's no way to specify the
+		 * Because currently there's no way to specify the
 		 * master/slave setting through the firmware interface,
 		 * so Alteon decided to just bag it and handle it
 		 * via autonegotiation.
@@ -1617,7 +1617,7 @@ ti_detach(device_t dev)
  * Note: we have to be able to handle three possibilities here:
  * 1) the frame is from the mini receive ring (can only happen)
  *    on Tigon 2 boards)
- * 2) the frame is from the jumbo recieve ring
+ * 2) the frame is from the jumbo receive ring
  * 3) the frame is from the standard receive ring
  */
 static void
@@ -1774,7 +1774,7 @@ ti_intr(void *xsc)
 		return;
 #endif
 
-	/* Ack interrupt and stop others from occuring. */
+	/* Ack interrupt and stop others from occurring. */
 	CSR_WRITE_4(sc, TI_MB_HOSTINTR, 1);
 
 	if (ifp->if_flags & IFF_RUNNING) {

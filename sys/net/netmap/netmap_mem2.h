@@ -52,7 +52,7 @@
  * of the object, and from there locate the offset from the beginning
  * of the region.
  *
- * The invididual allocators manage a pool of memory for objects of
+ * The individual allocators manage a pool of memory for objects of
  * the same size.
  * The pool is split into smaller clusters, whose size is a
  * multiple of the page size. The cluster size is chosen

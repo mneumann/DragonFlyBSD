@@ -66,7 +66,7 @@ SYSCTL_INT(_vfs, OID_AUTO, varsym_enable, CTLFLAG_RW, &varsym_enable, 0,
  * unlocked if an error occurs.
  *
  * The returned *vpp will be NULL if an error occurs.  Note that no error
- * will occur (error == 0) for CREATE requests on a non-existant target, but
+ * will occur (error == 0) for CREATE requests on a non-existent target, but
  * *vpp will be NULL in that case.  Both dvp and *vpp (if not NULL) will be
  * locked in the no-error case.   No additional references are made to dvp,
  * only the locking state changes.

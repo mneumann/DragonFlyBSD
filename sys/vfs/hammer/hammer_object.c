@@ -311,7 +311,7 @@ hammer_flush_record_done(hammer_record_t record, int error)
 	KKASSERT(record->flags & HAMMER_RECF_INTERLOCK_BE);
 
 	/*
-	 * If an error occured, the backend was unable to sync the
+	 * If an error occurred, the backend was unable to sync the
 	 * record to its media.  Leave the record intact.
 	 */
 	if (error) {
@@ -323,7 +323,7 @@ hammer_flush_record_done(hammer_record_t record, int error)
 	record->flush_group = NULL;
 
 	/*
-	 * Adjust the flush state and dependancy based on success or
+	 * Adjust the flush state and dependency based on success or
 	 * failure.
 	 */
 	if (record->flags & (HAMMER_RECF_DELETED_BE | HAMMER_RECF_COMMITTED)) {
@@ -494,7 +494,7 @@ hammer_rel_mem_record(hammer_record_t record)
  * must also check for commit races.
  *
  * Return non-zero if the record is visible, zero if it isn't or if it is
- * deleted.  Returns 0 if the record has been comitted (unless the special
+ * deleted.  Returns 0 if the record has been committed (unless the special
  * delete-visibility flag is set).  A committed record must be located
  * via the media B-Tree.  Returns non-zero if the record is good.
  *
@@ -724,11 +724,11 @@ hammer_ip_add_direntry(hammer_transaction_t trans,
 	TAILQ_INSERT_TAIL(&ip->target_list, record, target_entry);
 
 	/*
-	 * The inode now has a dependancy and must be taken out of the idle
+	 * The inode now has a dependency and must be taken out of the idle
 	 * state.  An inode not in an idle state is given an extra reference.
 	 *
 	 * When transitioning to a SETUP state flag for an automatic reflush
-	 * when the dependancies are disposed of if someone is waiting on
+	 * when the dependencies are disposed of if someone is waiting on
 	 * the inode.
 	 */
 	if (ip->flush_state == HAMMER_FST_IDLE) {
@@ -819,12 +819,12 @@ hammer_ip_del_direntry(hammer_transaction_t trans,
 		}
 
 		/*
-		 * The inode now has a dependancy and must be taken out of
+		 * The inode now has a dependency and must be taken out of
 		 * the idle state.  An inode not in an idle state is given
 		 * an extra reference.
 		 *
 		 * When transitioning to a SETUP state flag for an automatic
-		 * reflush when the dependancies are disposed of if someone
+		 * reflush when the dependencies are disposed of if someone
 		 * is waiting on the inode.
 		 */
 		if (ip && ip->flush_state == HAMMER_FST_IDLE) {
@@ -996,7 +996,7 @@ hammer_ip_add_bulk(hammer_inode_t ip, off_t file_offset, void *data, int bytes,
  * to replace any prior memory record which might still be active.
  *
  * Setting the FE deleted flag on the old record (if any) avoids any RB
- * tree insertion conflict, amoung other things.
+ * tree insertion conflict, among other things.
  *
  * This has to be done prior to the caller completing any related buffer
  * cache I/O or a reinstantiation of the buffer may load data from the
@@ -1294,7 +1294,7 @@ hammer_ip_sync_record_cursor(hammer_cursor_t cursor, hammer_record_t record)
 	 * as having been committed (and not BE-deleted).
 	 *
 	 * If the record represented a directory deletion but we had to
-	 * sync a valid directory entry to disk due to dependancies,
+	 * sync a valid directory entry to disk due to dependencies,
 	 * we must convert the record to a covering delete so the
 	 * frontend does not have visibility on the synced entry.
 	 *
@@ -2108,7 +2108,7 @@ retry:
 }
 
 /*
- * This function deletes remaining auxillary records when an inode is
+ * This function deletes remaining auxiliary records when an inode is
  * being deleted.  This function explicitly does not delete the
  * inode record, directory entry, data, or db records.  Those must be
  * properly disposed of prior to this call.

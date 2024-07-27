@@ -307,7 +307,7 @@ feed_matrix_setup(struct feed_matrix_info *info, struct pcmchan_matrix *m_in,
 
 	/*
 	 * If both in and out are part of standard matrix and identical, skip
-	 * everything alltogether.
+	 * everything altogether.
 	 */
 	if (m_in->id == m_out->id && !(m_in->id < SND_CHN_MATRIX_BEGIN ||
 	    m_in->id > SND_CHN_MATRIX_END))
@@ -480,10 +480,10 @@ feed_matrix_feed(struct pcm_feeder *f, struct pcm_channel *c, uint8_t *b,
 	inmax = info->ialign + info->oalign;
 
 	/*
-	 * This loop might look simmilar to other feeder_* loops, but be
+	 * This loop might look similar to other feeder_* loops, but be
 	 * advised: matrixing might involve overlapping (think about
 	 * swapping end to front or something like that). In this regard it
-	 * might be simmilar to feeder_format, but feeder_format works on
+	 * might be similar to feeder_format, but feeder_format works on
 	 * 'sample' domain where it can be fitted into single 32bit integer
 	 * while matrixing works on 'sample frame' domain.
 	 */
@@ -551,7 +551,7 @@ feeder_matrix_setup(struct pcm_feeder *f, struct pcmchan_matrix *m_in,
 
 /*
  * feeder_matrix_default_id(): For a given number of channels, return
- *                             default prefered id (example: both 5.1 and
+ *                             default preferred id (example: both 5.1 and
  *                             6.0 are simply 6 channels, but 5.1 is more
  *                             preferable).
  */
@@ -698,7 +698,7 @@ feeder_matrix_compare(struct pcmchan_matrix *m_in, struct pcmchan_matrix *m_out)
 }
 
 /*
- * XXX 4front intepretation of "surround" is ambigous and sort of
+ * XXX 4front interpretation of "surround" is ambigous and sort of
  *     conflicting with "rear"/"back". Map it to "side". Well.. 
  *     who cares?
  */

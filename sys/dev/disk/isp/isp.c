@@ -2907,7 +2907,7 @@ isp_scan_loop(ispsoftc_t *isp, int chan)
 	 * Check our connection topology.
 	 *
 	 * If we're a public or private loop, we scan 0..125 as handle values.
-	 * The firmware has (typically) peformed a PLOGI for us. We skip this
+	 * The firmware has (typically) performed a PLOGI for us. We skip this
 	 * step if we're a ISP_24XX in NP-IV mode.
 	 *
 	 * If we're a N-port connection, we treat this is a short loop (0..1).
@@ -5718,7 +5718,7 @@ isp_parse_async_fc(ispsoftc_t *isp, uint16_t mbox)
 			}
 #endif
 			/*
-			 * We've had problems with data corruption occuring on
+			 * We've had problems with data corruption occurring on
 			 * commands that complete (with no apparent error) after
 			 * we receive a LIP. This has been observed mostly on
 			 * Local Loop topologies. To be safe, let's just mark
@@ -6236,7 +6236,7 @@ isp_parse_status(ispsoftc_t *isp, ispstatusreq_t *sp, XS_T *xs, long *rp)
 		 * isn't an error, per se.
 		 *
 		 * Unfortunately, some QLogic f/w writers have, in
-		 * some cases, ommitted to *set* status to QFULL.
+		 * some cases, omitted to *set* status to QFULL.
 		 *
 
 		if (*XS_STSP(xs) != SCSI_GOOD && XS_NOERR(xs)) {

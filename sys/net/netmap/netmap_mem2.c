@@ -752,7 +752,7 @@ netmap_mem_private_new(const char *name, u_int txr, u_int txd, u_int rxr, u_int 
 
 	*d = nm_blueprint;
 
-	/* XXX the rest of the code assumes the stack rings are alwasy present */
+	/* XXX the rest of the code assumes the stack rings are always present */
 	txr++;
 	rxr++;
 	p[NETMAP_IF_POOL].size = sizeof(struct netmap_if) +

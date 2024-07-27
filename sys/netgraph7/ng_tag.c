@@ -257,7 +257,7 @@ NETGRAPH_INIT(tag, &typestruct);
  * returned in response to GET* messages when no configuration was made.
  * One could ask why to have this structures at all when we have
  * ng_tag_hookinfo initialized to zero and don't need in and out structures
- * at all to operate.  Unfortunatelly, we have to return thisHook field
+ * at all to operate.  Unfortunately, we have to return thisHook field
  * in response to messages so the fastest and simpliest way is to have
  * this default structures and initialize thisHook once at hook creation
  * rather than to do it on every response.

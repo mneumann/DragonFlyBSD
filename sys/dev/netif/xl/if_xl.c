@@ -75,7 +75,7 @@
  */
 
 /*
- * The 3c90x series chips use a bus-master DMA interface for transfering
+ * The 3c90x series chips use a bus-master DMA interface for transferring
  * packets to and from the controller chip. Some of the "vortex" cards
  * (3c59x) also supported a bus master mode, however for those chips
  * you could only DMA packets to/from a contiguous memory buffer. For
@@ -1373,7 +1373,7 @@ xl_attach(device_t dev)
 
 	/*
 	 * Now we have to see what sort of media we have.
-	 * This includes probing for an MII interace and a
+	 * This includes probing for an MII interface and a
 	 * possible PHY.
 	 */
 	XL_SEL_WIN(3);
@@ -2558,7 +2558,7 @@ xl_start_body(struct ifnet *ifp, int proc_rx)
 	 * Place the request for the upload interrupt
 	 * in the last descriptor in the chain. This way, if
 	 * we're chaining several packets at once, we'll only
-	 * get an interupt once for the whole chain rather than
+	 * get an interrupt once for the whole chain rather than
 	 * once for each packet.
 	 */
 	cur_tx->xl_ptr->xl_status = htole32(le32toh(cur_tx->xl_ptr->xl_status) |
@@ -2678,7 +2678,7 @@ xl_start_90xB(struct ifnet *ifp, struct ifaltq_subque *ifsq)
 	 * Place the request for the upload interrupt
 	 * in the last descriptor in the chain. This way, if
 	 * we're chaining several packets at once, we'll only
-	 * get an interupt once for the whole chain rather than
+	 * get an interrupt once for the whole chain rather than
 	 * once for each packet.
 	 */
 	cur_tx->xl_ptr->xl_status = htole32(le32toh(cur_tx->xl_ptr->xl_status) |

@@ -100,7 +100,7 @@ SYSINIT(ipshuffle, SI_SUB_PSEUDO, SI_ORDER_ANY, ip_idinit_shuffle, NULL);
 
 /*
  * Return a random IP id.  Use a forward shuffle over half the index
- * space to avoid duplicates occuring too quickly.  Since the initial
+ * space to avoid duplicates occurring too quickly.  Since the initial
  * shuffle may not have had a good random basis we returned the element
  * at the shuffle target instead of the current element.
  */

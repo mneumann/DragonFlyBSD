@@ -82,7 +82,7 @@
  ****************************************************************/
 
 /*********************************************************************
- * I2OUtil.h -- I2O Utility Class Message defintion file
+ * I2OUtil.h -- I2O Utility Class Message definition file
  *
  * This file contains information presented in Chapter 6 of the I2O
  * Specification.

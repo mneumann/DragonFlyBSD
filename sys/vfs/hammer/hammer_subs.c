@@ -639,7 +639,7 @@ hammer_rel_interlock_done(struct hammer_lock *lock, int orig_locked __unused)
  *
  * Return 1 if CHECK is currently set.  Note that CHECK will not
  * be set if the reference count is 0, but can get set if this function
- * is preceeded by, say, hammer_ref(), or through races with other
+ * is preceded by, say, hammer_ref(), or through races with other
  * threads.  The return value allows the caller to use the same logic
  * as hammer_ref_interlock().
  *
@@ -921,7 +921,7 @@ hammer_nohistory(hammer_inode_t ip)
  *	generated to deal with degenerate conditions.
  *
  *	The algorithm is designed to handle create/rename situations such
- *	that a create with an extention to a rename without an extention
+ *	that a create with an extension to a rename without an extension
  *	only shifts the key space rather than randomizes it.
  *
  *	NOTE: The inode allocator cache can only match 10 bits so we do

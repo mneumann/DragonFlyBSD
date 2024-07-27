@@ -116,7 +116,7 @@ dm_target_lookup(const char *dm_target_name)
 }
 
 /*
- * Search for name in TAILQ and return apropriate pointer.
+ * Search for name in TAILQ and return appropriate pointer.
  */
 static dm_target_t *
 dm_target_lookup_name(const char *dm_target_name)

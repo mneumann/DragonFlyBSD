@@ -179,7 +179,7 @@ debugvm_object_add(vm_object_t obj, char *file, int line, int addrem)
 	obj->debug_hold_file[i] = file;
 	obj->debug_hold_line[i] = line;
 #if 0
-	/* Uncomment for debugging obj refs/derefs in reproducable cases */
+	/* Uncomment for debugging obj refs/derefs in reproducible cases */
 	if (strcmp(curthread->td_comm, "sshd") == 0) {
 		kprintf("%d %p refs=%d ar=%d file: %s/%d\n",
 			(curthread->td_proc ? curthread->td_proc->p_pid : -1),
@@ -262,7 +262,7 @@ vm_object_assert_held(vm_object_t obj)
 }
 
 /*
- * Aquire a semi-random base page color for a new object.  Our main concern
+ * Acquire a semi-random base page color for a new object.  Our main concern
  * is that the color be spread out a bit.  Further spreading out occurs in
  * bio_page_alloc().
  */
@@ -1389,7 +1389,7 @@ vm_object_page_remove(vm_object_t object, vm_pindex_t start, vm_pindex_t end,
 		("attempt to remove pages from a physical object"));
 
 	/*
-	 * Indicate that paging is occuring on the object
+	 * Indicate that paging is occurring on the object
 	 */
 	vm_object_pip_add(object, 1);
 

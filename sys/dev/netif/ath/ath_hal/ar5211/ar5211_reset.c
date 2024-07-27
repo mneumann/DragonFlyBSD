@@ -1044,7 +1044,7 @@ ar5211SetRf6and7(struct ath_hal *ah, const struct ieee80211_channel *chan)
 	freqIndex = IEEE80211_IS_CHAN_2GHZ(chan) ? 2 : 1;
 
 	/*
-	 * TODO: This array mode correspondes with the index used
+	 * TODO: This array mode corresponds with the index used
 	 *	 during the read.
 	 * For readability, this should be changed to an enum or #define
 	 */

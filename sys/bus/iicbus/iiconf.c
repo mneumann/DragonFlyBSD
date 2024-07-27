@@ -334,7 +334,7 @@ iicbus_block_read(device_t bus, u_char slave, char *buf, int len, int *read)
 /*
  * iicbus_transfer()
  *
- * Do an aribtrary number of transfers on the iicbus.  We pass these
+ * Do an arbitrary number of transfers on the iicbus.  We pass these
  * raw requests to the bridge driver.  If the bridge driver supports
  * them directly, then it manages all the details.  If not, it can use
  * the helper function iicbus_transfer_gen() which will do the

@@ -1036,7 +1036,7 @@ typedef struct hammer_pseudofs_data *hammer_pseudofs_data_t;
  * Snapshot meta-data { Objid = HAMMER_OBJID_ROOT, Key = tid, rectype = SNAPSHOT }.
  *
  * Snapshot records replace the old <fs>/snapshots/<softlink> methodology.  Snapshot
- * records are mirrored but may be independantly managed once they are laid down on
+ * records are mirrored but may be independently managed once they are laid down on
  * a slave.
  *
  * NOTE: The b-tree key is signed, the tid is not, so callers must still sort the

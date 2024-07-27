@@ -5598,7 +5598,7 @@ struct l2_fhdr {
 /****************************************************************************/
 /* The following definitions refer to pre-defined locations in processor    */
 /* memory space which allows the driver to enable particular functionality  */
-/* within the firmware or read specfic information about the running        */
+/* within the firmware or read specific information about the running        */
 /* firmware.                                                                */
 /****************************************************************************/
 

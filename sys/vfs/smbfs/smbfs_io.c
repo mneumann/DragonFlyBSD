@@ -499,7 +499,7 @@ smbfs_getpages(struct vop_getpages_args *ap)
 			 * Whether or not to leave the page activated is up in
 			 * the air, but we should put the page on a page queue
 			 * somewhere (it already is in the object).  Result:
-			 * It appears that emperical results show that
+			 * It appears that empirical results show that
 			 * deactivating pages is best.
 			 */
 

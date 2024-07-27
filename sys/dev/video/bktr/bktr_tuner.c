@@ -815,7 +815,7 @@ tv_freq( bktr_ptr_t bktr, int frequency, int type )
 		 * where:
 		 *  pc is picture carrier, fRF & fIF are in MHz
 		 *
-		 * fortunatly, frequency is passed in as MHz * 16
+		 * fortunately, frequency is passed in as MHz * 16
 		 * and the TBL_IF frequency is also stored in MHz * 16
 		 */
 		N = frequency + TBL_IF;

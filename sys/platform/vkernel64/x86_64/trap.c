@@ -258,7 +258,7 @@ recheck:
 }
 
 /*
- * Cleanup from userenter and any passive release that might have occured.
+ * Cleanup from userenter and any passive release that might have occurred.
  * We must reclaim the current-process designation before we can return
  * to usermode.  We also handle both LWKT and USER reschedule requests.
  */

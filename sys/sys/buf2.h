@@ -225,7 +225,7 @@ buf_deallocate(struct buf *bp)
 
 /*
  * This callback is made from flushbufqueues() which uses BUF_LOCK().
- * Since it isn't going through a normal buffer aquisition mechanic
+ * Since it isn't going through a normal buffer acquisition mechanic
  * and calling the filesystem back enforce the vnode's KVABIO support.
  */
 static __inline int
@@ -311,7 +311,7 @@ buf_checkread(struct buf *bp)
 
 /*
  * This callback is made from flushbufqueues() which uses BUF_LOCK().
- * Since it isn't going through a normal buffer aquisition mechanic
+ * Since it isn't going through a normal buffer acquisition mechanic
  * and calling the filesystem back enforce the vnode's KVABIO support.
  */
 static __inline int

@@ -597,7 +597,7 @@
 #define E1000_TCPTIMER_LOOP	0x00000800 /* Loop */
 
 #define E1000_ITR_MASK		0x000FFFFF /* ITR value bitfield */
-#define E1000_ITR_MULT		256 /* ITR mulitplier in nsec */
+#define E1000_ITR_MULT		256 /* ITR multiplier in nsec */
 
 /* PBA ECC Register */
 #define E1000_PBA_ECC_COUNTER_MASK	0xFFF00000 /* ECC counter mask */

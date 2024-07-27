@@ -141,7 +141,7 @@ vg_out:
 		error = copyin(ev->name, name, ev->namesize);
 		if (error)
 			goto vn_out;
-		/* Note: namesize is the buffer size, not the string lenght */
+		/* Note: namesize is the buffer size, not the string length */
 
 		error = efi_var_nextname(&ev->namesize, name, &ev->vendor);
 		if (error == 0) {

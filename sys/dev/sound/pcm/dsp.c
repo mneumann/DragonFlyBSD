@@ -2869,7 +2869,7 @@ dsp_oss_syncgroup(struct pcm_channel *wrch, struct pcm_channel *rdch, oss_syncgr
 	}
 
 	/*
-	 * Verify that mode matches character device properites.
+	 * Verify that mode matches character device properties.
 	 *  - Bail if PCM_ENABLE_OUTPUT && wrch == NULL.
 	 *  - Bail if PCM_ENABLE_INPUT && rdch == NULL.
 	 */

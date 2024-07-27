@@ -45,7 +45,7 @@ typedef	__size_t	size_t;
  * to select alternate encoding format
  */
 #define	VIS_OCTAL	0x0001	/* use octal \ddd format */
-#define	VIS_CSTYLE	0x0002	/* use \[nrft0..] where appropiate */
+#define	VIS_CSTYLE	0x0002	/* use \[nrft0..] where appropriate */
 
 /*
  * to alter set of characters encoded (default is to encode all

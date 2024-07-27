@@ -1723,7 +1723,7 @@ ieee80211_swbmiss(void *arg)
 		 * bmiss after coming out of scan because we haven't had
 		 * time to receive a beacon then we should probe the AP
 		 * before posting a real bmiss (unless iv_bmiss_max has
-		 * been artifiically lowered).  A cleaner solution might
+		 * been artificially lowered).  A cleaner solution might
 		 * be to disable the timer on scan start/end but to handle
 		 * case of multiple sta vap's we'd need to disable the
 		 * timers of all affected vap's.

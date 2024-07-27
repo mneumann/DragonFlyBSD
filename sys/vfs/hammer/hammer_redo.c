@@ -121,7 +121,7 @@ hammer_generate_redo(hammer_transaction_t trans, hammer_inode_t ip,
 		/*
 		 * Calculate how big a media structure fits up to the next
 		 * alignment point and how large a data payload we can
-		 * accomodate.
+		 * accommodate.
 		 *
 		 * If n calculates to 0 or negative there is no room for
 		 * anything but a PAD.

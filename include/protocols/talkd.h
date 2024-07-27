@@ -52,7 +52,7 @@
  */
 
 /*
- * XXX: Nothing should explicity reference the structure osockaddr.
+ * XXX: Nothing should explicitly reference the structure osockaddr.
  * It is for binary compatibility only.  The talk protocol doesn't
  * understand this yet.
  */

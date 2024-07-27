@@ -765,7 +765,7 @@ kpmap_init(const void *udata __unused)
 SYSINIT(kpmapinit, SI_BOOT1_POST, SI_ORDER_FIRST, kpmap_init, NULL);
 
 /*
- * Machine independant globaldata initialization
+ * Machine independent globaldata initialization
  *
  * WARNING!  Called from early boot, 'mycpu' may not work yet.
  */

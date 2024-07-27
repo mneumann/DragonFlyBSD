@@ -717,7 +717,7 @@ hammer_ioc_mirror_write_pass(hammer_cursor_t cursor,
  * create_tid exactly matches our end_tid.  We cannot delete this
  * record on the slave yet because we cannot assign delete_tid == create_tid.
  * The deletion should be picked up on the next sequence since in order
- * to have been deleted on the master a transaction must have occured with
+ * to have been deleted on the master a transaction must have occurred with
  * a TID greater then the create_tid of the record.
  *
  * To support incremental re-mirroring, just for robustness, we do not

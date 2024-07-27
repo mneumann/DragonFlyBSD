@@ -1,7 +1,7 @@
 /*
  * SYS/THREAD.H
  *
- *	Implements the architecture independant portion of the LWKT
+ *	Implements the architecture independent portion of the LWKT
  *	subsystem.
  */
 

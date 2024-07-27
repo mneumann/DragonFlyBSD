@@ -791,12 +791,12 @@ hammer_io_flush(hammer_io_t io, int reclaim)
  *				BUFFER DIRTYING				*
  ************************************************************************
  *
- * These routines deal with dependancies created when IO buffers get
+ * These routines deal with dependencies created when IO buffers get
  * modified.  The caller must call hammer_modify_*() on a referenced
  * HAMMER structure prior to modifying its on-disk data.
  *
  * Any intent to modify an IO buffer acquires the related bp and imposes
- * various write ordering dependancies.
+ * various write ordering dependencies.
  */
 
 /*
@@ -1307,7 +1307,7 @@ hammer_io_movedeps(struct buf *bp1, struct buf *bp2)
  *
  * Writing is a different case.  We don't want the kernel to try to write
  * out a buffer that HAMMER may be modifying passively or which has a
- * dependancy.  In addition, kernel-demanded writes can only proceed for
+ * dependency.  In addition, kernel-demanded writes can only proceed for
  * certain types of buffers (i.e. UNDO and DATA types).  Other dirty
  * buffer types can only be explicitly written by the flusher.
  *
@@ -1781,7 +1781,7 @@ hammer_io_direct_write(hammer_mount_t hmp, struct bio *bio,
 	}
 	if (error) {
 		/*
-		 * Major suckage occured.  Also note:  The record was
+		 * Major suckage occurred.  Also note:  The record was
 		 * never added to the tree so we do not have to worry
 		 * about the backend.
 		 */
@@ -1969,7 +1969,7 @@ hammer_io_direct_uncache_callback(hammer_inode_t ip, void *data)
 
 
 /*
- * This function is called when writes may have occured on the volume,
+ * This function is called when writes may have occurred on the volume,
  * indicating that the device may be holding cached writes.
  */
 static __inline void

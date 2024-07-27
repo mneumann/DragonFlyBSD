@@ -245,7 +245,7 @@ vpo_intr(struct vpo_data *vpo, struct ccb_scsiio *csio)
 		goto error;
 	}
 
-	/* if a timeout occured, no sense */
+	/* if a timeout occurred, no sense */
 	if (vpo->vpo_error) {
 		if (vpo->vpo_error != VP0_ESELECT_TIMEOUT)
 			kprintf("vpo%d: VP0 error/timeout (%d)\n",

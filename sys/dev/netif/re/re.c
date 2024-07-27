@@ -8116,7 +8116,7 @@ static int re_encap(struct re_softc *sc,struct mbuf *m_head)
         /* Pad frames to at least 60 bytes. */
         if (m_head->m_pkthdr.len < RE_MIN_FRAMELEN) {	/* Case length < 60 bytes */
                 /*
-                 * Make security concious people happy: zero out the
+                 * Make security conscious people happy: zero out the
                  * bytes in the pad area, since we don't know what
                  * this mbuf cluster buffer's previous user might
                  * have left in it.
@@ -8294,7 +8294,7 @@ static void re_txeof(struct re_softc *sc)  	/* Transmit OK/ERR handler */
  * attempt to document it here. The driver provides a buffer area and
  * places its base address in the RX buffer start address register.
  * The chip then begins copying frames into the RX buffer. Each frame
- * is preceeded by a 32-bit RX status word which specifies the length
+ * is preceded by a 32-bit RX status word which specifies the length
  * of the frame and certain other status bits. Each frame (starting with
  * the status word) is also 32-bit aligned. The frame length is in the
  * first 16 bits of the status word; the lower 15 bits correspond with

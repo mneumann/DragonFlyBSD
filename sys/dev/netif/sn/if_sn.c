@@ -254,7 +254,7 @@ sninit(void *xsc)
 	outw(BASE + TXMIT_CONTROL_REG_W, 0x0000);
 
 	/*
-	 * Set the control register to automatically release succesfully
+	 * Set the control register to automatically release successfully
 	 * transmitted packets (making the best use out of our limited
 	 * memory) and to enable the EPH interrupt on certain TX errors.
 	 */
@@ -769,7 +769,7 @@ sn_intr(void *arg)
 	if (status & IM_RX_OVRN_INT) {
 
 		/*
-		 * Acknowlege Interrupt
+		 * Acknowledge Interrupt
 		 */
 		SMC_SELECT_BANK(2);
 		outb(BASE + INTR_ACK_REG_B, IM_RX_OVRN_INT);
@@ -817,7 +817,7 @@ sn_intr(void *arg)
 	if (status & IM_TX_INT) {
 
 		/*
-		 * Acknowlege Interrupt
+		 * Acknowledge Interrupt
 		 */
 		SMC_SELECT_BANK(2);
 		outb(BASE + INTR_ACK_REG_B, IM_TX_INT);
@@ -885,7 +885,7 @@ sn_intr(void *arg)
 	if (status & IM_TX_EMPTY_INT) {
 
 		/*
-		 * Acknowlege Interrupt
+		 * Acknowledge Interrupt
 		 */
 		SMC_SELECT_BANK(2);
 		outb(BASE + INTR_ACK_REG_B, IM_TX_EMPTY_INT);
@@ -1272,7 +1272,7 @@ sn_probe(device_t dev, int pccard)
 	base_address_register = inw(ioaddr + BASE_ADDR_REG_W);
 
 	/*
-	 * This test is nonsence on PC-card architecture, so if 
+	 * This test is nonsense on PC-card architecture, so if 
 	 * pccard == 1, skip this test. (hosokawa)
 	 */
 	if (!pccard && (ioaddr != (base_address_register >> 3 & 0x3E0))) {

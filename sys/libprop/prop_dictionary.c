@@ -688,7 +688,7 @@ prop_dictionary_create_with_capacity(unsigned int capacity)
  * prop_dictionary_copy --
  *	Copy a dictionary.  The new dictionary has an initial capacity equal
  *	to the number of objects stored int the original dictionary.  The new
- *	dictionary contains refrences to the original dictionary's objects,
+ *	dictionary contains references to the original dictionary's objects,
  *	not copies of those objects (i.e. a shallow copy).
  */
 prop_dictionary_t

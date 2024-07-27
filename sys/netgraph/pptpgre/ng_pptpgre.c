@@ -83,7 +83,7 @@ struct greheader {
 	u_char		hasSum:1;		/* checksum present */
 	u_char		vers:3;			/* version */
 	u_char		flags:4;		/* flags */
-	u_char		hasAck:1;		/* acknowlege number present */
+	u_char		hasAck:1;		/* acknowledge number present */
 #elif BYTE_ORDER == BIG_ENDIAN
 	u_char		hasSum:1;		/* checksum present */
 	u_char		hasRoute:1;		/* routing present */
@@ -91,7 +91,7 @@ struct greheader {
 	u_char		hasSeq:1;		/* sequence number present */
 	u_char		ssr:1;			/* strict source route */
 	u_char		recursion:3;		/* recursion control */
-	u_char		hasAck:1;		/* acknowlege number present */
+	u_char		hasAck:1;		/* acknowledge number present */
 	u_char		flags:4;		/* flags */
 	u_char		vers:3;			/* version */
 #else
@@ -123,8 +123,8 @@ typedef u_int64_t		pptptime_t;
 #define PPTP_MIN_TIMEOUT	(PPTP_TIME_SCALE / 83)	/* 12 milliseconds */
 #define PPTP_MAX_TIMEOUT	(10 * PPTP_TIME_SCALE)	/* 10 seconds */
 
-/* When we recieve a packet, we wait to see if there's an outgoing packet
-   we can piggy-back the ACK off of. These parameters determine the mimimum
+/* When we receive a packet, we wait to see if there's an outgoing packet
+   we can piggy-back the ACK off of. These parameters determine the minimum
    and maxmimum length of time we're willing to wait in order to do that.
    These have no effect unless "enableDelayedAck" is turned on. */
 #define PPTP_MIN_ACK_DELAY	(PPTP_TIME_SCALE / 500)	/* 2 milliseconds */

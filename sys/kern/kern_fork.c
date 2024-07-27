@@ -797,7 +797,7 @@ lwp_fork2(struct lwp *lp1, struct proc *destproc, struct lwp *lp2, int flags)
 	}
 
 	/*
-	 * Set cpbase to the last timeout that occured (not the upcoming
+	 * Set cpbase to the last timeout that occurred (not the upcoming
 	 * timeout).
 	 *
 	 * A critical section is required since a timer IPI can update

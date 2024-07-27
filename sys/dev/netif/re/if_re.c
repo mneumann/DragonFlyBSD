@@ -1652,7 +1652,7 @@ re_encap(struct re_softc *sc, struct mbuf **m_head, int *idx0)
 			cmdstat |= RE_TDESC_CMD_SOF;
 		} else if (i != nsegs - 1) {
 			/*
-			 * Last descriptor's ownership will be transfered
+			 * Last descriptor's ownership will be transferred
 			 * later.
 			 */
 			cmdstat |= RE_TDESC_CMD_OWN;

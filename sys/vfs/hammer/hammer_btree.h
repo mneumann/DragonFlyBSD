@@ -59,9 +59,9 @@
  *			      (there is also a previous and next-leaf pointer)
  *
  * The recursion radix of an internal node is reduced by 1 relative to
- * a normal B-Tree in order to accomodate the right-hand boundary.
+ * a normal B-Tree in order to accommodate the right-hand boundary.
  * The left-hand boundary (B in the left) is integrated into the first
- * element so it doesn't require 2 elements to accomodate boundaries.
+ * element so it doesn't require 2 elements to accommodate boundaries.
  *
  * The big benefit to using a B-Tree with built-in bounds information is
  * that it makes it possible to cache pointers into the middle of the tree
@@ -237,7 +237,7 @@ typedef struct hammer_node_ondisk {
 	 *
 	 * Internal nodes have one less logical element
 	 * (meaning: the same number of physical elements) in order to
-	 * accomodate the right-hand boundary.  The left-hand boundary
+	 * accommodate the right-hand boundary.  The left-hand boundary
 	 * is integrated into the first element.  Leaf nodes have no
 	 * boundary elements.
 	 */

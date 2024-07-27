@@ -407,7 +407,7 @@ interpret:
 
 	/*
 	 * For security and other reasons, signal handlers cannot
-	 * be shared after an exec. The new proces gets a copy of the old
+	 * be shared after an exec. The new process gets a copy of the old
 	 * handlers. In execsigs(), the new process will have its signals
 	 * reset.
 	 */
@@ -1043,7 +1043,7 @@ exec_copyin_args(struct image_args *args, char *fname,
 	 * Extract argument strings.  argv may not be NULL.  The argv
 	 * array is terminated by a NULL entry.  We special-case the
 	 * situation where argv[0] is NULL by passing { filename, NULL }
-	 * to the new program to guarentee that the interpreter knows what
+	 * to the new program to guarantee that the interpreter knows what
 	 * file to open in case we exec an interpreted file.   Note that
 	 * a NULL argv[0] terminates the argv[] array.
 	 *

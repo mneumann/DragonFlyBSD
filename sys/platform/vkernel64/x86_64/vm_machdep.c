@@ -128,7 +128,7 @@ cpu_fork(struct lwp *lp1, struct lwp *lp2, int flags)
 	 * pcb_rsp must allocate an additional call-return pointer below
 	 * the trap frame which will be restored by cpu_heavy_restore from
 	 * PCB_RIP, and the thread's td_sp pointer must allocate an
-	 * additonal two quadwords below the pcb_rsp call-return pointer to
+	 * additional two quadwords below the pcb_rsp call-return pointer to
 	 * hold the LWKT restore function pointer and rflags.
 	 *
 	 * The LWKT restore function pointer must be set to cpu_heavy_restore,
@@ -282,7 +282,7 @@ cpu_lwp_exit(void)
 /*
  * Terminate the current thread.  The caller must have already acquired
  * the thread's rwlock and placed it on a reap list or otherwise notified
- * a reaper of its existance.  We set a special assembly switch function which
+ * a reaper of its existence.  We set a special assembly switch function which
  * releases td_rwlock after it has cleaned up the MMU state and switched
  * out the stack.
  *

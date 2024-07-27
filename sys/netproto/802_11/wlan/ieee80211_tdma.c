@@ -804,7 +804,7 @@ tdma_ioctl_set80211(struct ieee80211vap *vap, struct ieee80211req *ireq)
 		 * XXX
 		 * 150 insures at least 1/8 TU
 		 * 0xfffff is the max duration for bursting
-		 * (implict by way of 16-bit data type for i_val)
+		 * (implicit by way of 16-bit data type for i_val)
 		 */
 		if (!TDMA_SLOTLEN_VALID(ireq->i_val))
 			return EINVAL;

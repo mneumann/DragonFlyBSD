@@ -360,7 +360,7 @@ passopen(struct dev_open_args *ap)
 	if ((softc->flags & PASS_FLAG_OPEN) == 0) {
 		softc->flags |= PASS_FLAG_OPEN;
 	} else {
-		/* Device closes aren't symmertical, so fix up the refcount */
+		/* Device closes aren't symmetrical, so fix up the refcount */
 		cam_periph_release(periph);
 	}
 
@@ -559,7 +559,7 @@ passsendccb(struct cam_periph *periph, union ccb *ccb, union ccb *inccb)
 	 * match CCBs.  For the SCSI CCBs, we only pass the CCB in if
 	 * there's actually data to map.  cam_periph_mapmem() will do the
 	 * right thing, even if there isn't data to map, but since CCBs
-	 * without data are a reasonably common occurance (e.g. test unit
+	 * without data are a reasonably common occurrence (e.g. test unit
 	 * ready), it will save a few cycles if we check for it here.
 	 */
 	if (((ccb->ccb_h.flags & CAM_DATA_PHYS) == 0)

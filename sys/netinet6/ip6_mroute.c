@@ -1484,7 +1484,7 @@ phyint_send(struct ip6_hdr *ip6, struct mif6 *mifp, struct mbuf *m)
 	mb_copy->m_flags |= M_MCAST;
 
 	/*
-	 * If we sourced the packet, call ip6_output since we may devide
+	 * If we sourced the packet, call ip6_output since we may divide
 	 * the packet into fragments when the packet is too big for the
 	 * outgoing interface.
 	 * Otherwise, we can simply send the packet to the interface

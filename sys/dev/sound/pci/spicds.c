@@ -44,7 +44,7 @@ struct spicds_info {
 	void *devinfo;
 	int num; /* number of this device */
 	unsigned int type;   /* codec type */
-	unsigned int cif;    /* Controll data Interface Format (0/1) */
+	unsigned int cif;    /* Control data Interface Format (0/1) */
 	unsigned int format; /* data format and master clock frequency */
 	unsigned int dvc;    /* De-emphasis and Volume Control */
 	unsigned int left, right;

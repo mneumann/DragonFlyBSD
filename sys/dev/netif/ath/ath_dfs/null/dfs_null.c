@@ -151,7 +151,7 @@ ath_dfs_radar_enable(struct ath_softc *sc, struct ieee80211_channel *chan)
 }
 
 /*
- * Explicity disable radar reporting.
+ * Explicitly disable radar reporting.
  *
  * Return 0 if it was disabled, < 0 on error.
  */

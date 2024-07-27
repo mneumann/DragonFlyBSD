@@ -539,7 +539,7 @@ checkdirs(struct nchandle *old_nch, struct nchandle *new_nch)
 
 /*
  * NOTE: callback is not MP safe because the scanned process's filedesc
- * structure can be ripped out from under us, amoung other things.
+ * structure can be ripped out from under us, among other things.
  */
 static int
 checkdirs_callback(struct proc *p, void *data)
@@ -779,7 +779,7 @@ unmount_allproc_cb(struct proc *p, void *arg)
  *
  * When halting we shortcut certain mount types such as devfs by not actually
  * issuing the VFS_SYNC() or VFS_UNMOUNT().  They are still disconnected
- * from the mountlist so higher-level filesytems can unmount cleanly.
+ * from the mountlist so higher-level filesystem can unmount cleanly.
  *
  * The mount types that allow QUICKHALT are: devfs, tmpfs, procfs.
  */
@@ -3209,7 +3209,7 @@ sys_lpathconf(struct sysmsg *sysmsg, const struct lpathconf_args *uap)
 
 /*
  * XXX: daver
- * kern_readlink isn't properly split yet.  There is a copyin burried
+ * kern_readlink isn't properly split yet.  There is a copyin buried
  * in VOP_READLINK().
  */
 int
@@ -4331,7 +4331,7 @@ kern_rename(struct nlookupdata *fromnd, struct nlookupdata *tond)
 	}
 
 	/*
-	 * If either fromnd or tond are marked destroyed a ripout occured
+	 * If either fromnd or tond are marked destroyed a ripout occurred
 	 * out from under us and we must retry.
 	 */
 	if ((fromnd->nl_nch.ncp->nc_flag & (NCF_DESTROYED | NCF_UNRESOLVED)) ||
@@ -4647,7 +4647,7 @@ kern_getdirentries(int fd, char *buf, u_int count, long *basep, int *res,
 		goto done;
 
 	/*
-	 * WARNING!  *basep may not be wide enough to accomodate the
+	 * WARNING!  *basep may not be wide enough to accommodate the
 	 * seek offset.   XXX should we hack this to return the upper 32 bits
 	 * for offsets greater then 4G?
 	 */

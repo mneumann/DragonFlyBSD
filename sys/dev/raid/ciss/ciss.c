@@ -441,7 +441,7 @@ ciss_attach(device_t dev)
     ciss_initq_notify(sc);
 
     /*
-     * Initalize device sysctls.
+     * Initialize device sysctls.
      */
     ciss_init_sysctl(sc);
 
@@ -597,7 +597,7 @@ ciss_init_pci(struct ciss_softc *sc)
 	/*
 	 * XXX Big hammer, masks/unmasks all possible interrupts.  This should
 	 * work on all hardware variants.  Need to add code to handle the
-	 * "controller crashed" interupt bit that this unmasks.
+	 * "controller crashed" interrupt bit that this unmasks.
 	 */
 	sqmask = ~0;
     }
@@ -833,7 +833,7 @@ setup:
 /************************************************************************
  * Setup MSI/MSIX operation (Performant only)
  * Four interrupts are available, but we only use 1 right now.  If MSI-X
- * isn't avaialble, try using MSI instead.
+ * isn't available, try using MSI instead.
  */
 static int
 ciss_setup_msix(struct ciss_softc *sc)

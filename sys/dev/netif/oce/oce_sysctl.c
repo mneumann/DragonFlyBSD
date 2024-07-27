@@ -963,7 +963,7 @@ oce_refresh_queue_stats(POCE_SOFTC sc)
 
 	adapter_stats = &sc->oce_stats_info;
 
-	/* Caluculate total TX and TXstats from all queues */
+	/* Calculate total TX and TXstats from all queues */
 
 	bzero(&adapter_stats->rx, sizeof(struct oce_rx_stats));
 	for (i = 0; i < sc->nrqs; i++) {

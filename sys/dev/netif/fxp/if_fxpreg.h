@@ -234,7 +234,7 @@ struct fxp_cb_ucode {
 /*
  * Number of DMA segments in a TxCB. Note that this is carefully
  * chosen to make the total struct size an even power of two. It's
- * critical that no TxCB be split across a page boundry since
+ * critical that no TxCB be split across a page boundary since
  * no attempt is made to allocate physically contiguous memory.
  */
 #define FXP_TXCB_FIXED  16              /* cb_status .. tbd_number */

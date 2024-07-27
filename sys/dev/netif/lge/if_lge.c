@@ -1023,7 +1023,7 @@ lge_intr(void *arg)
 	struct ifnet *ifp = &sc->arpcom.ac_if;
 	uint32_t status;
 
-	/* Supress unwanted interrupts */
+	/* Suppress unwanted interrupts */
 	if ((ifp->if_flags & IFF_UP) == 0) {
 		lge_stop(sc);
 		return;

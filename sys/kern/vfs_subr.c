@@ -644,12 +644,12 @@ vtruncbuf_bp_metasync(struct buf *bp, void *data)
 
 /*
  * vfsync - implements a multipass fsync on a file which understands
- * dependancies and meta-data.  The passed vnode must be locked.  The
+ * dependencies and meta-data.  The passed vnode must be locked.  The
  * waitfor argument may be MNT_WAIT or MNT_NOWAIT, or MNT_LAZY.
  *
  * When fsyncing data asynchronously just do one consolidated pass starting
  * with the most negative block number.  This may not get all the data due
- * to dependancies.
+ * to dependencies.
  *
  * When fsyncing data synchronously do a data pass, then a metadata pass,
  * then do additional data+metadata passes to try to get all the data out.
@@ -730,7 +730,7 @@ vfsync(struct vnode *vp, int waitfor, int passes,
 		/*
 		 * Synchronous.  Do a data-only pass, then a meta-data+data
 		 * pass, then additional integrated passes to try to get
-		 * all the dependancies flushed.
+		 * all the dependencies flushed.
 		 */
 		info.cmpfunc = vfsync_data_only_cmp;
 		info.fastpass = 1;
@@ -891,7 +891,7 @@ vfsync_bp(struct buf *bp, void *data)
 
 	/*
 	 * If syncdeps is not set we do not try to write buffers which have
-	 * dependancies.
+	 * dependencies.
 	 */
 	if (!info->synchronous && info->syncdeps == 0 && info->checkdef(bp)) {
 		BUF_UNLOCK(bp);

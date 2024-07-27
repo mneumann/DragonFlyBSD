@@ -775,7 +775,7 @@
 #define	TIMER_CNT_SHIFT		0
 #define	TIMER_UNIT		1024	/* 1024us */
 
-/* Aggresive power mode control. */
+/* Aggressive power mode control. */
 #define	JME_APMC		0x087C
 #define	APMC_PCIE_SDOWN_STAT	0x80000000
 #define	APMC_PCIE_SDOWN_ENB	0x40000000

@@ -846,7 +846,7 @@ lockmgr_release(struct lock *lkp, u_int flags)
 				 * an exclusive request is present.  We
 				 * automatically grant an exclusive state to
 				 * the owner of the exclusive request,
-				 * transfering our count.
+				 * transferring our count.
 				 *
 				 * This case virtually never occurs because
 				 * EXREQ is not set while exclusive holders

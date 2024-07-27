@@ -965,7 +965,7 @@ hammer2_sync_replace(hammer2_thread_t *thr,
 		case HAMMER2_BREF_TYPE_INODE:
 			/*
 			 * Special case PFSROOTs, only limited changes can
-			 * be made since the meta-data contains miscellanious
+			 * be made since the meta-data contains miscellaneous
 			 * distinguishing fields.
 			 */
 			if (isroot) {

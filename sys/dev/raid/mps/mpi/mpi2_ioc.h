@@ -78,7 +78,7 @@
  *                      Removed define MPI2_IOCFACTS_PROTOCOL_SMP_TARGET.
  *                      Added MaxVolumes and MaxPersistentEntries fields to
  *                      IOCFacts reply.
- *                      Added ProtocalFlags and IOCCapabilities fields to
+ *                      Added ProtocolFlags and IOCCapabilities fields to
  *                      MPI2_FW_IMAGE_HEADER.
  *                      Removed MPI2_PORTENABLE_FLAGS_ENABLE_SINGLE_PORT.
  *  03-03-08  02.00.07  Fixed MPI2_FW_IMAGE_HEADER by changing Reserved26 to

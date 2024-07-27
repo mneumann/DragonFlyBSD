@@ -376,7 +376,7 @@ prune_check_nlinks(hammer_cursor_t cursor, hammer_btree_leaf_elm_t elm)
  *
  * The use of a reverse iteration allows us to safely align the records and
  * related elements without creating temporary overlaps.  XXX we should
- * add ordering dependancies for record buffers to guarantee consistency
+ * add ordering dependencies for record buffers to guarantee consistency
  * during recovery.
  */
 static int

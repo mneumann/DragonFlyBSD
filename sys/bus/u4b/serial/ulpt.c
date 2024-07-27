@@ -107,7 +107,7 @@ struct ulpt_softc {
 					 * FWRITE */
 	uint8_t	sc_iface_no;
 	uint8_t	sc_last_status;
-	uint8_t	sc_zlps;		/* number of consequtive zero length
+	uint8_t	sc_zlps;		/* number of consecutive zero length
 					 * packets received */
 };
 
@@ -412,7 +412,7 @@ ulpt_open(struct usb_fifo *fifo, int fflags)
 
 	if (sc->sc_fflags == 0) {
 
-		/* reset USB paralell port */
+		/* reset USB parallel port */
 
 		ulpt_reset(sc);
 	}

@@ -318,7 +318,7 @@ hptmv_init_channel(IAL_ADAPTER_T *pAdapter, MV_U8 channelNum)
  *
  *	Description:	this functions parses the identify command results, checks
  *					that the connected deives can be accesed by RR18xx EDMA,
- *					and updates the channel stucture accordingly.
+ *					and updates the channel structure accordingly.
  *
  *	Parameters:     pMvSataChannel, pointer to the channel data structure.
  *

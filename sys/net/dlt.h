@@ -565,7 +565,7 @@
  * input packets such as port scans, packets from old lost connections,
  * etc. to force the connection to stay up).
  *
- * The first byte of the PPP header (0xff03) is modified to accomodate
+ * The first byte of the PPP header (0xff03) is modified to accommodate
  * the direction - 0x00 = IN, 0x01 = OUT.
  */
 #define DLT_PPP_PPPD		166
@@ -1390,7 +1390,7 @@
 
 /*
  * DisplayPort AUX channel monitoring data as specified by VESA
- * DisplayPort(DP) Standard preceeded by a pseudo-header.
+ * DisplayPort(DP) Standard preceded by a pseudo-header.
  *    per dirk.eibach at gdsys.cc
  */
 #define DLT_DISPLAYPORT_AUX	275

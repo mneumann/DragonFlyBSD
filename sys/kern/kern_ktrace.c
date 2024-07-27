@@ -641,7 +641,7 @@ ktrwrite(struct lwp *lp, struct ktr_header *kth, struct uio *uio)
 	vn_unlock(tracenode->kn_vp);
 	if (error) {
 		/*
-		 * If an error occured, give up tracing on all processes
+		 * If an error occurred, give up tracing on all processes
 		 * using this tracenode.  This is not MP safe but is
 		 * blocking-safe.
 		 */

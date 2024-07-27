@@ -298,7 +298,7 @@ exca_mem_unmap(struct exca_softc *sc, int window)
 /*
  * Find the map that we're using to hold the resoruce.  This works well
  * so long as the client drivers don't do silly things like map the same
- * area mutliple times, or map both common and attribute memory at the
+ * area multiple times, or map both common and attribute memory at the
  * same time.  This latter restriction is a bug.  We likely should just
  * store a pointer to the res in the mem[x] data structure.
  */

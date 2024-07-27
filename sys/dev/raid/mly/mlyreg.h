@@ -363,8 +363,8 @@ struct mly_command_control {
 #define MDACMD_MEMCOPY		0x1	/* memory to memory copy */
 #define MDACMD_SCSIPT		0x2	/* SCSI passthrough (small command) */
 #define MDACMD_SCSILCPT		0x3	/* SCSI passthrough (large command) */
-#define MDACMD_SCSI		0x4	/* SCSI command for logical/phyiscal device (small command) */
-#define MDACMD_SCSILC		0x5	/* SCSI command for logical/phyiscal device (large command) */
+#define MDACMD_SCSI		0x4	/* SCSI command for logical/physical device (small command) */
+#define MDACMD_SCSILC		0x5	/* SCSI command for logical/physical device (large command) */
 #define MDACMD_IOCTL		0x20	/* Management command */
 #define MDACMD_IOCTLCHECK	0x23	/* Validate management command (not implemented) */
 
@@ -1208,7 +1208,7 @@ union mly_command_packet {
  * PG6: 5.4.4 Doorbell 1
  *
  * Note that the documentation claims that these bits are set when the
- * status queue(s) are empty, wheras the Linux driver and experience 
+ * status queue(s) are empty, whereas the Linux driver and experience 
  * suggest they are set when there is status available.
  */
 #define MLY_HM_STSREADY			(1<<0)

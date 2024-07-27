@@ -149,7 +149,7 @@ struct lock {
  * lk_count bit fields.
  *
  * Positive count is exclusive, negative count is shared.  The count field
- * must be large enough to accomodate all possible threads.
+ * must be large enough to accommodate all possible threads.
  */
 #define LKC_RESERVED8	0x0000000080000000LU	/* (DNU, insn optimization) */
 #define LKC_EXREQ	0x0000000040000000LU	/* waiting for excl lock */

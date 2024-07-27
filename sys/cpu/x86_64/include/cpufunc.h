@@ -213,7 +213,7 @@ cpu_sfence(void)
 /*
  * cpu_ccfence() prevents the compiler from reordering instructions, in
  * particular stores, relative to the current cpu.  Use cpu_sfence() if
- * you need to guarentee ordering by both the compiler and by the cpu.
+ * you need to guarantee ordering by both the compiler and by the cpu.
  *
  * This also prevents the compiler from caching memory loads into local
  * variables across the routine.

@@ -64,7 +64,7 @@
 #define	UGENSA_BUF_SIZE		2048	/* bytes */
 #define	UGENSA_CONFIG_INDEX	0
 #define	UGENSA_IFACE_INDEX	0
-#define	UGENSA_IFACE_MAX	8	/* exclusivly */
+#define	UGENSA_IFACE_MAX	8	/* exclusively */
 
 enum {
 	UGENSA_BULK_DT_WR,

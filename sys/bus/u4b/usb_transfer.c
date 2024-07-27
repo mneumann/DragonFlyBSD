@@ -2448,7 +2448,7 @@ usbd_callback_wrapper(struct usb_xfer_queue *pq)
 	    (xfer->usb_state == USB_ST_ERROR)) {
 		/* clear flag in case of drain */
 		xfer->flags_int.doing_callback = 0;
-		/* try to loop, but not recursivly */
+		/* try to loop, but not recursively */
 		usb_command_wrapper(&info->done_q, xfer);
 		return;
 	}
@@ -2478,7 +2478,7 @@ done:
  *
  * This function is called when the DMA delay has been exectuded, and
  * will make sure that the callback is called to complete the USB
- * transfer. This code path is ususally only used when there is an USB
+ * transfer. This code path is usually only used when there is an USB
  * error like USB_ERR_CANCELLED.
  *------------------------------------------------------------------------*/
 void
@@ -3030,7 +3030,7 @@ done:
 /*------------------------------------------------------------------------*
  *	usb_command_wrapper
  *
- * This function is used to execute commands non-recursivly on an USB
+ * This function is used to execute commands non-recursively on an USB
  * transfer.
  *------------------------------------------------------------------------*/
 void

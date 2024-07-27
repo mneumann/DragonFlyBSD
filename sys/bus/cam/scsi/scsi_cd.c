@@ -445,7 +445,7 @@ cdcleanup(struct cam_periph *periph)
 	 && (softc->flags & CD_FLAG_ACTIVE)) {
 
 		/*
-		 * The purpose of the short timeout is soley to determine
+		 * The purpose of the short timeout is solely to determine
 		 * whether the current device has finished or not.  Well,
 		 * since we're removing the active device, we know that it
 		 * is finished.  So, get rid of the short timeout.

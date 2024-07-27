@@ -235,7 +235,7 @@ delete_unr(struct unrhdr *uh, void *ptr)
 /*
  * Allocate a new unrheader set.
  *
- * Highest and lowest valid values given as paramters.
+ * Highest and lowest valid values given as parameters.
  */
 
 struct unrhdr *

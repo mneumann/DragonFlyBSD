@@ -657,7 +657,7 @@ netmsg_so_notify(netmsg_t msg)
 	ssb = (msg->notify.nm_etype & NM_REVENT) ? &so->so_rcv : &so->so_snd;
 
 	/*
-	 * Reply immediately if the event has occured, otherwise queue the
+	 * Reply immediately if the event has occurred, otherwise queue the
 	 * request.
 	 *
 	 * NOTE: Socket can change if this is an accept predicate so cache

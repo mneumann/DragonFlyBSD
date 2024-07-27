@@ -90,7 +90,7 @@ struct malloc_pipe {
     int		pending;	/* there is a request pending */
     int		free_count;	/* entries in array[] */
     int		total_count;	/* total outstanding allocations incl free */
-    int		ary_count;	/* guarenteed allocation count */
+    int		ary_count;	/* guaranteed allocation count */
     int		max_count;	/* maximum count (M_NOWAIT used beyond nom) */
     struct lwkt_token token;
     void	**array;	/* array[ary_count] */

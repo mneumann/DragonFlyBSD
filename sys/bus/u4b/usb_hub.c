@@ -540,7 +540,7 @@ uhub_explore_sub(struct uhub_softc *sc, struct usb_port *up)
 	/* get driver added refcount from USB bus */
 	refcount = bus->driver_added_refcount;
 
-	/* get device assosiated with the given port */
+	/* get device associated with the given port */
 	child = usb_bus_port_get_device(bus, up);
 	if (child == NULL) {
 		/* nothing to do */
@@ -1760,7 +1760,7 @@ done:
  * The USB Transaction Translator:
  * ===============================
  *
- * When doing LOW- and FULL-speed USB transfers accross a HIGH-speed
+ * When doing LOW- and FULL-speed USB transfers across a HIGH-speed
  * USB HUB, bandwidth must be allocated for ISOCHRONOUS and INTERRUPT
  * USB transfers. To utilize bandwidth dynamically the "scatter and
  * gather" principle must be applied. This means that bandwidth must
@@ -1832,7 +1832,7 @@ usb_intr_find_best_slot(usb_size_t *ptr, uint8_t start,
 /*------------------------------------------------------------------------*
  *	usb_hs_bandwidth_adjust
  *
- * This function will update the bandwith usage for the microframe
+ * This function will update the bandwidth usage for the microframe
  * having index "slot" by "len" bytes. "len" can be negative.  If the
  * "slot" argument is greater or equal to "USB_HS_MICRO_FRAMES_MAX"
  * the "slot" argument will be replaced by the slot having least used

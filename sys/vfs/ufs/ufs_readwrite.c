@@ -128,7 +128,7 @@ ffs_read(struct vop_read_args *ap)
 		 * then we want to ensure that we do not uiomove bad
 		 * or uninitialized data.
 		 *
-		 * XXX b_resid is only valid when an actual I/O has occured
+		 * XXX b_resid is only valid when an actual I/O has occurred
 		 * and may be incorrect if the buffer is B_CACHE or if the
 		 * last op on the buffer was a failed write.  This KASSERT
 		 * is a precursor to removing it from the UFS code.

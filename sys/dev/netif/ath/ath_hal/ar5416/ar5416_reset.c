@@ -34,7 +34,7 @@
 #define IS_EEP_MINOR_V2(_ah)	(EEP_MINOR(_ah) >= AR5416_EEP_MINOR_VER_2)
 #define IS_EEP_MINOR_V3(_ah)	(EEP_MINOR(_ah) >= AR5416_EEP_MINOR_VER_3)
 
-/* Additional Time delay to wait after activiting the Base band */
+/* Additional Time delay to wait after activating the Base band */
 #define BASE_ACTIVATE_DELAY	100	/* 100 usec */
 #define PLL_SETTLE_DELAY	300	/* 300 usec */
 #define RTC_PLL_SETTLE_DELAY    1000    /* 1 ms     */
@@ -753,7 +753,7 @@ ar5416SetRfMode(struct ath_hal *ah, const struct ieee80211_channel *chan)
 	if (chan == AH_NULL)
 		return;
 
-	/* treat channel B as channel G , no  B mode suport in owl */
+	/* treat channel B as channel G , no  B mode support in owl */
 	rfMode = IEEE80211_IS_CHAN_CCK(chan) ?
 	    AR_PHY_MODE_DYNAMIC : AR_PHY_MODE_OFDM;
 

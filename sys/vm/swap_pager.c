@@ -856,7 +856,7 @@ swap_pager_copy(vm_object_t srcobject, vm_object_t dstobject,
 	/*
 	 * Free left over swap blocks in source.
 	 *
-	 * We have to revert the type to OBJT_DEFAULT so we do not accidently
+	 * We have to revert the type to OBJT_DEFAULT so we do not accidentally
 	 * double-remove the object from the swap queues.
 	 */
 	if (destroysource) {
@@ -1098,7 +1098,7 @@ swap_pager_strategy(vm_object_t object, struct bio *bio)
 		 *
 		 *	- no swap block at this index
 		 *	- swap block is not contiguous
-		 *	- we cross a physical disk boundry in the
+		 *	- we cross a physical disk boundary in the
 		 *	  stripe.
 		 */
 		if (biox &&
@@ -1708,7 +1708,7 @@ swap_pager_putpages(vm_object_t object, vm_page_t *m, int count,
 
 		/*
 		 * The I/O we are constructing cannot cross a physical
-		 * disk boundry in the swap stripe.
+		 * disk boundary in the swap stripe.
 		 */
 		if ((blk ^ (blk + n)) & ~SWB_DMMASK) {
 			j = ((blk + SWB_DMMAX) & ~SWB_DMMASK) - blk;
@@ -1811,7 +1811,7 @@ swap_pager_newswap(void)
 	 * NOTE: vm_swap_max cannot exceed 1 billion blocks, which is the
 	 *	 limitation imposed by the blist code.  Remember that this
 	 *	 will be divided by NSWAP_MAX (4), so each swap device is
-	 *	 limited to around a terrabyte.
+	 *	 limited to around a terabyte.
 	 */
 	if (vm_swap_max) {
 		nswap_lowat = (int64_t)vm_swap_max * 4 / 100;	/* 4% left */

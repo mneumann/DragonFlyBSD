@@ -140,7 +140,7 @@ typedef struct scsi_req {
      int	len;
      int	lun[2];
      int	itt;
-     int	edtlen;		// expectect data transfere length
+     int	edtlen;		// expected data transfer length
      int	cmdSN;
      int	extStatSN;
      int	cdb[4];

@@ -185,7 +185,7 @@ SYSCTL_INT(_net_local, OID_AUTO, inflight, CTLFLAG_RD, &unp_rights, 0,
 /*
  * SMP Considerations:
  *
- *	Since unp_token will be automaticly released upon execution of
+ *	Since unp_token will be automatically released upon execution of
  *	blocking code, we need to reference unp_conn before any possible
  *	blocking code to prevent it from being ripped behind our back.
  *
@@ -567,7 +567,7 @@ uipc_rcvd(netmsg_t msg)
 		unp2 = unp->unp_conn;	/* protected by pool token */
 
 		/*
-		 * Because we are transfering mbufs directly to the
+		 * Because we are transferring mbufs directly to the
 		 * peer socket we have to use SSB_STOP on the sender
 		 * to prevent it from building up infinite mbufs.
 		 *
@@ -777,7 +777,7 @@ uipc_send(netmsg_t msg)
 		}
 
 		/*
-		 * Because we are transfering mbufs directly to the
+		 * Because we are transferring mbufs directly to the
 		 * peer socket we have to use SSB_STOP on the sender
 		 * to prevent it from building up infinite mbufs.
 		 */
@@ -1594,7 +1594,7 @@ unp_externalize(struct mbuf *rights, int flags)
 			int j;
 
 			/*
-			 * Previous fdavail() can't garantee
+			 * Previous fdavail() can't guarantee
 			 * fdalloc() success due to SMP race.
 			 * Just clean up and return the same
 			 * error value as if fdavail() failed.
@@ -1876,7 +1876,7 @@ unp_gc(void *arg __unused, int pending __unused)
 	 * that are not otherwise accessible and then free the rights
 	 * that are stored in messages on them.
 	 *
-	 * The bug in the orginal code is a little tricky, so I'll describe
+	 * The bug in the original code is a little tricky, so I'll describe
 	 * what's wrong with it here.
 	 *
 	 * It is incorrect to simply unp_discard each entry for f_msgcount
@@ -2196,7 +2196,7 @@ unp_gc(void *arg __unused, int pending __unused)
 	 * that are not otherwise accessible and then free the rights
 	 * that are stored in messages on them.
 	 *
-	 * The bug in the orginal code is a little tricky, so I'll describe
+	 * The bug in the original code is a little tricky, so I'll describe
 	 * what's wrong with it here.
 	 *
 	 * It is incorrect to simply unp_discard each entry for f_msgcount

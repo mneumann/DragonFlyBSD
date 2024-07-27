@@ -471,7 +471,7 @@ ng_fec_delport(struct ng_fec_private *priv, char *iface)
 }
 
 /*
- * Pass an ioctl command down to all the underyling interfaces in a
+ * Pass an ioctl command down to all the underlying interfaces in a
  * bundle. Used for setting multicast filters and flags.
  */
 static int 

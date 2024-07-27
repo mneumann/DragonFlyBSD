@@ -541,7 +541,7 @@ struct iwi_wme_params {
 	uint16_t	burst[WME_NUM_AC];
 } __packed;
 
-/* structure for command IWI_CMD_SET_SENSITIVTY */
+/* structure for command IWI_CMD_SET_SENSITIVITY */
 struct iwi_sensitivity {
 	uint16_t rssi;			/* beacon rssi in dBm */
 #define	IWI_RSSI_TO_DBM		112

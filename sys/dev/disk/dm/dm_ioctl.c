@@ -525,7 +525,7 @@ dm_dev_resume_ioctl(prop_dictionary_t dm_dict)
 
 /*
  * Table management routines
- * lvm2tools doens't send name/uuid to kernel with table
+ * lvm2tools does't send name/uuid to kernel with table
  * for lookup I have to use minor number.
  */
 
@@ -663,7 +663,7 @@ dm_table_deps(dm_table_entry_t *table_en, prop_array_t array)
 
 /*
  * Load new table/tables to device.
- * Call apropriate target init routine open all physical pdev's and
+ * Call appropriate target init routine open all physical pdev's and
  * link them to device. For other targets mirror, strip, snapshot etc.
  *
  * Load table to inactive slot table are switched in dm_device_resume_ioctl.

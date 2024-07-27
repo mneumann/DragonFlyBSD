@@ -879,7 +879,7 @@ leavepgrp(struct proc *p)
 /*
  * Adjust the ref count on a session structure.  When the ref count falls to
  * zero the tty is disassociated from the session and the session structure
- * is freed.  Note that tty assocation is not itself ref-counted.
+ * is freed.  Note that tty association is not itself ref-counted.
  *
  * No requirements.
  */
@@ -1053,7 +1053,7 @@ proc_add_allproc(struct proc *p)
 
 /*
  * Calculate a new process pid.  This function is integrated into
- * proc_add_allproc() to guarentee that the new pid is not reused before
+ * proc_add_allproc() to guarantee that the new pid is not reused before
  * the new process can be added to the allproc list.
  *
  * p_pid is assigned and the process is added to the allproc hash table
@@ -1195,7 +1195,7 @@ proc_move_allproc_zombie(struct proc *p)
 /*
  * This routine is called from kern_wait() and will remove the process
  * from the zombie list and the sibling list.  This routine will block
- * if someone has a lock on the proces (p_lock).
+ * if someone has a lock on the process (p_lock).
  *
  * Caller must hold p->p_token.  We are required to wait until p_lock
  * becomes one before we can manipulate the list, allowing allproc
@@ -1451,7 +1451,7 @@ allproc_scan(int (*callback)(struct proc *, void *), void *data, int segmented)
  * Scan all lwps of processes on the allproc list.  The lwp is automatically
  * held for the callback.  A return value of -1 terminates the loop.
  *
- * The callback is made with the proces and lwp both held, and proc_token held.
+ * The callback is made with the process and lwp both held, and proc_token held.
  *
  * No requirements.
  */
@@ -1510,7 +1510,7 @@ alllwp_scan(int (*callback)(struct lwp *, void *), void *data, int segmented)
  * held for the callback.  A return value of -1 terminates the loop.
  *
  * No requirements.
- * The callback is made with the proces held and proc_token held.
+ * The callback is made with the process held and proc_token held.
  */
 void
 zombproc_scan(int (*callback)(struct proc *, void *), void *data)

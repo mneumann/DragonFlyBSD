@@ -1536,7 +1536,7 @@ nfs_writerpc_uio(struct vnode *vp, struct uio *uiop,
 				commit = fxdr_unsigned(int, *tl++);
 
 				/*
-				 * Return the lowest committment level
+				 * Return the lowest commitment level
 				 * obtained by any of the RPCs.
 				 */
 				if (committed == NFSV3WRITE_FILESYNC)
@@ -2645,10 +2645,10 @@ nfs_readdirrpc_uio(struct vnode *vp, struct uio *uiop)
 			}
 
 			/*
-			 * If we were able to accomodate the last entry,
+			 * If we were able to accommodate the last entry,
 			 * get the cookie for the next one.  Otherwise
 			 * hold-over the cookie for the one we were not
-			 * able to accomodate.
+			 * able to accommodate.
 			 */
 			if (bigenough) {
 				cookie.nfsuquad[0] = *tl++;
@@ -3345,7 +3345,7 @@ nfs_flush(struct vnode *vp, int waitfor, struct thread *td, int commit)
 				nfs_flush_bp, &info);
 
 		/*
-		 * Take a second pass if committing and no error occured.  
+		 * Take a second pass if committing and no error occurred.
 		 * Clean up any left over collection (whether an error 
 		 * occurs or not).
 		 */

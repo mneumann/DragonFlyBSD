@@ -824,7 +824,7 @@ hammer2_io_hash_lookup(hammer2_dev_t *hmp, hammer2_off_t pbase, uint64_t *refsp)
 
 /*
  * Enter a dio into the hash.  If the pbase already exists in the hash,
- * the xio in the hash is referenced and returned.  If dio is sucessfully
+ * the xio in the hash is referenced and returned.  If dio is successfully
  * entered into the hash, NULL is returned.
  */
 static hammer2_io_t *

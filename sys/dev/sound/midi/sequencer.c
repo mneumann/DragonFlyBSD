@@ -891,7 +891,7 @@ seq_read(struct dev_read_args *ap)
 	/*
 	 * I think the semantics are to return as soon
 	 * as possible.
-	 * Second thought, it doens't seem like midimoutain
+	 * Second thought, it doesn't seem like midimoutain
 	 * expects that at all.
 	 * TODO: Look up in some sort of spec
 	 */
@@ -1081,7 +1081,7 @@ seq_write(struct dev_write_args *ap)
 				/*
 			         * For now, try to make midimoutain work by
 			         * forcing these events to be processed
-				 * immediatly.
+				 * immediately.
 			         */
 				seq_processevent(scp, event);
 			} else
@@ -1476,7 +1476,7 @@ seq_filter_read(struct knote *kn, long hint)
 
 	lockmgr(&scp->seq_lock, LK_EXCLUSIVE);
 
-	/* Look up the apropriate queue and select it. */
+	/* Look up the appropriate queue and select it. */
 
 	/* TODO: Start recording. */
 
@@ -1503,7 +1503,7 @@ seq_filter_write(struct knote *kn, long hint)
 
 	lockmgr(&scp->seq_lock, LK_EXCLUSIVE);
 
-	/* Look up the apropriate queue and select it. */
+	/* Look up the appropriate queue and select it. */
 
 	/* Start playing. */
 	scp->playing = 1;
@@ -1713,7 +1713,7 @@ restart:
 }
 
 /*
- * Writting to the sequencer buffer never blocks and drops
+ * Writing to the sequencer buffer never blocks and drops
  * input which cannot be queued
  */
 void

@@ -622,7 +622,7 @@ linker_file_lookup_symbol(linker_file_t file, const char* name, int deps, caddr_
 	 */
 	if (symval.value == NULL && symval.size != 0) {
 	    /*
-	     * For commons, first look them up in the dependancies and
+	     * For commons, first look them up in the dependencies and
 	     * only allocate space if not found there.
 	     */
 	    common_size = symval.size;
@@ -661,7 +661,7 @@ linker_file_lookup_symbol(linker_file_t file, const char* name, int deps, caddr_
     if (common_size > 0) {
 	/*
 	 * This is a common symbol which was not found in the
-	 * dependancies.  We maintain a simple common symbol table in
+	 * dependencies.  We maintain a simple common symbol table in
 	 * the file object.
 	 */
 	struct common_symbol* cp;
@@ -712,7 +712,7 @@ linker_file_lookup_symbol(linker_file_t file, const char* name, int deps, caddr_
  *
  * Note that we do not obey list locking protocols here.  We really don't
  * need DDB to hang because somebody's got the lock held.  We'll take the
- * chance that the files list is inconsistant instead.
+ * chance that the files list is inconsistent instead.
  */
 
 int

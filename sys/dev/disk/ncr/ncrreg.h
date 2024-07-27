@@ -546,7 +546,7 @@ struct scr_tblsel {
 
 /*
 **	Bits defining chip features.
-**	For now only some of them are used, since we explicitely 
+**	For now only some of them are used, since we explicitly
 **	deal with PCI device id and revision id.
 */
 #define FE_LED0		(1<<0)

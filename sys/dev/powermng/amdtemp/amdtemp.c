@@ -676,7 +676,7 @@ amdtemp_intrhook(void *arg)
 			    OID_AUTO, "temperature",
 			    CTLTYPE_INT | CTLFLAG_RD,
 			    dev, sensor, amdtemp_sysctl, "IK",
-			    "Current temparature");
+			    "Current temperature");
 		}
 	}
 	config_intrhook_disestablish(&sc->sc_ich);

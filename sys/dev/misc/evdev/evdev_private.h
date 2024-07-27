@@ -78,7 +78,7 @@ enum evdev_clock_id
 {
 	EV_CLOCK_REALTIME = 0,	/* UTC clock */
 	EV_CLOCK_MONOTONIC,	/* monotonic, stops on suspend */
-	EV_CLOCK_BOOTTIME	/* monotonic, suspend-awared */
+	EV_CLOCK_BOOTTIME	/* monotonic, suspend-aware */
 };
 
 enum evdev_lock_type

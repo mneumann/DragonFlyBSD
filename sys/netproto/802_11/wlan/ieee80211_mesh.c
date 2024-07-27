@@ -2290,7 +2290,7 @@ mesh_recv_action_meshpeering_open(struct ieee80211_node *ni,
 	const struct ieee80211_meshpeer_ie *meshpeer;
 	uint16_t args[3];
 
-	/* +2+2 for action + code + capabilites */
+	/* +2+2 for action + code + capabilities */
 	meshpeer = mesh_parse_meshpeering_action(ni, wh, frm+2+2, efrm, &ie,
 	    IEEE80211_ACTION_MESHPEERING_OPEN);
 	if (meshpeer == NULL) {
@@ -2437,7 +2437,7 @@ mesh_recv_action_meshpeering_confirm(struct ieee80211_node *ni,
 	const struct ieee80211_meshpeer_ie *meshpeer;
 	uint16_t args[3];
 
-	/* +2+2+2+2 for action + code + capabilites + status code + AID */
+	/* +2+2+2+2 for action + code + capabilities + status code + AID */
 	meshpeer = mesh_parse_meshpeering_action(ni, wh, frm+2+2+2+2, efrm, &ie,
 	    IEEE80211_ACTION_MESHPEERING_CONFIRM);
 	if (meshpeer == NULL) {
@@ -2792,7 +2792,7 @@ mesh_send_action_meshpeering_open(struct ieee80211_node *ni,
 	m = ieee80211_getmgtframe(&frm,
 	    ic->ic_headroom + sizeof(struct ieee80211_frame),
 	    sizeof(uint16_t)	/* action+category */
-	    + sizeof(uint16_t)	/* capabilites */
+	    + sizeof(uint16_t)	/* capabilities */
 	    + 2 + IEEE80211_RATE_SIZE
 	    + 2 + (IEEE80211_RATE_MAXSIZE - IEEE80211_RATE_SIZE)
 	    + 2 + IEEE80211_MESHID_LEN
@@ -2853,7 +2853,7 @@ mesh_send_action_meshpeering_confirm(struct ieee80211_node *ni,
 	m = ieee80211_getmgtframe(&frm,
 	    ic->ic_headroom + sizeof(struct ieee80211_frame),
 	    sizeof(uint16_t)	/* action+category */
-	    + sizeof(uint16_t)	/* capabilites */
+	    + sizeof(uint16_t)	/* capabilities */
 	    + sizeof(uint16_t)	/* status code */
 	    + sizeof(uint16_t)	/* AID */
 	    + 2 + IEEE80211_RATE_SIZE

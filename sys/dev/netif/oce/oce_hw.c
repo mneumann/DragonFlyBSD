@@ -567,7 +567,7 @@ oce_hw_update_multicast(POCE_SOFTC sc)
 
 		if (req->params.req.num_mac == OCE_MAX_MC_FILTER_SIZE) {
 			/*More multicast addresses than our hardware table
-			  So Enable multicast promiscus in our hardware to
+			  So Enable multicast promiscuous in our hardware to
 			  accept all multicat packets
 			*/
 			req->params.req.promiscuous = 1;

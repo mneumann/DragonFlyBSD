@@ -602,7 +602,7 @@ epic_rx_done(epic_softc_t *sc)
 		/* Give mbuf to OS */
 		ifp->if_input(ifp, m, NULL, -1);
 
-		/* Successfuly received frame */
+		/* Successfully received frame */
 		IFNET_STAT_INC(ifp, ipackets, 1);
 	}
 
@@ -921,7 +921,7 @@ epic_ifmedia_upd(struct ifnet *ifp)
 		mii->mii_media_active = media;
 		mii->mii_media_status = 0;
 
-		/* We need to call this manualy as i wasn't called
+		/* We need to call this manually as i wasn't called
 		 * in mii_mediachg()
 		 */
 		epic_miibus_statchg(sc->dev);
@@ -988,7 +988,7 @@ epic_miibus_statchg(device_t dev)
 	if (IFM_OPTIONS(media) & (IFM_FDX | IFM_LOOP))
  		sc->txcon |= TXCON_FULL_DUPLEX;
 
-	/* On some cards we need manualy set fullduplex led */
+	/* On some cards we need manually set fullduplex led */
 	if (sc->cardid == SMC9432FTX ||
 	    sc->cardid == SMC9432FTX_SC) {
 		if (IFM_OPTIONS(media) & IFM_FDX)

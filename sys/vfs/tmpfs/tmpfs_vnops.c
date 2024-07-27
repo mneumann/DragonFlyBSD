@@ -1324,7 +1324,7 @@ tmpfs_nrename(struct vop_nrename_args *ap)
 	 * If replacing an entry in the target directory and that entry
 	 * is a directory, it must be empty.
 	 *
-	 * Kern_rename gurantees the destination to be a directory
+	 * Kern_rename guarantees the destination to be a directory
 	 * if the source is one (it does?).
 	 */
 	if (tvp != NULL) {

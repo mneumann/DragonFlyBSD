@@ -52,7 +52,7 @@
  * conversions.
  *
  * Byte ordering issues.  Note two things.  First, no secondary carry occurs,
- * and second, a one's complement checksum is endian-independant.  If we are
+ * and second, a one's complement checksum is endian-independent.  If we are
  * given a data buffer in network byte order, our checksum will be in network
  * byte order.
  *
@@ -214,7 +214,7 @@ in_cksum_range(const struct mbuf *m, int nxt, int offset, int bytes)
     /*
      * Due to byte aligned or oddly-sized buffers we may have a checksum
      * in sum1 which needs to be shifted and added to our main sum.  There
-     * is a presumption here that no more then 255 overflows occured which
+     * is a presumption here that no more then 255 overflows occurred which
      * is 255/3 byte aligned mbufs in the worst case.
      */
     sum0 += sum1 << 8;

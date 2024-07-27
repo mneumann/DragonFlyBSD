@@ -503,7 +503,7 @@ vfs_setfsid(struct mount *mp, fsid_t *template)
  * the buffer cache may have references on the vnode, a directory
  * vnode may still have references due to the namei cache representing
  * underlying files, or the vnode may be in active use.   It is not
- * desireable to reuse such vnodes.  These conditions may cause the
+ * desirable to reuse such vnodes.  These conditions may cause the
  * number of vnodes to reach some minimum value regardless of what
  * you set kern.maxvnodes to.  Do not set kern.maxvnodes too low.
  */
@@ -886,7 +886,7 @@ insmntque(struct vnode *vp, struct mount *mp)
  * locked based on passed flags.  The vnode is skipped if it gets rearranged
  * or destroyed while blocking on the lock.  A non-zero return value from
  * the slow function terminates the loop.  The slow function is allowed to
- * arbitrarily block.  The scanning code guarentees consistency of operation
+ * arbitrarily block.  The scanning code guarantees consistency of operation
  * even if the slow function deletes or moves the node, or blocks and some
  * other thread deletes or moves the node.
  */

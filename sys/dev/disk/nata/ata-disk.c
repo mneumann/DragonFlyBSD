@@ -507,7 +507,7 @@ ad_describe(device_t dev)
     struct ad_softc *adp = device_get_ivars(dev);
     u_int8_t *marker, vendor[64], product[64];
 
-    /* try to seperate the ATA model string into vendor and model parts */
+    /* try to separate the ATA model string into vendor and model parts */
     if ((marker = index(atadev->param.model, ' ')) ||
 	(marker = index(atadev->param.model, '-'))) {
 	int len = (marker - atadev->param.model);

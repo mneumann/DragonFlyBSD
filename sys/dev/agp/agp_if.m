@@ -88,7 +88,7 @@ METHOD void flush_tlb {
 };
 
 #
-# Enable the agp hardware with the relavent mode. The mode bits are
+# Enable the agp hardware with the relevant mode. The mode bits are
 # defined in <pci/agpreg.h>
 #
 METHOD int enable {

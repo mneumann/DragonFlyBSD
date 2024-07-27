@@ -96,7 +96,7 @@
 #define	SIOCSIFLLADDR	 _IOW('i', 60, struct ifreq)	/* set linklevel addr */
 #define	SIOCGHWADDR	_IOWR('i', 62, struct ifreq)	/* get hardware lladdr*/
 
-#define	SIOCSIFPHYADDR	 _IOW('i', 70, struct ifaliasreq) /* set gif addres */
+#define	SIOCSIFPHYADDR	 _IOW('i', 70, struct ifaliasreq) /* set gif address */
 #define	SIOCGIFPSRCADDR	_IOWR('i', 71, struct ifreq)	/* get gif psrc addr */
 #define	SIOCGIFPDSTADDR	_IOWR('i', 72, struct ifreq)	/* get gif pdst addr */
 #define	SIOCDIFPHYADDR	 _IOW('i', 73, struct ifreq)	/* delete gif addrs */

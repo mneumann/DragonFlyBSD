@@ -279,7 +279,7 @@ hammer_vfs_init(struct vfsconf *conf)
 	/*
 	 * Wait up to this long for an exclusive deadlock to clear
 	 * before acquiring a new shared lock on the ip.  The deadlock
-	 * may have occured on a b-tree node related to the ip.
+	 * may have occurred on a b-tree node related to the ip.
 	 */
 	if (hammer_tdmux_ticks == 0)
 		hammer_tdmux_ticks = hz / 5;

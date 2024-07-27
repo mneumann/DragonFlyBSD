@@ -273,7 +273,7 @@
     do not have to clean up the freemap and thus do not have to recurse
     the topology during the deletion.  In fact, a 'rm -rf' equivalent of a
     directory topology can be handled simply by blowing away the top-level
-    directory inode.  This is instantanious and thus can be dangerous but
+    directory inode.  This is instantaneous and thus can be dangerous but
     you always have your snapshots to fall-back on.
 
     The DISADVANTAGE is that all meta-data must be scanned.  Twice.  This

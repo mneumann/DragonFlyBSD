@@ -1008,7 +1008,7 @@ mon_perf(double srt)
 	int cpu;
 
 	/*
-	 * Find cpus requiring performance and their cooresponding power
+	 * Find cpus requiring performance and their corresponding power
 	 * domains.  Save the number of cpus requiring performance in
 	 * pnstate.
 	 */

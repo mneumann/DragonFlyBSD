@@ -9,7 +9,7 @@
  * USB on the other.
  *
  * Thanx to FTDI (http://www.ftdi.co.uk) for so kindly providing details
- * of the protocol required to talk to the device and ongoing assistence
+ * of the protocol required to talk to the device and ongoing assistance
  * during development.
  *
  * Bill Ryder - bryder@sgi.com of Silicon Graphics, Inc. is the original
@@ -173,7 +173,7 @@ enum {
  *   BmRequestType:  0100 0000b
  *   bRequest:       FTDI_SIO_SET_FLOW_CTRL
  *   wValue:         Xoff/Xon
- *   wIndex:         Protocol/Port - hIndex is protocl / lIndex is port
+ *   wIndex:         Protocol/Port - hIndex is protocol / lIndex is port
  *   wLength:        0
  *   Data:           None
  *

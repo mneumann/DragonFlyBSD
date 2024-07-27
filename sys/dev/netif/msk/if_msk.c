@@ -1411,7 +1411,7 @@ msk_attach(device_t dev)
 	/*
 	 * IFCAP_RXCSUM capability is intentionally disabled as the hardware
 	 * has serious bug in Rx checksum offload for all Yukon II family
-	 * hardware. It seems there is a workaround to make it work somtimes.
+	 * hardware. It seems there is a workaround to make it work sometimes.
 	 * However, the workaround also have to check OP code sequences to
 	 * verify whether the OP code is correct. Sometimes it should compute
 	 * IP/TCP/UDP checksum in driver in order to verify correctness of
@@ -1893,7 +1893,7 @@ msk_txrx_dma_alloc(struct msk_if_softc *sc_if)
 	 * simplyfies descriptor handling and possibly would increase
 	 * performance a bit due to efficient handling of descriptors.
 	 * Apart from harassing checksum offloading mechanisms, it seems
-	 * it's really bad idea to use a seperate descriptor for 64bit
+	 * it's really bad idea to use a separate descriptor for 64bit
 	 * DMA operation to save small descriptor memory. Anyway, I've
 	 * never seen these exotic scheme on ethernet interface hardware.
 	 */
@@ -3040,7 +3040,7 @@ mskc_intr_hwerr(struct msk_softc *sc)
 		CSR_WRITE_1(sc, GMAC_TI_ST_CTRL, GMT_ST_CLR_IRQ);
 	if ((status & Y2_IS_PCI_NEXP) != 0) {
 		/*
-		 * PCI Express Error occured which is not described in PEX
+		 * PCI Express Error occurred which is not described in PEX
 		 * spec.
 		 * This error is also mapped either to Master Abort(
 		 * Y2_IS_MST_ERR) or Target Abort (Y2_IS_IRQ_STAT) bit and
@@ -3076,7 +3076,7 @@ mskc_intr_hwerr(struct msk_softc *sc)
 		 * On PCI Express bus bridges are called root complexes (RC).
 		 * PCI Express errors are recognized by the root complex too,
 		 * which requests the system to handle the problem. After
-		 * error occurence it may be that no access to the adapter
+		 * error occurrence it may be that no access to the adapter
 		 * may be performed any longer.
 		 */
 

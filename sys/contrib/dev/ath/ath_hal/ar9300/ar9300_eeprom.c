@@ -174,7 +174,7 @@ ar9300_eeprom_restore_something(struct ath_hal *ah, ar9300_eeprom_t *mptr,
     nptr = -1; 
     /*
      * if we didn't find any blocks in the memory,
-     * put the prefered template in place
+     * put the preferred template in place
      */
     if (nptr < 0) {
         AH9300(ah)->calibration_data_source = calibration_data_none;
@@ -187,7 +187,7 @@ ar9300_eeprom_restore_something(struct ath_hal *ah, ar9300_eeprom_t *mptr,
         }
     }
     /*
-     * if we didn't find the prefered one,
+     * if we didn't find the preferred one,
      * put the normal default template in place
      */
     if (nptr < 0) {
@@ -3135,7 +3135,7 @@ ar9300_eeprom_set_transmit_power(struct ath_hal *ah,
         /* Transmit Power per-rate per-chain  are  computed here. A separate
          * power table is maintained for different MIMO modes (i.e. TXBF ON,
          * STBC) to enable easy lookup during packet transmit. 
-         * The reason for maintaing each of these tables per chain is that
+         * The reason for maintaining each of these tables per chain is that
          * the transmit power used for different number of chains is different
          * depending on whether the power has been limited by the target power,
          * the regulatory domain  or the CTL limits.
@@ -3217,7 +3217,7 @@ ar9300_eeprom_set_addac(struct ath_hal *ah, struct ieee80211_channel *chan)
     if (p_modal->xpa_bias_lvl != 0xff) {
         biaslevel = p_modal->xpa_bias_lvl;
     } else {
-        /* Use freqeuncy specific xpa bias level */
+        /* Use frequency specific xpa bias level */
         u_int16_t reset_freq_bin, freq_bin, freq_count = 0;
         CHAN_CENTERS centers;
 

@@ -1026,7 +1026,7 @@ enum {
 #define AR_GPIO_OUTPUT_MUX_AS_SMARTANT_CTRL2     0x1b
 /* The above three seems to be functional values for peacock chip. For some
  * reason these are continued for different boards as simple place holders.
- * Now continuing to use these and adding the extra definitions for Scropion
+ * Now continuing to use these and adding the extra definitions for Scorpion
  */
 #define AR_GPIO_OUTPUT_MUX_AS_SWCOM3             0x26 
 
@@ -2041,7 +2041,7 @@ enum {
                                                                      * the use of AR_AGG_WEP_ENABLE.
                                                                      */
 
-#define AR_PCU_MISC_MODE2_PROM_VC_MODE                 0xa148103b   /* Enable promiscous in azimuth mode */
+#define AR_PCU_MISC_MODE2_PROM_VC_MODE                 0xa148103b   /* Enable promiscuous in azimuth mode */
 
 #define AR_PCU_MISC_MODE2_RESERVED                     0x00000038
 

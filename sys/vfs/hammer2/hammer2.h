@@ -527,10 +527,10 @@ RB_PROTOTYPE(hammer2_chain_tree, hammer2_chain, rbnode, hammer2_chain_cmp);
 /*
  * HAMMER2 cluster - A set of chains representing the same entity.
  *
- * hammer2_cluster typically represents a temporary set of representitive
+ * hammer2_cluster typically represents a temporary set of representative
  * chains.  The one exception is that a hammer2_cluster is embedded in
  * hammer2_inode.  This embedded cluster is ONLY used to track the
- * representitive chains and cannot be directly locked.
+ * representative chains and cannot be directly locked.
  *
  * A cluster is usually temporary (and thus per-thread) for locking purposes,
  * allowing us to embed the asynchronous storage required for cluster
@@ -540,7 +540,7 @@ RB_PROTOTYPE(hammer2_chain_tree, hammer2_chain, rbnode, hammer2_chain_cmp);
  * The exception is the cluster embedded in the hammer2_inode structure.
  * This is used to cache the cluster state on an inode-by-inode basis.
  * Individual hammer2_chain structures not incorporated into clusters might
- * also stick around to cache miscellanious elements.
+ * also stick around to cache miscellaneous elements.
  *
  * Because the cluster is a 'working copy' and is usually subject to cluster
  * quorum rules, it is quite possible for us to end up with an insufficient

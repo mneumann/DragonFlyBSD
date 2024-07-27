@@ -55,7 +55,7 @@ struct acpi_hpcib_softc {
     ACPI_HANDLE		ap_handle;
     int			ap_flags;
 
-    int			ap_segment;	/* analagous to Alpha 'hose' */
+    int			ap_segment;	/* analogous to Alpha 'hose' */
     int			ap_bus;		/* bios-assigned bus number */
 
     ACPI_BUFFER		ap_prt;		/* interrupt routing table */

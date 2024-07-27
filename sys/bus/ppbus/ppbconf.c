@@ -170,7 +170,7 @@ static char *pnp_classes[] = {
 /*
  * search_token()
  *
- * Search the first occurence of a token within a string
+ * Search the first occurrence of a token within a string
  *
  * XXX should use strxxx() calls
  */
@@ -208,7 +208,7 @@ search_token(char *str, int slen, char *token)
 /*
  * ppb_pnp_detect()
  *
- * Returns the class id. of the peripherial, -1 otherwise
+ * Returns the class id. of the peripheral, -1 otherwise
  */
 static int
 ppb_pnp_detect(device_t bus)

@@ -86,7 +86,7 @@ xio_init(xio_t xio)
 /*
  * Initialize an XIO given a kernelspace buffer.  0 is returned on success,
  * an error code on failure.  The actual number of bytes that could be
- * accomodated in the XIO will be stored in xio_bytes and the page offset
+ * accommodated in the XIO will be stored in xio_bytes and the page offset
  * will be stored in xio_offset.
  *
  * WARNING! We cannot map user memory directly into an xio unless we also
@@ -125,7 +125,7 @@ xio_init_kbuf(xio_t xio, void *kbase, size_t kbytes)
     xio->xio_npages = i;
 
     /*
-     * If a failure occured clean out what we loaded and return EFAULT.
+     * If a failure occurred clean out what we loaded and return EFAULT.
      * Return 0 on success.
      */
     if (i < XIO_INTERNAL_PAGES && n) {

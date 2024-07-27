@@ -273,7 +273,7 @@ memtemp_e5_attach(device_t dev)
 		 * - TEMPHI initiates THRTCRIT.
 		 * - TEMPMID initiates THRTHI, so it is also taken into
 		 *   consideration.
-		 * - Some BIOSes program temp_lo to a rediculous low value,
+		 * - Some BIOSes program temp_lo to a ridiculous low value,
 		 *   so ignore TEMPLO here.
 		 */
 		if (temp_mid <= 0) {

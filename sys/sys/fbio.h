@@ -240,7 +240,7 @@ struct video_info {
 };
 typedef struct video_info video_info_t;
 
-/* adapter infromation block */
+/* adapter information block */
 struct video_adapter {
     int			va_index;
     int			va_type;

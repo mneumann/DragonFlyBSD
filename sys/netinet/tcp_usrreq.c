@@ -243,7 +243,7 @@ tcp_usr_detach(netmsg_t msg)
 	/*
 	 * If the inp is already detached or never attached, it may have
 	 * been due to an async close or async attach failure.  Just return
-	 * as if no error occured.
+	 * as if no error occurred.
 	 */
 	if (inp) {
 		tp = intotcpcb(inp);

@@ -1470,7 +1470,7 @@ hammer2_dedup_record(hammer2_chain_t *chain, hammer2_io_t *dio,
 	 * buffer has been updated.  The alloc bits were set (and the valid
 	 * bits cleared) when the media was allocated.
 	 *
-	 * This is done in two stages becuase the bulkfree code can race
+	 * This is done in two stages because the bulkfree code can race
 	 * the gap between allocation and data population.  Both masks must
 	 * be set before a bcmp/dedup operation is able to use the block.
 	 */

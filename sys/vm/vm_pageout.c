@@ -1781,7 +1781,7 @@ next_rover:
 	 *
 	 * We consider ourselves to have run out of memory if the swap pager
 	 * is full and avail_shortage is still positive.  The secondary check
-	 * ensures that we do not kill processes if the instantanious
+	 * ensures that we do not kill processes if the instantaneous
 	 * availability is good, even if the pageout demon pass says it
 	 * couldn't get to the target.
 	 *
@@ -2300,7 +2300,7 @@ vm_pageout_thread(void)
 	 *	 files when the VM system is otherwise full of pages
 	 *	 belonging to multi-time-use files or active program data.
 	 *
-	 * NOTE: The inactive target is aggressively persued only if the
+	 * NOTE: The inactive target is aggressively pursued only if the
 	 *	 inactive queue becomes too small.  If the inactive queue
 	 *	 is large enough to satisfy page movement to free+cache
 	 *	 then it is repopulated more slowly from the active queue.

@@ -2540,7 +2540,7 @@ ng_btsocket_l2cap_send(netmsg_t msg)
 		goto drop;
 	}
 
-	/* Check packet size agains outgoing (peer's incoming) MTU) */
+	/* Check packet size against outgoing (peer's incoming) MTU) */
 	if (m->m_pkthdr.len > pcb->omtu) {
 		NG_BTSOCKET_L2CAP_ERR(
 "%s: Packet too big, len=%d, omtu=%d\n", __func__, m->m_pkthdr.len, pcb->omtu);
@@ -2620,7 +2620,7 @@ ng_btsocket_l2cap_send2(ng_btsocket_l2cap_pcb_p pcb)
 		hdr->token, pcb->state);
 
 	/*
-	 * If we got here than we have successfuly creates new L2CAP 
+	 * If we got here than we have successfully creates new L2CAP
 	 * data packet and now we can send it to the L2CAP layer
 	 */
 

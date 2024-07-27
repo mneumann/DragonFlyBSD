@@ -363,7 +363,7 @@ static int getSpanInfo(MR_FW_RAID_MAP_ALL *map, PLD_SPAN_INFO ldSpanInfo)
 *
 *    span          - Span number
 *    block         - Absolute Block number in the physical disk
-*    div_error    - Devide error code.
+*    div_error    - Divide error code.
 */
 
 u_int32_t mr_spanset_get_span_block(struct mrsas_softc *sc, u_int32_t ld, u_int64_t row, 

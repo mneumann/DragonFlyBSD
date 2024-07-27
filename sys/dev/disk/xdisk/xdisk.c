@@ -1173,7 +1173,7 @@ xa_bio_completion(kdmsg_state_t *state, kdmsg_msg_t *msg)
 
 	/*
 	 * If the device is open stall the bio on DMSG errors.  If an
-	 * actual I/O error occured on the remote device, DMSG_ERR_IO
+	 * actual I/O error occurred on the remote device, DMSG_ERR_IO
 	 * will be returned.
 	 */
 	if (tag->status.head.error &&

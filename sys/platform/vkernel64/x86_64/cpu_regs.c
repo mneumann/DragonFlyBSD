@@ -300,7 +300,7 @@ sendsig(sig_t catcher, int sig, sigset_t *mask, u_long code)
 
 /*
  * Sanitize the trapframe for a virtual kernel passing control to a custom
- * VM context.  Remove any items that would otherwise create a privilage
+ * VM context.  Remove any items that would otherwise create a privilege
  * issue.
  *
  * XXX at the moment we allow userland to set the resume flag.  Is this a
@@ -491,7 +491,7 @@ cpu_idle(void)
 
 		/*
 		 * The idle loop halts only if no threads are scheduleable
-		 * and no signals have occured.
+		 * and no signals have occurred.
 		 */
 		if (cpu_idle_hlt &&
 		    (td->td_gd->gd_reqflags & RQF_IDLECHECK_WK_MASK) == 0) {

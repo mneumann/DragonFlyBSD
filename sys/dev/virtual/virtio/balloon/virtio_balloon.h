@@ -90,7 +90,7 @@ struct virtio_balloon_config {
 #define VTBALLOON_S_MINFLT	 3	/* The number of minor page faults that have occurred. */
 #define VTBALLOON_S_MEMFREE	 4	/* The amount of memory not being used for any purpose (in bytes). */
 #define VTBALLOON_S_MEMTOT	 5	/* The total amount of memory available (in bytes). */
-#define VTBALLOON_S_AVAIL	 6	/* The amount of availabe memory (in bytes) as in linux-proc */
+#define VTBALLOON_S_AVAIL	 6	/* The amount of available memory (in bytes) as in linux-proc */
 #define VTBALLOON_S_CACHES	 7	/* Disk-File caches */
 #define VTBALLOON_S_HTLB_PGALLOC 8	/* Hugetlb page allocations */
 #define VTBALLOON_S_HTLB_PGFAIL	 9	/* Hugetlb page allocation failures */

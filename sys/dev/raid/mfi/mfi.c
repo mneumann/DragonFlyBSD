@@ -512,7 +512,7 @@ mfi_attach(struct mfi_softc *sc)
 
 		/*
 		  Allocate DMA memory mapping for MPI2 IOC Init descriptor,
-		  we are taking it diffrent from what we have allocated for Request
+		  we are taking it different from what we have allocated for Request
 		  and reply descriptors to avoid confusion later
 		*/
 		tb_mem_size = sizeof(struct MPI2_IOC_INIT_REQUEST);

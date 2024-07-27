@@ -1328,7 +1328,7 @@ change_euid(uid_t euid)
 /*
  * Helper function to change the real uid of a process
  *
- * The per-uid process count for this process is transfered from
+ * The per-uid process count for this process is transferred from
  * the old uid to the new uid.
  */
 struct ucred *

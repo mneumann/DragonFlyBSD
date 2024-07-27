@@ -336,7 +336,7 @@ uLONG	osdStartThread(void *,void *);
 /* what is my thread id */
 uLONG osdGetThreadID(void);
 
-/* wakes up the specifed thread */
+/* wakes up the specified thread */
 void osdWakeThread(uLONG);
 
 /* osd sleep for x miliseconds */

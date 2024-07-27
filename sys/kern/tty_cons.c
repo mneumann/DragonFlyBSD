@@ -408,7 +408,7 @@ cnclose(struct dev_close_args *ap)
 	physdev = (dev == cn_devfsdev) ? cndev : dev;
 
 	/*
-	 * act appropriatly depending on whether it's /dev/console
+	 * act appropriately depending on whether it's /dev/console
 	 * or the pysical device (e.g. /dev/sio) that's being closed.
 	 * in either case, don't actually close the device unless
 	 * both are closed.

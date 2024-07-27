@@ -207,7 +207,7 @@
  * PAUSED	- Set to 1 if the controller is paused, 0 if normal operation.
  * SUBRESET	- Set to 1 if a subsystem reset occurred (if available).
  * SHUT*	- Shutdown state for poller
- * FATAL	- Indicates a fatal controller error ocurred.
+ * FATAL	- Indicates a fatal controller error occurred.
  * RDY		- Controller ready/disable response to ENABLE.
  */
 #define NVME_STATUS_RESERVED	0xFFFFFFC0U
@@ -930,7 +930,7 @@ typedef struct {
 /*
  * Namespace Management Command
  *
- * See nvme_ns.h for transfered data structures
+ * See nvme_ns.h for transferred data structures
  */
 typedef struct {
 	nvme_subq_head_t head;
@@ -1253,7 +1253,7 @@ typedef struct {
 		((fid) & NVME_FID_MASK)
 
 #define NVME_FID_00		0x00
-#define NVME_FID_ARB		0x01	/* Aribtration */
+#define NVME_FID_ARB		0x01	/* Arbitration */
 #define NVME_FID_PWRMGMT	0x02	/* Power Management */
 #define NVME_FID_LBARNGTYPE	0x03	/* (opt) LBA Range Type */
 #define NVME_FID_TEMPTHRESH	0x04	/* Temp Threshold */
@@ -1272,7 +1272,7 @@ typedef struct {
 #define NVME_FID_SFTPROGRESS	0x80	/* (opt) Software Progress Marker */
 #define NVME_FID_HOSTID		0x81	/* (opt) Host Identifier */
 #define NVME_FID_RESERVENOTMASK	0x82	/* (opt) Reservation Notify Marker */
-#define NVME_FID_RESERVEPERSIST	0x83	/* (opt) Reservation Persistance */
+#define NVME_FID_RESERVEPERSIST	0x83	/* (opt) Reservation Persistence */
 
 typedef struct {
 	uint32_t dw0;

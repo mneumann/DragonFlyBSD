@@ -806,7 +806,7 @@ oce_mq_free(struct oce_mq *mq)
 
 /**
  * @brief		Function to delete a EQ, CQ, MQ, WQ or RQ
- * @param sc		sofware handle to the device
+ * @param sc		software handle to the device
  * @param mbx		mailbox command to send to the fw to delete the queue
  *			(mbx contains the queue information to delete)
  * @param req_size	the size of the mbx payload dependent on the qtype
@@ -1117,7 +1117,7 @@ oce_drain_mq_cq(void *arg)
 
 
 /**
- * @brief		function to process a Recieve queue
+ * @brief		function to process a Receive queue
  * @param arg		pointer to the RQ to charge
  * @return		number of cqes processed
  */

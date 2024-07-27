@@ -31,7 +31,7 @@
 #define FIX_NOISE_FLOOR     1
 
 
-/* Additional Time delay to wait after activiting the Base band */
+/* Additional Time delay to wait after activating the Base band */
 #define BASE_ACTIVATE_DELAY         100     /* usec */
 #define RTC_PLL_SETTLE_DELAY        100     /* usec */
 #define COEF_SCALE_S                24
@@ -276,11 +276,11 @@ ar9300_upload_noise_floor(struct ath_hal *ah, int is_2g,
      */
     u_int32_t masks[2] = {
         AR_PHY_MINCCA_PWR,     /* control channel */
-        AR_PHY_EXT_MINCCA_PWR, /* extention channel */
+        AR_PHY_EXT_MINCCA_PWR, /* extension channel */
     };
     u_int8_t shifts[2] = {
         AR_PHY_MINCCA_PWR_S,     /* control channel */
-        AR_PHY_EXT_MINCCA_PWR_S, /* extention channel */
+        AR_PHY_EXT_MINCCA_PWR_S, /* extension channel */
     };
 
     /*
@@ -591,7 +591,7 @@ get_noise_floor_thresh(struct ath_hal *ah, const HAL_CHANNEL_INTERNAL *chan,
 #endif
 
 /*
- * Read the NF and check it against the noise floor threshhold
+ * Read the NF and check it against the noise floor threshold
  */
 #define IS(_c, _f)       (((_c)->channel_flags & _f) || 0)
 static int
@@ -1952,7 +1952,7 @@ ar9300_phy_disable(struct ath_hal *ah)
 #define REG_READ(_reg)          *((volatile u_int32_t *)(_reg))
 #define REG_WRITE(_reg, _val)   *((volatile u_int32_t *)(_reg)) = (_val);
 #define ATH_GPIO_OE             0xB8040000
-#define ATH_GPIO_OUT            0xB8040008 /* GPIO Ouput Value reg.*/
+#define ATH_GPIO_OUT            0xB8040008 /* GPIO Output Value reg.*/
     if (AR_SREV_WASP(ah)) {
         if (IS_CHAN_2GHZ((AH_PRIVATE(ah)->ah_curchan))) {
             REG_WRITE(ATH_GPIO_OE, (REG_READ(ATH_GPIO_OE) | (0x1 << 13)));
@@ -5333,7 +5333,7 @@ ar9300_reset(struct ath_hal *ah, HAL_OPMODE opmode, struct ieee80211_channel *ch
 
     /* H/W Green TX */
     ar9300_control_signals_for_green_tx_mode(ah);
-    /* Smart Antenna, only for 5GHz on Scropion */
+    /* Smart Antenna, only for 5GHz on Scorpion */
     if (IEEE80211_IS_CHAN_2GHZ((AH_PRIVATE(ah)->ah_curchan)) && AR_SREV_SCORPION(ah)) {
         ahp->ah_smartantenna_enable = 0;
     }

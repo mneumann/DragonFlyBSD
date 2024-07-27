@@ -309,7 +309,7 @@ hammer2_freemap_try_alloc(hammer2_chain_t **parentp,
 	if (chain == NULL) {
 		/*
 		 * Create the missing leaf, be sure to initialize
-		 * the auxillary freemap tracking information in
+		 * the auxiliary freemap tracking information in
 		 * the bref.check.freemap structure.
 		 */
 #if 0
@@ -576,7 +576,7 @@ hammer2_bmap_alloc(hammer2_dev_t *hmp, hammer2_bmap_data_t *bmap,
 	 * once we pack to the boundary.  We adjust it after a bitmap
 	 * allocation only for sub-16KB allocations (so the perfectly good
 	 * previous value can still be used for fragments when 16KB+
-	 * allocations are made inbetween fragmentary allocations).
+	 * allocations are made between fragmentary allocations).
 	 *
 	 * Beware of hardware artifacts when bmradix == 64 (intermediate
 	 * result can wind up being '1' instead of '0' if hardware masks
@@ -1006,7 +1006,7 @@ hammer2_freemap_adjust(hammer2_dev_t *hmp, hammer2_blockref_t *bref,
 	/*
 	 * Create any missing leaf(s) if we are doing a recovery (marking
 	 * the block(s) as being allocated instead of being freed).  Be sure
-	 * to initialize the auxillary freemap tracking info in the
+	 * to initialize the auxiliary freemap tracking info in the
 	 * bref.check.freemap structure.
 	 */
 	if (chain == NULL && how == HAMMER2_FREEMAP_DORECOVER) {

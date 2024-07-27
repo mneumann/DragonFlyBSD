@@ -150,7 +150,7 @@ struct globaldata {
 	u_int		gd_npoll;		/* ipiq synchronization */
 	int		gd_tdrunqcount;
 
-	/* temporary mess to retain structural compatibilty for now */
+	/* temporary mess to retain structural compatibility for now */
 	union {
 		struct {
 			struct {

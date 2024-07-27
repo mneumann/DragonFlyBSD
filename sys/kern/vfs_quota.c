@@ -427,7 +427,7 @@ vq_vptomp(struct vnode *vp)
 		/* This is a PFS, use a copy of the real mp */
 		return vp->v_pfsmp;
 	} else {
-		/* Not a PFS or a PFS beeing unmounted */
+		/* Not a PFS or a PFS being unmounted */
 		return vp->v_mount;
 	}
 }

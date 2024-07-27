@@ -2547,7 +2547,7 @@ mxge_media_probe(mxge_softc_t *sc)
 	/*
 	 * At this point we know the NIC has an XFP cage, so now we
 	 * try to determine what is in the cage by using the
-	 * firmware's XFP I2C commands to read the XFP 10GbE compilance
+	 * firmware's XFP I2C commands to read the XFP 10GbE compliance
 	 * register.  We read just one byte, which may take over
 	 * a millisecond
 	 */
@@ -4198,7 +4198,7 @@ mxge_npoll_rx(struct ifnet *ifp, void *xss, int cycle)
 	} else {
 		/*
 		 * XXX
-		 * This register writting obviously has cost,
+		 * This register writing obviously has cost,
 		 * however, if we don't hand back the rx token,
 		 * the upcoming packets may suffer rediculously
 		 * large delay, as observed on 8AL-C using ping(8).

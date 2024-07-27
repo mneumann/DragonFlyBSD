@@ -63,7 +63,7 @@
 #include "ah_regdomain/ah_rd_regmap.h"
 
 /* 
- * The following tables are the master list for all different freqeuncy
+ * The following tables are the master list for all different frequency
  * bands with the complete matrix of all possible flags and settings
  * for each band if it is used in ANY reg domain.
  */

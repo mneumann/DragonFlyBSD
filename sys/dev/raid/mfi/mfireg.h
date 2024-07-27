@@ -659,7 +659,7 @@ struct mfi_ctrl_props {
 	uint8_t		loadBalanceMode;
 	/*
 	 * 0 - use auto detect logic of backplanes like SGPIO, i2c SEP using
-	 *     h/w mechansim like GPIO pins
+	 *     h/w mechanism like GPIO pins
 	 * 1 - disable auto detect SGPIO,
 	 * 2 - disable i2c SEP auto detect
 	 * 3 - disable both auto detect

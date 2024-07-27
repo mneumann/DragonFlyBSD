@@ -61,15 +61,15 @@
  *
  *				    FEATURES
  *
- * Jitter supression	- Implements 2-pixel hysteresis with memory.
+ * Jitter suppression	- Implements 2-pixel hysteresis with memory.
  *
- * False-finger supression- Two-fingers-down does not emulate anything,
+ * False-finger suppression- Two-fingers-down does not emulate anything,
  *			    on purpose.
  *
  * False-emulated button handling-
  *			  Buttons are emulated when three fingers are
  *			  placed on the pad.  If you place all three
- *			  fingers down simultaniously, this condition
+ *			  fingers down simultaneously, this condition
  *			  is detected and will not emulate any button.
  *
  * Slider jesture	- Tap right hand side and slide up or down.

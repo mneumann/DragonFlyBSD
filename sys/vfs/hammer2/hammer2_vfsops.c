@@ -467,7 +467,7 @@ hammer2_pfsalloc(hammer2_chain_t *chain,
 
 	/*
 	 * When a chain is passed in we must add it to the PFS's root
-	 * inode, update pmp->pfs_types[], and update the syncronization
+	 * inode, update pmp->pfs_types[], and update the synchronization
 	 * threads.
 	 *
 	 * When forcing local mode, mark the PFS as a MASTER regardless.

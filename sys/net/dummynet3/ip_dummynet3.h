@@ -196,7 +196,7 @@ TAILQ_HEAD(dn_pkt_queue, dn_pkt);
  * is run at every timer tick, and grabs queues from the head of the heaps when
  * they are ready for processing.
  *
- * There are three data structures definining a pipe and associated queues:
+ * There are three data structures defining a pipe and associated queues:
  *
  *  + dn_pipe, which contains the main configuration parameters related to
  *	delay and bandwidth;

@@ -108,7 +108,7 @@ __sig_condblockallsigs(sigset_t *mask, struct lwp *lp)
 		 * Upon successful update to lpmap->blockallsigs remove
 		 * all maskable signals, leaving only unmaskable signals.
 		 *
-		 * If lwp_sig is non-zero it represents a syncronous 'trap'
+		 * If lwp_sig is non-zero it represents a synchronous 'trap'
 		 * signal which, being a synchronous trap, must be allowed.
 		 */
 		if (atomic_fcmpset_int(&lpmap->blockallsigs, &bas,

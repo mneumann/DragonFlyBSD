@@ -210,7 +210,7 @@ nfs_iosize(int v3, int sotype)
 	 * mmap() the vm_page->valid bits can become weird looking
 	 * (e.g. 0xfc).  This occurs because NFS uses piecemeal buffers
 	 * at the file EOF.  To solve the problem the BIO system needs to
-	 * be guarenteed that the NFS iosize for regular files will be a
+	 * be guaranteed that the NFS iosize for regular files will be a
 	 * multiple of PAGE_SIZE so it can invalidate the whole page
 	 * rather then just the piece of it owned by the buffer when
 	 * NFS does vinvalbuf() calls.

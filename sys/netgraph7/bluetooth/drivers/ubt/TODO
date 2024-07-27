@@ -19,7 +19,7 @@ $FreeBSD: src/sys/netgraph/bluetooth/drivers/ubt/TODO,v 1.2 2003/05/10 21:44:39 
 
 3) Understand and fix isoc. USB transfers (SCO data)
 
-	Currenty device reports that is got zero bytes and calls
+	Currently device reports that is got zero bytes and calls
 	isoc_in_complete callback over and over again. Why?
 	Also might need to setup at least two isoc. transfers in
 	both directions and switch them on the fly. Just to ensure

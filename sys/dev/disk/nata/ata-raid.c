@@ -1134,7 +1134,7 @@ ata_raid_create(struct ata_ioc_raid_config *config)
 		rdp->format = ctlr;
 	    
 	    /* use the smallest disk of the lots size */
-	    /* gigabyte boundry ??? XXX SOS */
+	    /* gigabyte boundary ??? XXX SOS */
 	    if (disk_size)
 		disk_size = min(rdp->disks[disk].sectors, disk_size);
 	    else
@@ -3501,7 +3501,7 @@ ata_raid_sii_read_meta(device_t dev, struct ar_softc **raidp)
 	goto sii_out;
     }
 
-    /* check verison */
+    /* check version */
     if (meta->version_major != 0x0002 ||
 	(meta->version_minor != 0x0000 && meta->version_minor != 0x0001)) {
 	if (testing || bootverbose)

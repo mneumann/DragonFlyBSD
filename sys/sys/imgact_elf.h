@@ -43,7 +43,7 @@ struct file;
 struct vnode;
 
 /*
- * Structure used to pass infomation from the loader to the
+ * Structure used to pass information from the loader to the
  * stack fixup routine.
  */
 typedef struct {

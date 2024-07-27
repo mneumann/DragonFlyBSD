@@ -106,7 +106,7 @@ MCOUNT_LABEL(btrap)
  * to occur in certain bad places that would normlally be protected by
  * the interrupt gate's interrupt disablement.
  *
- * Due to this possibly occuring in the system call entry code, we also
+ * Due to this possibly occurring in the system call entry code, we also
  * run #DB on an ist2 stack to force the cpu to load a new %rsp, otherwise
  * it might push the cpu exception frame onto the user stack.  To make things
  * easier we just point ist2 at our trampoline area.

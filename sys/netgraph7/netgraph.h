@@ -1045,7 +1045,7 @@ struct ng_cmdlist {
  * Note the input queueing system is to allow modules
  * to 'release the stack' or to pass data across spl layers.
  * The data will be redelivered as soon as the NETISR code runs
- * which may be almost immediatly.  A node may also do it's own queueing
+ * which may be almost immediately.  A node may also do it's own queueing
  * for other reasons (e.g. device output queuing).
  */
 struct ng_type {

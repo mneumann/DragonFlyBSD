@@ -51,7 +51,7 @@ struct sockaddr_un {
 
 #if __BSD_VISIBLE
 /* Socket options. */
-#define	LOCAL_PEERCRED		0x001		/* retrieve peer credentails */
+#define	LOCAL_PEERCRED		0x001		/* retrieve peer credentials */
 #endif
 
 #ifdef _KERNEL

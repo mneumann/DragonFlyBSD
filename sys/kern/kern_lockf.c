@@ -346,7 +346,7 @@ restart:
 		/*
 		 * Skip non-overlapping locks.  Locks are sorted by lf_start
 		 * So we can terminate the search when lf_start exceeds the
-		 * requested range (insert_point is still guarenteed to be
+		 * requested range (insert_point is still guaranteed to be
 		 * set properly).
 		 */
 		if (range->lf_end < start)

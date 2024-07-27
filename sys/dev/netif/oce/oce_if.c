@@ -140,7 +140,7 @@ MODULE_VERSION(oce, 1);
 /* global vars */
 const char component_revision[32] = {"///" COMPONENT_REVISION "///"};
 
-/* Module capabilites and parameters */
+/* Module capabilities and parameters */
 uint32_t oce_max_rsp_handled = OCE_MAX_RSP_HANDLED;
 #if 0 /* XXX swildner: RSS */
 uint32_t oce_enable_rss = OCE_MODCAP_RSS;

@@ -104,7 +104,7 @@ CFLAGS+=	-DKLD_MODULE
 # such paths after -nostdinc.  It doesn't seem to be possible to
 # add to the front of `make' variable.
 #
-# Don't use -I- anymore, source-relative includes are desireable.
+# Don't use -I- anymore, source-relative includes are desirable.
 _ICFLAGS:=	${CFLAGS:M-I*}
 CFLAGS+=	-nostdinc ${_ICFLAGS}
 

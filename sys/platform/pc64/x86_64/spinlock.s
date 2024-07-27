@@ -58,7 +58,7 @@ NON_GPROF_ENTRY(spin_unlock_np)
 	NON_GPROF_RET
 
 /*
- * Auxillary convenience routines.  Note that these functions disable and
+ * Auxiliary convenience routines.  Note that these functions disable and
  * restore interrupts as well, on SMP, as performing spin locking functions.
  */
 NON_GPROF_ENTRY(imen_lock)

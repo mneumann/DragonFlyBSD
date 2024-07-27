@@ -899,7 +899,7 @@ vn_stat(struct vnode *vp, struct stat *sb, struct ucred *cred)
 
 	/*
 	 * A VCHR and VBLK device may track the last access and last modified
-	 * time independantly of the filesystem.  This is particularly true
+	 * time independently of the filesystem.  This is particularly true
 	 * because device read and write calls may bypass the filesystem.
 	 */
 	if (vp->v_type == VCHR || vp->v_type == VBLK) {

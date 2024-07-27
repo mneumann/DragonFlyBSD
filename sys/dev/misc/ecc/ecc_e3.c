@@ -201,7 +201,7 @@ ecc_e3_attach(device_t dev)
 	TAILQ_INIT(&sc->ecc_dimm);
 	sc->ecc_dev = dev;
 
-	/* Probe the existance of MCHBAR */
+	/* Probe the existence of MCHBAR */
 	error = COREMCTL_MCH_READ(device_get_parent(dev), MCH_CORE_DIMM_CH0,
 	    &val);
 	if (!error)

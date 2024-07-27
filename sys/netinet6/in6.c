@@ -1370,7 +1370,7 @@ in6_purgeif(struct ifnet *ifp)
  *	other values may be returned from in6_ioctl()
  *
  * NOTE: SIOCALIFADDR(with IFLR_PREFIX set) allows prefixlen less than 64.
- * this is to accomodate address naming scheme other than RFC2374,
+ * this is to accommodate address naming scheme other than RFC2374,
  * in the future.
  * RFC2373 defines interface id to be 64bit, but it allows non-RFC2374
  * address encoding scheme. (see figure on page 8)
@@ -2204,7 +2204,7 @@ in6_ifawithscope(struct ifnet *oifp, struct in6_addr *dst, struct ucred *cred)
 			 *   Smaller scopes are the last resort.
 			 * - A deprecated address is chosen only when we have
 			 *   no address that has an enough scope, but is
-			 *   prefered to any addresses of smaller scopes
+			 *   preferred to any addresses of smaller scopes
 			 *   (this must be already done above.)
 			 * - addresses on the outgoing I/F are preferred to
 			 *   ones on other interfaces if none of above

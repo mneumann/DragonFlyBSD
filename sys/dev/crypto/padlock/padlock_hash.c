@@ -59,7 +59,7 @@
  * the padding and calculate hash automatically.
  * This means, it is not possible to implement common init(), update(), final()
  * methods.
- * The way I've choosen is to keep adding data to the buffer on update()
+ * The way I've chosen is to keep adding data to the buffer on update()
  * (reallocating the buffer if necessary) and call XSHA{1,256} instruction on
  * final().
  */

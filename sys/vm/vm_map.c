@@ -536,7 +536,7 @@ vmspace_terminate(struct vmspace *vm, int final)
 }
 
 /*
- * Swap useage is determined by taking the proportional swap used by
+ * Swap usage is determined by taking the proportional swap used by
  * VM objects backing the VM map.  To make up for fractional losses,
  * if the VM object has any swap use at all the associated map entries
  * count for at least 1 swap page.
@@ -1516,7 +1516,7 @@ vm_map_findspace(vm_map_t map, vm_offset_t start, vm_size_t length,
 		/*
 		 * Locate the next entry, we can stop if this is the
 		 * last entry (we know we are in-bounds so that would
-		 * be a sucess).
+		 * be a success).
 		 */
 		if (entry)
 			entry = vm_map_rb_tree_RB_NEXT(entry);
@@ -1661,7 +1661,7 @@ vm_map_find(vm_map_t map, void *map_object, void *map_aux,
  * Simplify the given map entry by merging with either neighbor.  This
  * routine also has the ability to merge with both neighbors.
  *
- * This routine guarentees that the passed entry remains valid (though
+ * This routine guarantees that the passed entry remains valid (though
  * possibly extended).  When merging, this routine may delete one or
  * both neighbors.  No action is taken on entries which have their
  * in-transition flag set.
@@ -1885,10 +1885,10 @@ vm_map_transition_wait(vm_map_t map, int relock)
 
 /*
  * When we do blocking operations with the map lock held it is
- * possible that a clip might have occured on our in-transit entry,
+ * possible that a clip might have occurred on our in-transit entry,
  * requiring an adjustment to the entry in our loop.  These macros
  * help the pageable and clip_range code deal with the case.  The
- * conditional costs virtually nothing if no clipping has occured.
+ * conditional costs virtually nothing if no clipping has occurred.
  */
 
 #define CLIP_CHECK_BACK(entry, save_start)			\
@@ -1991,7 +1991,7 @@ again:
 			vm_map_transition_wait(map, 1);
 
 			/*
-			 * clips might have occured while we blocked.
+			 * clips might have occurred while we blocked.
 			 */
 			CLIP_CHECK_FWD(entry, save_end);
 			CLIP_CHECK_BACK(start_entry, start);
@@ -2829,7 +2829,7 @@ vm_map_kernel_wiring(vm_map_t map, vm_offset_t start,
 		}
 
 		/*
-		 * If a failure occured undo everything by falling through
+		 * If a failure occurred undo everything by falling through
 		 * to the unwiring code.  'end' has already been adjusted
 		 * appropriately.
 		 */
@@ -3196,7 +3196,7 @@ again:
 		 * retry.  It's easier (and not really slower) to just retry
 		 * since this case occurs so rarely and the hint is already
 		 * pointing at the right place.  We have to reset the
-		 * start offset so as not to accidently delete an entry
+		 * start offset so as not to accidentally delete an entry
 		 * another process just created in vacated space.
 		 */
 		if (entry->eflags & MAP_ENTRY_IN_TRANSITION) {
@@ -3931,7 +3931,7 @@ vm_map_stack (vm_map_t map, vm_offset_t *addrbos, vm_size_t max_ssize,
 #endif
 
 	/*
-	 * If we can't accomodate max_ssize in the current mapping,
+	 * If we can't accommodate max_ssize in the current mapping,
 	 * no go.  However, we need to be aware that subsequent user
 	 * mappings might map into the space we have reserved for
 	 * stack, and currently this space is not protected.  

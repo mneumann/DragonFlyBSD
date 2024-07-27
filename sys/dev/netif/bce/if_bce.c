@@ -794,7 +794,7 @@ bce_attach(device_t dev)
 			sc->bce_bc_ver[j++] = '.';
 	}
 
-	/* Check if any management firwmare is running. */
+	/* Check if any management firmware is running. */
 	val = bce_shmem_rd(sc, BCE_PORT_FEATURE);
 	if (val & BCE_PORT_FEATURE_ASF_ENABLED) {
 		sc->bce_flags |= BCE_MFW_ENABLE_FLAG;
@@ -4423,7 +4423,7 @@ bce_rx_intr(struct bce_rx_ring *rxr, int count, uint16_t hw_cons)
 			    &sw_prod_bseq, 0)) {
 				IFNET_STAT_INC(ifp, ierrors, 1);
 
-				/* Try and reuse the exisitng mbuf. */
+				/* Try and reuse the existing mbuf. */
 				bce_setup_rxdesc_std(rxr, sw_chain_prod,
 				    &sw_prod_bseq);
 				m = NULL;
@@ -5437,7 +5437,7 @@ bce_intr_legacy(void *xsc)
 	     BCE_PCICFG_MISC_STATUS_INTA_VALUE))
 		return;
 
-	/* Ack the interrupt and stop others from occuring. */
+	/* Ack the interrupt and stop others from occurring. */
 	REG_WR(sc, BCE_PCICFG_INT_ACK_CMD,
 	       BCE_PCICFG_INT_ACK_CMD_USE_INT_HC_PARAM |
 	       BCE_PCICFG_INT_ACK_CMD_MASK_INT);
@@ -5462,7 +5462,7 @@ bce_intr_msi(void *xsc)
 {
 	struct bce_softc *sc = xsc;
 
-	/* Ack the interrupt and stop others from occuring. */
+	/* Ack the interrupt and stop others from occurring. */
 	REG_WR(sc, BCE_PCICFG_INT_ACK_CMD,
 	       BCE_PCICFG_INT_ACK_CMD_USE_INT_HC_PARAM |
 	       BCE_PCICFG_INT_ACK_CMD_MASK_INT);
@@ -5620,7 +5620,7 @@ bce_set_rx_mode(struct bce_softc *sc)
 		REG_WR(sc, BCE_EMAC_RX_MODE, rx_mode);
 	}
 
-	/* Disable and clear the exisitng sort before enabling a new sort. */
+	/* Disable and clear the existing sort before enabling a new sort. */
 	REG_WR(sc, BCE_RPM_SORT_USER0, 0x0);
 	REG_WR(sc, BCE_RPM_SORT_USER0, sort_mode);
 	REG_WR(sc, BCE_RPM_SORT_USER0, sort_mode | BCE_RPM_SORT_USER0_ENA);

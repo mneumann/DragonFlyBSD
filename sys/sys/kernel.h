@@ -178,7 +178,7 @@ enum sysinit_sub_id {
 	SI_BOOT2_PROC0		= 0x1f00000,
 
 	/*
-	 * Continue with miscellanious system initialization
+	 * Continue with miscellaneous system initialization
 	 */
 	SI_SUB_CREATE_INIT	= 0x2300000,	/* create the init process */
 	SI_SUB_PROP		= 0x2340000,

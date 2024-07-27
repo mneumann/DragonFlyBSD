@@ -660,7 +660,7 @@ snd_clone_alloc(struct snd_clone *c, struct cdev **dev, int *unit, int tmask)
 
 		cunit++;
 		/*
-		 * Simmilar device type. Sort incrementally according
+		 * Similar device type. Sort incrementally according
 		 * to allocation unit. While here, look for free slot
 		 * and possible collision for new / future allocation.
 		 */
@@ -733,7 +733,7 @@ snd_clone_alloc_new:
 	 * allowable units. Allocate, setup a minimal unique entry with busy
 	 * status so nobody will monkey on this new entry. Unit magic is set
 	 * right here to avoid collision with other contesting handler.
-	 * The caller must be carefull here to maintain its own
+	 * The caller must be careful here to maintain its own
 	 * synchronization, as long as it will not conflict with malloc(9)
 	 * operations.
 	 *

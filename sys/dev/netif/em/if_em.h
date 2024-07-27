@@ -358,7 +358,7 @@ struct adapter {
 	 * tx_dd[]:
 	 * Index of the TX descriptors which have RS bit set,
 	 * i.e. DD bit will be set on this TX descriptor after
-	 * the data of the TX descriptor are transfered to
+	 * the data of the TX descriptor are transferred to
 	 * hardware's internal packet buffer.  Only the TX
 	 * descriptors listed in tx_dd[] will be checked upon
 	 * TX interrupt.  This array is used as circular ring.

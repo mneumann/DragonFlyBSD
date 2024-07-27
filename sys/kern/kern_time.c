@@ -449,7 +449,7 @@ sys_getcpuclockid(struct sysmsg *sysmsg, const struct getcpuclockid_args *uap)
  *	If there is more than a tick's worth of time left,
  *	calculate the baseline ticks and use an interruptable
  *	tsleep, then handle the fine-grained delay on the next
- *	loop.  This usually results in two sleeps occuring, a long one
+ *	loop.  This usually results in two sleeps occurring, a long one
  *	and a short one.
  *
  * MPSAFE

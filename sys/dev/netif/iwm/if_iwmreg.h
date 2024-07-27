@@ -2995,7 +2995,7 @@ struct iwm_binding_cmd {
  * struct iwm_time_quota_data - configuration of time quota per binding
  * @id_and_color: ID and color of the relevant Binding
  * @quota: absolute time quota in TU. The scheduler will try to divide the
- *	remainig quota (after Time Events) according to this quota.
+ *	remaining quota (after Time Events) according to this quota.
  * @max_duration: max uninterrupted context duration in TU
  */
 struct iwm_time_quota_data_v1 {
@@ -3021,7 +3021,7 @@ struct iwm_time_quota_cmd_v1 {
  * struct iwm_time_quota_data - configuration of time quota per binding
  * @id_and_color: ID and color of the relevant Binding.
  * @quota: absolute time quota in TU. The scheduler will try to divide the
- *	remainig quota (after Time Events) according to this quota.
+ *	remaining quota (after Time Events) according to this quota.
  * @max_duration: max uninterrupted context duration in TU
  * @low_latency: low latency status IWM_QUOTA_LOW_LATENCY_*
  */
@@ -3035,7 +3035,7 @@ struct iwm_time_quota_data {
 /**
  * struct iwm_time_quota_cmd - configuration of time quota between bindings
  * ( TIME_QUOTA_CMD = 0x2c )
- * Note: on non-CDB the fourth one is the auxilary mac and is essentially zero.
+ * Note: on non-CDB the fourth one is the auxiliary mac and is essentially zero.
  * On CDB the fourth one is a regular binding.
  *
  * @quotas: allocations per binding
@@ -3152,7 +3152,7 @@ struct iwm_fw_channel_info {
  * XXX Intel forgot to bump the PHY_CONTEXT command API when they increased
  * the size of fw_channel_info from v1 to v2.
  * To keep things simple we define two versions of this struct, and both
- * are labled as CMD_API_VER_1. (The Linux iwlwifi driver performs dark
+ * are labeled as CMD_API_VER_1. (The Linux iwlwifi driver performs dark
  * magic with pointers to struct members instead.)
  */
 /* This version must be used if IWM_UCODE_TLV_CAPA_ULTRA_HB_CHANNELS is set: */
@@ -4340,7 +4340,7 @@ struct iwm_uapsd_misbehaving_ap_notif {
  *      Roaming Energy Delta Threshold, otherwise use normal Energy Delta
  *      Threshold. Typical energy threshold is -72dBm.
  * @bf_temp_threshold: This threshold determines the type of temperature
- *	filtering (Slow or Fast) that is selected (Units are in Celsuis):
+ *	filtering (Slow or Fast) that is selected (Units are in Celsius):
  *      If the current temperature is above this threshold - Fast filter
  *	will be used, If the current temperature is below this threshold -
  *	Slow filter will be used.
@@ -4348,12 +4348,12 @@ struct iwm_uapsd_misbehaving_ap_notif {
  *      calculated for this and the last passed beacon is greater than this
  *      threshold. Zero value means that the temperature change is ignored for
  *      beacon filtering; beacons will not be  forced to be sent to driver
- *      regardless of whether its temerature has been changed.
+ *      regardless of whether its temperature has been changed.
  * @bf_temp_slow_filter: Send Beacon to driver if delta in temperature values
  *      calculated for this and the last passed beacon is greater than this
  *      threshold. Zero value means that the temperature change is ignored for
  *      beacon filtering; beacons will not be forced to be sent to driver
- *      regardless of whether its temerature has been changed.
+ *      regardless of whether its temperature has been changed.
  * @bf_enable_beacon_filter: 1, beacon filtering is enabled; 0, disabled.
  * @bf_escape_timer: Send beacons to driver if no beacons were passed
  *      for a specific period of time. Units: Beacons.
@@ -6474,7 +6474,7 @@ struct iwm_add_sta_cmd {
  *	and probe responses.
  * @IWM_STA_MULTICAST: multicast traffic,
  * @IWM_STA_TDLS_LINK: TDLS link station
- * @IWM_STA_AUX_ACTIVITY: auxilary station (scan, ROC and so on).
+ * @IWM_STA_AUX_ACTIVITY: auxiliary station (scan, ROC and so on).
  */
 #define IWM_STA_LINK		0
 #define IWM_STA_GENERAL_PURPOSE	1

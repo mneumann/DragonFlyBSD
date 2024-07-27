@@ -34,9 +34,9 @@
  * $DragonFly: src/sys/vfs/hammer/hammer_flusher.c,v 1.45 2008/07/31 04:42:04 dillon Exp $
  */
 /*
- * HAMMER dependancy flusher thread
+ * HAMMER dependency flusher thread
  *
- * Meta data updates create buffer dependancies which are arranged as a
+ * Meta data updates create buffer dependencies which are arranged as a
  * hierarchy of lists.
  */
 
@@ -580,7 +580,7 @@ hammer_flusher_flush_inode(hammer_inode_t ip, void *data)
  * space left.
  *
  * 1/4 - Emergency free undo space level.  Below this point the flusher
- *	 will finalize even if directory dependancies have not been resolved.
+ *	 will finalize even if directory dependencies have not been resolved.
  *
  * 2/4 - Used by the pruning and reblocking code.  These functions may be
  *	 running in parallel with a flush and cannot be allowed to drop

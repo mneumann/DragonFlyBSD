@@ -2913,7 +2913,7 @@ sppp_ipcp_RCR(struct sppp *sp, struct lcp_header *h, int len)
 			 * since our algorithm always uses the
 			 * original option to NAK it with new values,
 			 * things would become more complicated.  In
-			 * pratice, the only commonly implemented IP
+			 * practice, the only commonly implemented IP
 			 * compression option is VJ anyway, so the
 			 * difference is negligible.
 			 */

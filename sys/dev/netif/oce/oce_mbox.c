@@ -443,7 +443,7 @@ oce_read_mac_addr(POCE_SOFTC sc, uint32_t if_id,
 		goto error;
 	}
 
-	/* copy the mac addres in the output parameter */
+	/* copy the mac address in the output parameter */
 	mac->size_of_struct = fwcmd->params.rsp.mac.size_of_struct;
 	bcopy(&fwcmd->params.rsp.mac.mac_addr[0], &mac->mac_addr[0],
 		mac->size_of_struct);
@@ -1163,7 +1163,7 @@ oce_update_multicast(POCE_SOFTC sc, POCE_DMA_MEM pdma_mem)
 
 	bzero(&mbx, sizeof(struct oce_mbx));
 
-	mbx.u0.s.embedded = 0; /*Non embeded*/
+	mbx.u0.s.embedded = 0; /*Non embedded*/
 	mbx.payload_length = sizeof(struct mbx_set_common_iface_multicast);
 	mbx.u0.s.sge_count = 1;
 	sgl = &mbx.payload.u0.u1.sgl[0];
@@ -1199,7 +1199,7 @@ oce_pass_through_mbox(POCE_SOFTC sc, POCE_DMA_MEM dma_mem, uint32_t req_size)
 
 	bzero(&mbx, sizeof(struct oce_mbx));
 
-	mbx.u0.s.embedded  = 0; /*Non embeded*/
+	mbx.u0.s.embedded  = 0; /*Non embedded*/
 	mbx.payload_length = req_size;
 	mbx.u0.s.sge_count = 1;
 	sgl = &mbx.payload.u0.u1.sgl[0];
@@ -1436,7 +1436,7 @@ oce_mbox_write_flashrom(POCE_SOFTC sc, uint32_t optype,uint32_t opcode,
 	fwcmd->flash_op_code = opcode;
 	fwcmd->data_buffer_size = num_bytes;
 
-	mbx.u0.s.embedded  = 0; /*Non embeded*/
+	mbx.u0.s.embedded  = 0; /*Non embedded*/
 	mbx.payload_length = payload_len;
 	mbx.u0.s.sge_count = 1;
 

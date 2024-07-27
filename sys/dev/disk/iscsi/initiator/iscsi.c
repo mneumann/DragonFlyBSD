@@ -164,7 +164,7 @@ iscsi_close(struct dev_close_args *ap)
 	  sdebug(2, "session=%d flags=%x", minor(dev), sp->flags );
 	  /*
 	   | if still in full phase, this probably means
-	   | that something went realy bad.
+	   | that something went really bad.
 	   | it could be a result from 'shutdown', in which case
 	   | we will ignore it (so buffers can be flushed).
 	   | the problem is that there is no way of differentiating

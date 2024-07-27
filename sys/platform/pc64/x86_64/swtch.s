@@ -144,7 +144,7 @@ ENTRY(cpu_heavy_switch)
 	 * Save RIP, RSP and callee-saved registers (RBX, RBP, R12-R15).
 	 */
 	movq	PCPU(curthread),%rcx
-	/* On top of the stack is the return adress. */
+	/* On top of the stack is the return address. */
 	movq	(%rsp),%rax			/* (reorder optimization) */
 	movq	TD_PCB(%rcx),%rdx		/* RDX = PCB */
 	movq	%rax,PCB_RIP(%rdx)		/* return PC may be modified */

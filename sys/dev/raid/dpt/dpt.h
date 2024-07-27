@@ -1076,7 +1076,7 @@ typedef struct dpt_softc {
 
 	/*
 	 * Every object on a unit can have a receiver, if it treats
-	 * us as a target.  We do that so that separate and independant
+	 * us as a target.  We do that so that separate and independent
 	 * clients can consume received buffers.
 	 */
 
@@ -1248,7 +1248,7 @@ dpt_softc_t *dpt_minor2softc(int minor_no);
 #endif /* _KERNEL */
 
 /*
- * This function substracts one timval structure from another,
+ * This function subtracts one timval structure from another,
  * Returning the result in usec.
  * It assumes that less than 4 billion usecs passed form start to end.
  * If times are sensless, ~0 is returned.

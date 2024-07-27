@@ -839,7 +839,7 @@ prison_free(struct prison *pr)
 }
 
 /*
- * Check if permisson for a specific privilege is granted within jail.
+ * Check if permission for a specific privilege is granted within jail.
  *
  * MPSAFE
  */

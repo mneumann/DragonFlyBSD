@@ -3975,7 +3975,7 @@ wpi_send_rxon(struct wpi_softc *sc, int assoc, int async)
 }
 
 /**
- * Configure the card to listen to a particular channel, this transisions the
+ * Configure the card to listen to a particular channel, this transitions the
  * card in to being able to receive frames from remote devices.
  */
 static int

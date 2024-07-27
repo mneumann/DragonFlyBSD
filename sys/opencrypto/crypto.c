@@ -808,7 +808,7 @@ crypto_dispatch(struct cryptop *crp)
 	/*
 	 * Dispatch the crypto op directly to the driver if the caller
 	 * marked the request to be processed immediately or this is
-	 * a synchronous callback chain occuring from within a crypto
+	 * a synchronous callback chain occurring from within a crypto
 	 * processing thread.
 	 *
 	 * Fall through to queueing the driver is blocked.
@@ -951,7 +951,7 @@ again:
 }
 
 /*
- * Dispatch an assymetric crypto request.
+ * Dispatch an asymmetric crypto request.
  */
 static int
 crypto_kinvoke(struct cryptkop *krp, int crid)

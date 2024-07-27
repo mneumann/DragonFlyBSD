@@ -426,7 +426,7 @@ vr_mii_writereg(struct vr_softc *sc, struct vr_mii_frame *frame)
 {
 	int i;
 
-  	/* Set the PHY-adress */
+  	/* Set the PHY-address */
 	CSR_WRITE_1(sc, VR_PHYADDR, (CSR_READ_1(sc, VR_PHYADDR)& 0xe0)|
 		    frame->mii_phyaddr);
 
@@ -1189,7 +1189,7 @@ vr_intr(void *arg)
 	sc = arg;
 	ifp = &sc->arpcom.ac_if;
 
-	/* Supress unwanted interrupts. */
+	/* Suppress unwanted interrupts. */
 	if (!(ifp->if_flags & IFF_UP)) {
 		vr_stop(sc);
 		return;

@@ -108,7 +108,7 @@
 #include "hammer2.h"
 
 /*
- * Returns the bref type of the cluster's foucs.
+ * Returns the bref type of the cluster's focus.
  *
  * If the cluster is errored, returns HAMMER2_BREF_TYPE_EMPTY (0).
  * The cluster must be locked.
@@ -150,7 +150,7 @@ hammer2_cluster_bref(hammer2_cluster_t *cluster, hammer2_blockref_t *bref)
  * The returned cluster will be focused on the chain and inherit its
  * error state.
  *
- * The chain's lock and reference are transfered to the new cluster, so
+ * The chain's lock and reference are transferred to the new cluster, so
  * the caller should not try to unlock the chain separately.
  *
  * We fake the flags.

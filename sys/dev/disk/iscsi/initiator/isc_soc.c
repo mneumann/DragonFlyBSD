@@ -145,7 +145,7 @@ isc_sendPDU(isc_session_t *sp, pduq_t *pq)
           int           off = 0;
 
           len = pp->ds_len;
-	  while(len & 03) // the specs say it must be int alligned
+	  while(len & 03) // the specs say it must be int aligned
 	       len++;
           while(len > 0) {
                 int       l;
@@ -232,7 +232,7 @@ isc_sendPDU(isc_session_t *sp, pduq_t *pq)
      if(pq->pdu.ds) {
 	  iv->iov_base = pp->ds;
 	  iv->iov_len = pp->ds_len;
-	  while(iv->iov_len & 03) // the specs say it must be int alligned
+	  while(iv->iov_len & 03) // the specs say it must be int aligned
 	       iv->iov_len++;
 	  iv++;
      }

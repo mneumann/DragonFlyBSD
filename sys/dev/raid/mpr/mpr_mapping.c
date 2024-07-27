@@ -2387,7 +2387,7 @@ fail:
 }
 
 /*
- * mpr_mapping_check_devices - start of the day check for device availabilty
+ * mpr_mapping_check_devices - start of the day check for device availability
  * @sc: per adapter object
  *
  * Returns nothing.

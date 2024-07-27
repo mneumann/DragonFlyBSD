@@ -160,7 +160,7 @@ iface_match(struct ifnet *ifp, ipfw_insn_if *cmd)
 	return 0;	/* no match, fail ... */
 }
 
-/* implimentation of the checker functions */
+/* implementation of the checker functions */
 void
 check_count(int *cmd_ctl, int *cmd_val, struct ip_fw_args **args,
 	struct ip_fw **f, ipfw_insn *cmd, uint16_t ip_len)

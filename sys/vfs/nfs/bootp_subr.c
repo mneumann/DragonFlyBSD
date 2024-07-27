@@ -590,7 +590,7 @@ bootpc_call(struct bootpc_globalcontext *gctx, struct thread *td)
 	char hexstr[64];
 	
 	/*
-	 * Create socket and set its recieve timeout.
+	 * Create socket and set its receive timeout.
 	 */
 	error = socreate(AF_INET, &so, SOCK_DGRAM, 0, td);
 	if (error != 0)

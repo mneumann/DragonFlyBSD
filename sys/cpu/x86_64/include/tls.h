@@ -67,7 +67,7 @@ struct tls_dtv {
 
 /*
  * NOTE: RTLD_STATIC_TLS_EXTRA_DEFAULT is set as the kernel's kern.tls_extra
- *	 default, generally made large enough to accomodate modern libraries
+ *	 default, generally made large enough to accommodate modern libraries
  *	 that desire to use static TLS sections.  Make it roughly 2048 bytes
  *	 smaller than a multiple of an aligned page for allocation efficiency.
  */

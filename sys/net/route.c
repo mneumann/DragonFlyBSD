@@ -726,7 +726,7 @@ rtrequest1_global(int req, struct rt_addrinfo *rtinfo,
 
 /*
  * Handle a route table request on the current cpu.  Since the route table's
- * are supposed to be identical on each cpu, an error occuring later in the
+ * are supposed to be identical on each cpu, an error occurring later in the
  * message chain is considered system-fatal.
  */
 static void
@@ -1739,7 +1739,7 @@ rtsearch_msghandler(netmsg_t msg)
 
 		/*
 		 * Under following cases, unrecoverable error has
-		 * not occured:
+		 * not occurred:
 		 * o  Request is RTM_GET
 		 * o  The first time that we find the route, but the
 		 *    modification fails.
@@ -1902,11 +1902,11 @@ rtchange(struct ifaddr *old_ifa, struct ifaddr *new_ifa)
 	struct netmsg_rtchange msg;
 
 	/*
-	 * XXX individual requests are not independantly chained,
+	 * XXX individual requests are not independently chained,
 	 * which means that the per-cpu route tables will not be
 	 * consistent in the middle of the operation.  If routes
 	 * related to the interface are manipulated while we are
-	 * doing this the inconsistancy could trigger a panic.
+	 * doing this the inconsistency could trigger a panic.
 	 */
 	netmsg_init(&msg.base, NULL, &curthread->td_msgport, MSGF_PRIORITY,
 	    rtchange_dispatch);

@@ -291,7 +291,7 @@ ips_send_adapter_info_cmd(ips_command_t *command)
 	int error = 0;
 
 	if (bus_dma_tag_create(	/* parent    */	sc->adapter_dmatag,
-				/* alignemnt */	1,
+				/* alignment */	1,
 				/* boundary  */	0,
 				/* lowaddr   */	BUS_SPACE_MAXADDR_32BIT,
 				/* highaddr  */	BUS_SPACE_MAXADDR,
@@ -389,7 +389,7 @@ ips_send_drive_info_cmd(ips_command_t *command)
 	ips_drive_info_t *driveinfo;
 
 	if (bus_dma_tag_create(	/* parent    */	sc->adapter_dmatag,
-				/* alignemnt */	1,
+				/* alignment */	1,
 				/* boundary  */	0,
 				/* lowaddr   */	BUS_SPACE_MAXADDR_32BIT,
 				/* highaddr  */	BUS_SPACE_MAXADDR,
@@ -647,7 +647,7 @@ ips_read_nvram(ips_command_t *command)
 	ips_softc_t *sc = command->sc;
 
 	if (bus_dma_tag_create(	/* parent    */	sc->adapter_dmatag,
-				/* alignemnt */	1,
+				/* alignment */	1,
 				/* boundary  */	0,
 				/* lowaddr   */	BUS_SPACE_MAXADDR_32BIT,
 				/* highaddr  */	BUS_SPACE_MAXADDR,

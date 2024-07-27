@@ -1207,9 +1207,9 @@ amdparsemsg(struct amd_softc *amd)
 	reject = FALSE;
 
 	/*
-	 * Parse as much of the message as is availible,
+	 * Parse as much of the message as is available,
 	 * rejecting it if we don't support it.  When
-	 * the entire message is availible and has been
+	 * the entire message is available and has been
 	 * handled, return TRUE indicating that we have
 	 * parsed an entire message.
 	 */
@@ -1508,7 +1508,7 @@ amdhandlemsgreject(struct amd_softc *amd)
 
 		/*
 		 * Requeue all tagged commands for this target
-		 * currently in our posession so they can be
+		 * currently in our possession so they can be
 		 * converted to untagged commands.
 		 */
 		amdcompletematch(amd, amd->cur_target, amd->cur_lun,

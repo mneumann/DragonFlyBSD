@@ -54,7 +54,7 @@ typedef	__uint32_t	cpulock_t;	/* count and exclusive lock */
 
 #define	CPULOCK_EXCLBIT	0		/* exclusive lock bit number */
 #define	CPULOCK_EXCL	0x00000001	/* exclusive lock */
-#define	CPULOCK_INCR	0x00000002	/* auxillary counter add/sub */
+#define	CPULOCK_INCR	0x00000002	/* auxiliary counter add/sub */
 #define	CPULOCK_CNTMASK	0x7FFFFFFE
 
 #endif /* !_SYS_CPUMASK_H_ */

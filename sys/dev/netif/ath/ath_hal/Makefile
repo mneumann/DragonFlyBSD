@@ -71,7 +71,7 @@ SRCS+=	ar9160_attach.c
 # + AR9130 - (Sowl) - Embedded (AR913x SoC)
 #
 # This requires AH_SUPPORT_AR9130 in order to function as some
-# register values have shifted for this chipset. Definig this however
+# register values have shifted for this chipset. Defining this however
 # (currently) breaks non-AR9130 chipsets - since this is an embedded
 # chipset and no other radios are glued to it, this shouldn't pose a
 # problem.

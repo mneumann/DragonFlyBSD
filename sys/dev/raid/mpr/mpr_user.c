@@ -1109,7 +1109,7 @@ mpr_user_pass_thru(struct mpr_softc *sc, mpr_pass_thru_t *data)
 		}
 
 		/*
-		 * Copy out the NVMe Error Reponse to user. The Error Response
+		 * Copy out the NVMe Error Response to user. The Error Response
 		 * buffer is given by the user, but a sense buffer is used to
 		 * get that data from the IOC. The user's
 		 * ErrorResponseBaseAddress is saved in the
@@ -1118,7 +1118,7 @@ mpr_user_pass_thru(struct mpr_softc *sc, mpr_pass_thru_t *data)
 		 * complete, the Error Response data from the IOC is copied to
 		 * that user address after it is checked for validity.
 		 * Also note that 'sense' buffers are not defined for
-		 * NVMe commands. Sense terminalogy is only used here so that
+		 * NVMe commands. Sense terminology is only used here so that
 		 * the same IOCTL structure and sense buffers can be used for
 		 * NVMe.
 		 */

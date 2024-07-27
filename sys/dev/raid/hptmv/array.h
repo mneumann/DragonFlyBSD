@@ -99,7 +99,7 @@ typedef struct _RaidArray
 } RaidArray;
 
 /***************************************************************************
- *            Array Descripton on disk
+ *            Array Description on disk
  ***************************************************************************/
 #pragma pack(1)
 typedef struct _ArrayDescript
@@ -220,7 +220,7 @@ void HPTLIBAPI fFixRAID01Stripe(_VBUS_ARG PVDevice pStripe);
 #endif
 
 /***************************************************************************
- *  Macro defination
+ *  Macro definition
  ***************************************************************************/
 #ifndef MAX_ARRAY_PER_VBUS
 #define MAX_ARRAY_PER_VBUS (MAX_VDEVICE_PER_VBUS*2) /* worst case */

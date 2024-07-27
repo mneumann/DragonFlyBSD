@@ -366,7 +366,7 @@ struct aac_softc
 
 	struct aac_qstat	aac_qstat[AACQ_COUNT];	/* queue statistics */
 
-	/* connected containters */
+	/* connected containers */
 	TAILQ_HEAD(,aac_container)	aac_container_tqh;
 	struct lock		aac_container_lock;
 

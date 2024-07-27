@@ -56,7 +56,7 @@ static void  ar9340_soc_gpio_cfg_output_mux(
     }
 #if ATH_SMARTANTENNA_DISABLE_JTAG
 /* 
- * To use GPIO pins 0 and 1 for controling antennas, JTAG needs to disabled.
+ * To use GPIO pins 0 and 1 for controlling antennas, JTAG needs to disabled.
  */
     if (gpio <= MAX_JTAG_GPIO_PIN) {
         flags = ADDR_READ(AR9340_SOC_GPIO_FUNCTION);

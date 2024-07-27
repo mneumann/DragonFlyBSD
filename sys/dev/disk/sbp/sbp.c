@@ -79,7 +79,7 @@
  * STATUS FIFO addressing
  *   bit
  * -----------------------
- *  0- 1( 2): 0 (alingment)
+ *  0- 1( 2): 0 (alignment)
  *  2- 7( 6): target
  *  8-15( 8): lun
  * 16-31( 8): reserved

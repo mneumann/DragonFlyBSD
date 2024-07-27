@@ -389,7 +389,7 @@ icmp6_error(struct mbuf *m, int type, int code, int param)
 
 freeit:
 	/*
-	 * If we can't tell wheter or not we can generate ICMP6, free it.
+	 * If we can't tell whether or not we can generate ICMP6, free it.
 	 */
 	m_freem(m);
 }

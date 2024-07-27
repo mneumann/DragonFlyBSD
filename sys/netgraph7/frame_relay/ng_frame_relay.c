@@ -370,7 +370,7 @@ ngfrm_rcvdata(hook_p hook, item_p item)
 	data = mtod(m, char *);
 
 	/*
-	 * Shift the lowest bits into the address field untill we are done.
+	 * Shift the lowest bits into the address field until we are done.
 	 * First byte is MSBits of addr so work backwards.
 	 */
 	switch (alen) {

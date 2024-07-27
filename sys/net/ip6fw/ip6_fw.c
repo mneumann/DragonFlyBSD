@@ -515,7 +515,7 @@ ip6_fw_chk(struct ip6_hdr **pip6,
 	/*
 	 * Go down the chain, looking for enlightment
 	 * #ifdef IP6FW_DIVERT_RESTART
-	 * If we've been asked to start at a given rule immediatly, do so.
+	 * If we've been asked to start at a given rule immediately, do so.
 	 * #endif
 	 */
 	chain = LIST_FIRST(&ip6_fw_chain);

@@ -76,7 +76,7 @@ struct	unpcb {
 	struct xucred	unp_peercred;	/* peer credentials, if applicable */
 	int		unp_msgcount;	/* # of cmsgs this unp are in */
 	int		unp_gcflags;	/* flags reserved for unp GC to use */
-	struct file	*unp_fp;	/* cooresponding fp if unp is in cmsg */
+	struct file	*unp_fp;	/* corresponding fp if unp is in cmsg */
 	long		unp_unused01;
 	struct vnode	*unp_vnode;	/* if associated with file */
 	struct vnode	*unp_rvnode;	/* root vp for creating process */
