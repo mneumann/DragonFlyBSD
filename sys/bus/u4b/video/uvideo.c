@@ -757,7 +757,7 @@ uvideo_vc_parse_desc_pu(struct uvideo_softc *sc,
 	d = (void *)desc;
 
 	if (sc->sc_desc_vc_pu_num == UVIDEO_MAX_PU) {
-		kprintf("%s: too many PU descriptors found!\n", DEVNAME(sc));
+		device_printf(sc->sc_dev, "too many PU descriptors found!\n");
 		return (USB_ERR_INVAL);
 	}
 
@@ -963,7 +963,7 @@ uvideo_vs_parse_desc_input_header(struct uvideo_softc *sc,
 
 	/* on some devices bNumFormats is larger than the truth */
 	if (d->bNumFormats == 0) {
-		kprintf("%s: no INPUT FORMAT descriptors found!\n", DEVNAME(sc));
+		device_printf(sc->sc_dev, "no INPUT FORMAT descriptors found!\n");
 		return (USB_ERR_INVAL);
 	}
 
@@ -1023,7 +1023,7 @@ uvideo_vs_parse_desc_format(struct uvideo_softc *sc)
 	sc->sc_fmtgrp_idx = 0;
 
 	if (sc->sc_fmtgrp_num == 0) {
-		kprintf("%s: no format descriptors found!\n", DEVNAME(sc));
+		device_printf(sc->sc_dev, "no format descriptors found!\n");
 		return (USB_ERR_INVAL);
 	}
 	DPRINTF("%s: number of total format descriptors=%d\n",
@@ -1041,13 +1041,14 @@ uvideo_vs_parse_desc_format_mjpeg(struct uvideo_softc *sc,
 	d = (struct usb_video_format_mjpeg_desc *)(uint8_t *)desc;
 
 	if (d->bNumFrameDescriptors == 0) {
-		kprintf("%s: no MJPEG frame descriptors available!\n",
-		    DEVNAME(sc));
+		device_printf(sc->sc_dev,
+		    "no MJPEG frame descriptors available!\n");
 		return (USB_ERR_INVAL);
 	}
 
 	if (sc->sc_fmtgrp_idx >= UVIDEO_MAX_FORMAT) {
-		kprintf("%s: too many format descriptors found!\n", DEVNAME(sc));
+		device_printf(sc->sc_dev,
+		    "too many format descriptors found!\n");
 		return (USB_ERR_INVAL);
 	}
 
@@ -1084,13 +1085,14 @@ uvideo_vs_parse_desc_format_uncompressed(struct uvideo_softc *sc,
 	d = (struct usb_video_format_uncompressed_desc *)(uint8_t *)desc;
 
 	if (d->bNumFrameDescriptors == 0) {
-		kprintf("%s: no UNCOMPRESSED frame descriptors available!\n",
-		    DEVNAME(sc));
+		device_printf(sc->sc_dev,
+		    "no UNCOMPRESSED frame descriptors available!\n");
 		return (USB_ERR_INVAL);
 	}
 
 	if (sc->sc_fmtgrp_idx >= UVIDEO_MAX_FORMAT) {
-		kprintf("%s: too many format descriptors found!\n", DEVNAME(sc));
+		device_printf(sc->sc_dev,
+		    "too many format descriptors found!\n");
 		return (USB_ERR_INVAL);
 	}
 
@@ -1179,8 +1181,8 @@ uvideo_vs_parse_desc_frame_sub(struct uvideo_softc *sc,
 	fmtidx = sc->sc_fmtgrp_idx;
 	frame_num = sc->sc_fmtgrp[fmtidx].frame_num;
 	if (frame_num >= UVIDEO_MAX_FRAME) {
-		kprintf("%s: too many %s frame descriptors found!\n",
-		    DEVNAME(sc),
+		device_printf(sc->sc_dev,
+		    "too many %s frame descriptors found!\n",
 		    desc->bDescriptorSubtype == UDESCSUB_VS_FRAME_MJPEG ?
 		    "MJPEG" : "UNCOMPRESSED");
 		return (USB_ERR_INVAL);
@@ -1299,8 +1301,8 @@ next:
 
 	/* check if we have found a valid alternate interface */
 	if (vs->ifaceh == NULL) {
-		kprintf("%s: no valid alternate interface found!\n",
-		    DEVNAME(sc));
+		device_printf(sc->sc_dev,
+		    "no valid alternate interface found!\n");
 		return (USB_ERR_INVAL);
 	}
 
