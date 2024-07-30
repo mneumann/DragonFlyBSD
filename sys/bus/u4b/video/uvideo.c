@@ -1736,7 +1736,7 @@ uvideo_vs_alloc_frame(struct uvideo_softc *sc)
 		return (USBD_NOMEM);
 	}
 
-	fb->buf = malloc(fb->buf_size, M_USBDEV, M_NOWAIT);
+	fb->buf = kmalloc(fb->buf_size, M_USBDEV, M_NOWAIT);
 	if (fb->buf == NULL) {
 		kprintf("%s: can't allocate frame buffer!\n", DEVNAME(sc));
 		return (USBD_NOMEM);
@@ -1760,12 +1760,12 @@ uvideo_vs_free_frame(struct uvideo_softc *sc)
 	struct uvideo_frame_buffer *fb = &sc->sc_frame_buffer;
 
 	if (fb->buf != NULL) {
-		free(fb->buf, M_USBDEV, fb->buf_size);
+		kfree(fb->buf, M_USBDEV);
 		fb->buf = NULL;
 	}
 
 	if (sc->sc_mmap_buffer != NULL) {
-		free(sc->sc_mmap_buffer, M_USBDEV, sc->sc_mmap_buffer_size);
+		kfree(sc->sc_mmap_buffer, M_USBDEV);
 		sc->sc_mmap_buffer = NULL;
 		sc->sc_mmap_buffer_size = 0;
 	}
@@ -3272,7 +3272,7 @@ uvideo_reqbufs(void *v, struct v4l2_requestbuffers *rb)
 	}
 	buf_size_total = sc->sc_mmap_count * buf_size;
 	buf_size_total = round_page(buf_size_total); /* page align buffer */
-	sc->sc_mmap_buffer = malloc(buf_size_total, M_USBDEV, M_NOWAIT);
+	sc->sc_mmap_buffer = kmalloc(buf_size_total, M_USBDEV, M_NOWAIT);
 	if (sc->sc_mmap_buffer == NULL) {
 		kprintf("%s: can't allocate mmap buffer!\n", DEVNAME(sc));
 		sc->sc_mmap_count = 0;
@@ -3430,7 +3430,7 @@ uvideo_queryctrl(void *v, struct v4l2_queryctrl *qctrl)
 		return (EINVAL);
 	}
 
-	ctrl_data = malloc(ctrl_len, M_USBDEV, M_WAITOK | M_CANFAIL);
+	ctrl_data = kmalloc(ctrl_len, M_USBDEV, M_WAITOK | M_NULLOK);
 	if (ctrl_data == NULL) {
 		kprintf("%s: could not allocate control data\n", __func__);
 		return (ENOMEM);
@@ -3530,7 +3530,7 @@ uvideo_queryctrl(void *v, struct v4l2_queryctrl *qctrl)
 	qctrl->flags = 0;
 
 out:
-	free(ctrl_data, M_USBDEV, ctrl_len);
+	kfree(ctrl_data, M_USBDEV);
 
 	return (ret);
 }
@@ -3554,7 +3554,7 @@ uvideo_g_ctrl(void *v, struct v4l2_control *gctrl)
 		return (EINVAL);
 	}
 
-	ctrl_data = malloc(ctrl_len, M_USBDEV, M_WAITOK | M_CANFAIL);
+	ctrl_data = kmalloc(ctrl_len, M_USBDEV, M_WAITOK | M_NULLOK);
 	if (ctrl_data == NULL) {
 		kprintf("%s: could not allocate control data\n", __func__);
 		return (ENOMEM);
@@ -3581,7 +3581,7 @@ uvideo_g_ctrl(void *v, struct v4l2_control *gctrl)
 	}
 
 out:
-	free(ctrl_data, M_USBDEV, ctrl_len);
+	kfree(ctrl_data, M_USBDEV);
 
 	return (0);
 }
@@ -3605,7 +3605,7 @@ uvideo_s_ctrl(void *v, struct v4l2_control *sctrl)
 		return (EINVAL);
 	}
 
-	ctrl_data = malloc(ctrl_len, M_USBDEV, M_WAITOK | M_CANFAIL);
+	ctrl_data = kmalloc(ctrl_len, M_USBDEV, M_WAITOK | M_NULLOK);
 	if (ctrl_data == NULL) {
 		kprintf("%s: could not allocate control data\n", __func__);
 		return (ENOMEM);
@@ -3628,7 +3628,7 @@ uvideo_s_ctrl(void *v, struct v4l2_control *sctrl)
 	if (error != USB_ERR_NORMAL_COMPLETION)
 		ret = EINVAL;
 
-	free(ctrl_data, M_USBDEV, ctrl_len);
+	kfree(ctrl_data, M_USBDEV);
 
 	return (ret);
 }
@@ -3775,7 +3775,7 @@ uvideo_ucode_loader_ricoh(struct uvideo_softc *sc)
 	while (remain > 0) {
 		if (remain < 3) {
 			kprintf("%s: ucode file incomplete!\n", DEVNAME(sc));
-			free(ucode, M_DEVBUF, ucode_size);
+			kfree(ucode, M_DEVBUF);
 			return (USB_ERR_INVAL);
 		}
 
@@ -3789,7 +3789,7 @@ uvideo_ucode_loader_ricoh(struct uvideo_softc *sc)
 		if (error != USB_ERR_NORMAL_COMPLETION) {
 			kprintf("%s: ucode upload error=%s!\n",
 			    DEVNAME(sc), usbd_errstr(error));
-			free(ucode, M_DEVBUF, ucode_size);
+			kfree(ucode, M_DEVBUF);
 			return (USB_ERR_INVAL);
 		}
 		DPRINTF(1, "%s: uploaded %d bytes ucode to addr 0x%x\n",
@@ -3798,7 +3798,7 @@ uvideo_ucode_loader_ricoh(struct uvideo_softc *sc)
 		offset += len;
 		remain -= len;
 	}
-	free(ucode, M_DEVBUF, ucode_size);
+	kfree(ucode, M_DEVBUF);
 
 	/* activate microcode */
 	cbuf = 0;
@@ -3854,7 +3854,7 @@ uvideo_ucode_loader_apple_isight(struct uvideo_softc *sc)
 		if (len < 1 || len > 1023) {
 			kprintf("%s: ucode header contains wrong value!\n",
 			    DEVNAME(sc));
-			free(ucode, M_DEVBUF, ucode_size);
+			kfree(ucode, M_DEVBUF);
 			return (USB_ERR_INVAL);
 		}
 		code += 4;
@@ -3871,21 +3871,21 @@ uvideo_ucode_loader_apple_isight(struct uvideo_softc *sc)
 			if (error) {
 				kprintf("%s: ucode load failed: %s\n",
 				    DEVNAME(sc), usbd_errstr(error));
-				free(ucode, M_DEVBUF, ucode_size);
+				kfree(ucode, M_DEVBUF);
 				return (USB_ERR_INVAL);
 			}
 
 			code += llen;
 		}
 	}
-	free(ucode, M_DEVBUF, ucode_size);
+	kfree(ucode, M_DEVBUF);
 
 	/* send finished request */
 	cbuf = 0;
 	error = uvideo_usb_control(sc, UT_WRITE_VENDOR_DEVICE, 0xa0, 0xe600,
 	    &cbuf, sizeof(cbuf));
 	if (error != USB_ERR_NORMAL_COMPLETION) {
-		printf("%s: ucode activate error=%s!\n",
+		kprintf("%s: ucode activate error=%s!\n",
 		    DEVNAME(sc), usbd_errstr(error));
 		return (USB_ERR_INVAL);
 	}
