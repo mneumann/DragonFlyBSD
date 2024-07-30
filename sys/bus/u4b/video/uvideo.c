@@ -697,8 +697,8 @@ uvideo_vc_parse_desc(struct uvideo_softc *sc)
 			if (!uvideo_desc_len(desc, 12, 11, 1, 0))
 				break;
 			if (vc_header_found) {
-				kprintf("%s: too many VC_HEADERs!\n",
-				    DEVNAME(sc));
+				device_printf(sc->sc_dev,
+				    "too many VC_HEADERs!\n");
 				return (USB_ERR_INVAL);
 			}
 			error = uvideo_vc_parse_desc_header(sc, desc);
@@ -721,7 +721,7 @@ uvideo_vc_parse_desc(struct uvideo_softc *sc)
 	}
 
 	if (vc_header_found == 0) {
-		kprintf("%s: no VC_HEADER found!\n", DEVNAME(sc));
+		device_printf(sc->sc_dev, "no VC_HEADER found!\n");
 		return (USB_ERR_INVAL);
 	}
 
