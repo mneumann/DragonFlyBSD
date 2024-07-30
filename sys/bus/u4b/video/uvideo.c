@@ -778,7 +778,7 @@ uvideo_vc_get_ctrl(struct uvideo_softc *sc, uint8_t *ctrl_data,
 	USETW(req.wIndex, (unitid << 8));
 	USETW(req.wLength, ctrl_len);
 
-	error = usbd_do_request(sc->sc_udev, &req, ctrl_data);
+	error = usbd_do_request(sc->sc_udev, NULL, &req, ctrl_data);
 	if (error) {
 		DPRINTF("%s: %s: could not GET ctrl request: %s\n",
 		    DEVNAME(sc), __func__, usbd_errstr(error));
@@ -801,7 +801,7 @@ uvideo_vc_set_ctrl(struct uvideo_softc *sc, uint8_t *ctrl_data,
 	USETW(req.wIndex, (unitid << 8));
 	USETW(req.wLength, ctrl_len);
 
-	error = usbd_do_request(sc->sc_udev, &req, ctrl_data);
+	error = usbd_do_request(sc->sc_udev, NULL, &req, ctrl_data);
 	if (error) {
 		DPRINTF("%s: %s: could not SET ctrl request: %s\n",
 		    DEVNAME(sc), __func__, usbd_errstr(error));
@@ -1646,7 +1646,7 @@ uvideo_vs_set_probe(struct uvideo_softc *sc, uint8_t *probe_data)
 
 	pc = (struct usb_video_probe_commit *)probe_data;
 
-	error = usbd_do_request(sc->sc_udev, &req, probe_data);
+	error = usbd_do_request(sc->sc_udev, NULL, &req, probe_data);
 	if (error) {
 		kprintf("%s: could not SET probe request: %s\n",
 		    DEVNAME(sc), usbd_errstr(error));
@@ -1691,7 +1691,7 @@ uvideo_vs_get_probe(struct uvideo_softc *sc, uint8_t *probe_data,
 
 	pc = (struct usb_video_probe_commit *)probe_data;
 
-	error = usbd_do_request(sc->sc_udev, &req, probe_data);
+	error = usbd_do_request(sc->sc_udev, NULL, &req, probe_data);
 	if (error) {
 		kprintf("%s: could not GET probe request: %s\n",
 		    DEVNAME(sc), usbd_errstr(error));
@@ -1732,7 +1732,7 @@ uvideo_vs_set_commit(struct uvideo_softc *sc, uint8_t *probe_data)
 	USETW(req.wIndex, sc->sc_vs_cur->iface);
 	USETW(req.wLength, sc->sc_max_ctrl_size);
 
-	error = usbd_do_request(sc->sc_udev, &req, probe_data);
+	error = usbd_do_request(sc->sc_udev, NULL, &req, probe_data);
 	if (error) {
 		kprintf("%s: could not SET commit request: %s\n",
 		    DEVNAME(sc), usbd_errstr(error));
@@ -3739,6 +3739,7 @@ uvideo_start_read(void *v)
 
 	return (0);
 }
+#endif
 
 usb_error_t
 uvideo_usb_control(struct uvideo_softc *sc, uint8_t rt, uint8_t r,
@@ -3753,13 +3754,14 @@ uvideo_usb_control(struct uvideo_softc *sc, uint8_t rt, uint8_t r,
 	USETW(req.wValue, value);
 	USETW(req.wLength, length);
 
-	err = usbd_do_request(sc->sc_udev, &req, data);
+	err = usbd_do_request(sc->sc_udev, NULL, &req, data);
 	if (err != USB_ERR_NORMAL_COMPLETION)
 		return (err);
 
 	return (USB_ERR_NORMAL_COMPLETION);
 }
 
+#if defined(NOTYET)
 usb_error_t
 uvideo_ucode_loader_ricoh(struct uvideo_softc *sc)
 {
