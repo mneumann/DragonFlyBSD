@@ -1,8 +1,7 @@
 KMOD=	uvideo
-SRCS=	bus_if.h device_if.h
-#SRCS+=	uvideo_debug.h
+SRCS=	uvideo.c uvideo.h
+SRCS+=	bus_if.h device_if.h
 SRCS+=	opt_usb.h usbdevs.h
-SRCS+=	uvideo.c 
 NO_WERROR=1
 
 .include <bsd.kmod.mk>

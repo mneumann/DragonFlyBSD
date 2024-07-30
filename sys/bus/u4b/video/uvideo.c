@@ -720,23 +720,21 @@ uvideo_vc_parse_desc(struct uvideo_softc *sc)
 	return (USB_ERR_NORMAL_COMPLETION);
 }
 
-#if defined(NOTYET)
 usb_error_t
 uvideo_vc_parse_desc_header(struct uvideo_softc *sc,
     const usb_descriptor_t *desc)
 {
-	struct usb_video_header_desc *d;
+	const struct usb_video_header_desc *d;
 
-	d = (struct usb_video_header_desc *)(uint8_t *)desc;
+	d = (const struct usb_video_header_desc *)(const uint8_t *)desc;
 
 	if (d->bInCollection == 0) {
-		kprintf("%s: no VS interface found!\n",
-		    DEVNAME(sc));
+		device_printf(sc->sc_dev, "no VS interface found!\n");
 		return (USB_ERR_INVAL);
 	}
 	
 	sc->sc_desc_vc_header.fix = d;
-	sc->sc_desc_vc_header.baInterfaceNr = (uByte *)(d + 1);
+	sc->sc_desc_vc_header.baInterfaceNr = (const uByte *)(d + 1);
 	if (UGETW(d->bcdUVC) < 0x0110)
 		sc->sc_max_ctrl_size = 26;
 	else if (UGETW(d->bcdUVC) < 0x0150)
@@ -746,6 +744,8 @@ uvideo_vc_parse_desc_header(struct uvideo_softc *sc,
 
 	return (USB_ERR_NORMAL_COMPLETION);
 }
+
+#if defined(NOTYET)
 
 usb_error_t
 uvideo_vc_parse_desc_pu(struct uvideo_softc *sc,

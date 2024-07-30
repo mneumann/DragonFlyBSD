@@ -166,8 +166,8 @@ struct usb_video_header_desc {
 } __packed;
 
 struct usb_video_header_desc_all {
-	struct usb_video_header_desc	*fix;
-	uByte				*baInterfaceNr;
+	const struct usb_video_header_desc	*fix;
+	const uByte				*baInterfaceNr;
 };
 
 /* Table 3-4: Input Terminal Descriptor */
