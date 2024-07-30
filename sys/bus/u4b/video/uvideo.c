@@ -41,10 +41,12 @@
 
 MALLOC_DEFINE(M_UVIDEO, "uvideo", "USB video driver");
 
+#define UVIDEO_DEBUG
+
 #ifdef UVIDEO_DEBUG
 int uvideo_debug = 1;
 #define DPRINTFN(l, x...) do { if ((l) <= uvideo_debug) kprintf(x); } while (0)
-#define DPRINTF(...) DPRINTF(1, __VA_ARGS__)
+#define DPRINTF(...) DPRINTFN(1, __VA_ARGS__)
 #else
 #define DPRINTFN(l, x...)
 #define DPRINTF(x...)
@@ -216,7 +218,7 @@ void		uvideo_dump_desc_processing(struct uvideo_softc *,
 		    const usb_descriptor_t *);
 void		uvideo_dump_desc_extension(struct uvideo_softc *,
 		    const usb_descriptor_t *);
-void		uvideo_hexdump(void *, int, int);
+void		uvideo_hexdump(const void *, int, int);
 int		uvideo_debug_file_open(struct uvideo_softc *);
 void		uvideo_debug_file_write_frame(void *);
 #endif
@@ -2359,8 +2361,10 @@ uvideo_read(struct uvideo_softc *sc, uint8_t *buf, int len)
 	bcopy(buf, sc->sc_uplayer_fbuffer, len);
 	sc->sc_uplayer_intr(sc->sc_uplayer_arg);
 }
+#endif
 
 #ifdef UVIDEO_DEBUG
+#if defined(NOTYET)
 void
 uvideo_dump_desc_all(struct uvideo_softc *sc)
 {
@@ -2524,14 +2528,15 @@ uvideo_dump_desc_all(struct uvideo_softc *sc)
 	}	
 
 }
+#endif
 
 void
 uvideo_dump_desc_vc_header(struct uvideo_softc *sc,
     const usb_descriptor_t *desc)
 {
-	struct usb_video_header_desc *d;
+	const struct usb_video_header_desc *d;
 
-	d = (struct usb_video_header_desc *)(uint8_t *)desc;
+	d = (const struct usb_video_header_desc *)(const uint8_t *)desc;
 
 	kprintf("bLength=%d\n", d->bLength);
 	kprintf("bDescriptorType=0x%02x\n", d->bDescriptorType);
@@ -2546,9 +2551,9 @@ void
 uvideo_dump_desc_input_header(struct uvideo_softc *sc,
     const usb_descriptor_t *desc)
 {
-	struct usb_video_input_header_desc *d;
+	const struct usb_video_input_header_desc *d;
 
-	d = (struct usb_video_input_header_desc *)(uint8_t *)desc;
+	d = (const struct usb_video_input_header_desc *)(const uint8_t *)desc;
 
 	kprintf("bLength=%d\n", d->bLength);
 	kprintf("bDescriptorType=0x%02x\n", d->bDescriptorType);
@@ -2568,9 +2573,9 @@ void
 uvideo_dump_desc_input(struct uvideo_softc *sc,
     const usb_descriptor_t *desc)
 {
-	struct usb_video_input_terminal_desc *d;
+	const struct usb_video_input_terminal_desc *d;
 
-	d = (struct usb_video_input_terminal_desc *)(uint8_t *)desc;
+	d = (const struct usb_video_input_terminal_desc *)(const uint8_t *)desc;
 
 	kprintf("bLength=%d\n", d->bLength);
 	kprintf("bDescriptorType=0x%02x\n", d->bDescriptorType);
@@ -2585,9 +2590,9 @@ void
 uvideo_dump_desc_output(struct uvideo_softc *sc,
     const usb_descriptor_t *desc)
 {
-	struct usb_video_output_terminal_desc *d;
+	const struct usb_video_output_terminal_desc *d;
 
-	d = (struct usb_video_output_terminal_desc *)(uint8_t *)desc;
+	d = (const struct usb_video_output_terminal_desc *)(const uint8_t *)desc;
 
 	kprintf("bLength=%d\n", d->bLength);
 	kprintf("bDescriptorType=0x%02x\n", d->bDescriptorType);
@@ -2603,9 +2608,9 @@ void
 uvideo_dump_desc_endpoint(struct uvideo_softc *sc,
     const usb_descriptor_t *desc)
 {
-	usb_endpoint_descriptor_t *d;
+	const usb_endpoint_descriptor_t *d;
 
-	d = (usb_endpoint_descriptor_t *)(uint8_t *)desc;
+	d = (const usb_endpoint_descriptor_t *)(const uint8_t *)desc;
 
 	kprintf("bLength=%d\n", d->bLength);
 	kprintf("bDescriptorType=0x%02x\n", d->bDescriptorType);
@@ -2638,9 +2643,9 @@ void
 uvideo_dump_desc_iface_assoc(struct uvideo_softc *sc,
     const usb_descriptor_t *desc)
 {
-	usb_interface_assoc_descriptor_t *d;
+	const usb_interface_assoc_descriptor_t *d;
 
-	d = (usb_interface_assoc_descriptor_t *)(uint8_t *)desc;
+	d = (const usb_interface_assoc_descriptor_t *)(const uint8_t *)desc;
 
 	kprintf("bLength=%d\n", d->bLength);
 	kprintf("bDescriptorType=0x%02x\n", d->bDescriptorType);
@@ -2656,9 +2661,9 @@ void
 uvideo_dump_desc_interface(struct uvideo_softc *sc,
     const usb_descriptor_t *desc)
 {
-	usb_interface_descriptor_t *d;
+	const usb_interface_descriptor_t *d;
 
-	d = (usb_interface_descriptor_t *)(uint8_t *)desc;
+	d = (const usb_interface_descriptor_t *)(const uint8_t *)desc;
 
 	kprintf("bLength=%d\n", d->bLength);
 	kprintf("bDescriptorType=0x%02x\n", d->bDescriptorType);
@@ -2675,14 +2680,14 @@ void
 uvideo_dump_desc_config(struct uvideo_softc *sc,
     const usb_descriptor_t *desc)
 {
-	usb_config_descriptor_t *d;
+	const usb_config_descriptor_t *d;
 
-	d = (usb_config_descriptor_t *)(uint8_t *)desc;
+	d = (const usb_config_descriptor_t *)(const uint8_t *)desc;
 
 	kprintf("bLength=%d\n", d->bLength);
 	kprintf("bDescriptorType=0x%02x\n", d->bDescriptorType);
 	kprintf("wTotalLength=%d\n", UGETW(d->wTotalLength));
-	kprintf("bNumInterfaces=0x%02x\n", d->bNumInterfaces);
+	kprintf("bNumInterface=0x%02x\n", d->bNumInterface);
 	kprintf("bConfigurationValue=0x%02x\n", d->bConfigurationValue);
 	kprintf("iConfiguration=0x%02x\n", d->iConfiguration);
 	kprintf("bmAttributes=0x%02x\n", d->bmAttributes);
@@ -2693,9 +2698,9 @@ void
 uvideo_dump_desc_cs_endpoint(struct uvideo_softc *sc,
     const usb_descriptor_t *desc)
 {
-	struct usb_video_vc_endpoint_desc *d;
+	const struct usb_video_vc_endpoint_desc *d;
 
-	d = (struct usb_video_vc_endpoint_desc *)(uint8_t *)desc;
+	d = (const struct usb_video_vc_endpoint_desc *)(const uint8_t *)desc;
 
 	kprintf("bLength=%d\n", d->bLength);
 	kprintf("bDescriptorType=0x%02x\n", d->bDescriptorType);
@@ -2707,9 +2712,9 @@ void
 uvideo_dump_desc_colorformat(struct uvideo_softc *sc,
     const usb_descriptor_t *desc)
 {
-	struct usb_video_color_matching_descr *d;
+	const struct usb_video_color_matching_descr *d;
 
-	d = (struct usb_video_color_matching_descr *)(uint8_t *)desc;
+	d = (const struct usb_video_color_matching_descr *)(const uint8_t *)desc;
 
 	kprintf("bLength=%d\n", d->bLength);
 	kprintf("bDescriptorType=0x%02x\n", d->bDescriptorType);
@@ -2719,13 +2724,14 @@ uvideo_dump_desc_colorformat(struct uvideo_softc *sc,
 	    d->bTransferCharacteristics);
 	kprintf("bMatrixCoefficients=0x%02x\n", d->bMatrixCoefficients);
 }
+
 void
 uvideo_dump_desc_format_mjpeg(struct uvideo_softc *sc,
     const usb_descriptor_t *desc)
 {
-	struct usb_video_format_mjpeg_desc *d;
+	const struct usb_video_format_mjpeg_desc *d;
 
-	d = (struct usb_video_format_mjpeg_desc *)(uint8_t *)desc;
+	d = (const struct usb_video_format_mjpeg_desc *)(const uint8_t *)desc;
 
 	kprintf("bLength=%d\n", d->bLength);
 	kprintf("bDescriptorType=0x%02x\n", d->bDescriptorType);
@@ -2743,11 +2749,11 @@ uvideo_dump_desc_format_mjpeg(struct uvideo_softc *sc,
 void
 uvideo_dump_desc_frame(struct uvideo_softc *sc, const usb_descriptor_t *desc)
 {
-	struct usb_video_frame_desc *d;
-	uint8_t *p;
+	const struct usb_video_frame_desc *d;
+	const uint8_t *p;
 	int length, i;
 
-	d = (struct usb_video_frame_desc *)(uint8_t *)desc;
+	d = (const struct usb_video_frame_desc *)(const uint8_t *)desc;
 
 	kprintf("bLength=%d\n", d->bLength);
 	kprintf("bDescriptorType=0x%02x\n", d->bDescriptorType);
@@ -2764,7 +2770,7 @@ uvideo_dump_desc_frame(struct uvideo_softc *sc, const usb_descriptor_t *desc)
 	    UGETDW(d->dwDefaultFrameInterval));
 	kprintf("bFrameIntervalType=0x%02x\n", d->bFrameIntervalType);
 
-	p = (uint8_t *)d;
+	p = (const uint8_t *)d;
 	p += sizeof(struct usb_video_frame_desc);
 
 	if (!d->bFrameIntervalType) {
@@ -2799,9 +2805,9 @@ void
 uvideo_dump_desc_format_uncompressed(struct uvideo_softc *sc,
     const usb_descriptor_t *desc)
 {
-	struct usb_video_format_uncompressed_desc *d;
+	const struct usb_video_format_uncompressed_desc *d;
 
-	d = (struct usb_video_format_uncompressed_desc *)(uint8_t *)desc;
+	d = (const struct usb_video_format_uncompressed_desc *)(const uint8_t *)desc;
 
 	kprintf("bLength=%d\n", d->bLength);
 	kprintf("bDescriptorType=0x%02x\n", d->bDescriptorType);
@@ -2821,10 +2827,10 @@ void
 uvideo_dump_desc_processing(struct uvideo_softc *sc,
     const usb_descriptor_t *desc)
 {
-	struct usb_video_vc_processing_desc *d;
+	const struct usb_video_vc_processing_desc *d;
 
 	/* PU descriptor is variable sized */
-	d = (void *)desc;
+	d = (const void *)desc;
 
 	kprintf("bLength=%d\n", d->bLength);
 	kprintf("bDescriptorType=0x%02x\n", d->bDescriptorType);
@@ -2843,9 +2849,9 @@ void
 uvideo_dump_desc_extension(struct uvideo_softc *sc,
     const usb_descriptor_t *desc)
 {
-	struct usb_video_vc_extension_desc *d;
+	const struct usb_video_vc_extension_desc *d;
 
-	d = (struct usb_video_vc_extension_desc *)(uint8_t *)desc;
+	d = (const struct usb_video_vc_extension_desc *)(const uint8_t *)desc;
 
 	kprintf("bLength=%d\n", d->bLength);
 	kprintf("bDescriptorType=0x%02x\n", d->bDescriptorType);
@@ -2858,7 +2864,7 @@ uvideo_dump_desc_extension(struct uvideo_softc *sc,
 }
 
 void
-uvideo_hexdump(void *buf, int len, int quiet)
+uvideo_hexdump(const void *buf, int len, int quiet)
 {
 	int i;
 
@@ -2869,14 +2875,16 @@ uvideo_hexdump(void *buf, int len, int quiet)
 			if (i % 4 == 0)
 				kprintf(" ");
 		}
-		kprintf("%02x", (int)*((u_char *)buf + i));
+		kprintf("%02x", (int)*((const u_char *)buf + i));
 	}
 	kprintf("\n");
 }
 
+
 int
 uvideo_debug_file_open(struct uvideo_softc *sc)
 {
+#if defined(NOTYET)
 	struct proc *p = curproc;
 	struct nameidata nd;
 	char name[] = "/tmp/uvideo.mjpeg";
@@ -2899,6 +2907,7 @@ uvideo_debug_file_open(struct uvideo_softc *sc)
 
 	DPRINTF("%s: %s: created debug file %s\n",
 	    DEVNAME(sc), __func__, name);
+#endif
 
 	return (0);
 }
@@ -2906,6 +2915,7 @@ uvideo_debug_file_open(struct uvideo_softc *sc)
 void
 uvideo_debug_file_write_frame(void *arg)
 {
+#if defined(NOTYET)
 	struct uvideo_softc *sc = arg;
 	struct uvideo_frame_buffer *sb = &sc->sc_frame_buffer;
 	struct proc *p = curproc;
@@ -2921,8 +2931,8 @@ uvideo_debug_file_write_frame(void *arg)
 
 	if (error)
 		DPRINTF("vn_rdwr error!\n");
-}
 #endif
+}
 #endif
 
 /*
