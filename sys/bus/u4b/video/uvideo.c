@@ -657,12 +657,11 @@ DRIVER_MODULE_ORDERED(uvideo, uhub, uvideo_driver, &uvideo_devclass, NULL, NULL,
 MODULE_DEPEND(uvideo, usb, 1, 1, 1);
 MODULE_VERSION(uvideo, 1);
 
-#if defined(NOTYET)
 usb_error_t
 uvideo_vc_parse_desc(struct uvideo_softc *sc)
 {
-	struct usbd_desc_iter iter;
-	const usb_descriptor_t *desc;
+	usb_descriptor_t *desc;
+	usb_config_descriptor_t *cd;
 	usb_interface_descriptor_t *id;
 	int vc_header_found;
 	usb_error_t error;
@@ -671,23 +670,23 @@ uvideo_vc_parse_desc(struct uvideo_softc *sc)
 
 	vc_header_found = 0;
 
-	usbd_desc_iter_init(sc->sc_udev, &iter);
-	desc = usbd_desc_iter_next(&iter);
-	while (desc) {
+	desc = NULL;
+	cd = usbd_get_config_descriptor(sc->sc_udev);
+	while ((desc = usb_desc_foreach(cd, desc))) {
 		/* Skip all interfaces until we found our first. */
-		if (desc->bDescriptorType == UDESC_INTERFACE) {
+		if (desc->bDescriptorType == UDESC_INTERFACE &&
+		    (desc->bLength >= sizeof(*id))) {
 			id = (usb_interface_descriptor_t *)desc;
 			if (id->bInterfaceNumber == sc->sc_iface)
 				break;
 		}
-		desc = usbd_desc_iter_next(&iter);
 	}
 	while (desc) {
 		/* Crossed device function boundary. */
 		if (desc->bDescriptorType == UDESC_IFACE_ASSOC)
 			break;
 		if (desc->bDescriptorType != UDESC_CS_INTERFACE) {
-			desc = usbd_desc_iter_next(&iter);
+			desc = usb_desc_foreach(cd, desc);
 			continue;
 		}
 
@@ -716,7 +715,7 @@ uvideo_vc_parse_desc(struct uvideo_softc *sc)
 		/* TODO: which VC descriptors do we need else? */
 		}
 
-		desc = usbd_desc_iter_next(&iter);
+		desc = usb_desc_foreach(cd, desc);
 	}
 
 	if (vc_header_found == 0) {
@@ -727,6 +726,7 @@ uvideo_vc_parse_desc(struct uvideo_softc *sc)
 	return (USB_ERR_NORMAL_COMPLETION);
 }
 
+#if defined(NOTYET)
 usb_error_t
 uvideo_vc_parse_desc_header(struct uvideo_softc *sc,
     const usb_descriptor_t *desc)
