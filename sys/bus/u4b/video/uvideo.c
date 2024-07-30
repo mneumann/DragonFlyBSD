@@ -2923,6 +2923,7 @@ uvideo_debug_file_write_frame(void *arg)
 		DPRINTF("vn_rdwr error!\n");
 }
 #endif
+#endif
 
 /*
  * IOCTL's
@@ -2933,8 +2934,8 @@ uvideo_querycap(void *v, struct v4l2_capability *caps)
 	struct uvideo_softc *sc = v;
 
 	bzero(caps, sizeof(*caps));
-	strlcpy(caps->driver, DEVNAME(sc), sizeof(caps->driver));
-	strlcpy(caps->card, sc->sc_udev->product, sizeof(caps->card));
+	strlcpy(caps->driver, device_get_name(sc->sc_dev), sizeof(caps->driver));
+	strlcpy(caps->card, usb_get_product(sc->sc_udev), sizeof(caps->card));
 	strlcpy(caps->bus_info, "usb", sizeof(caps->bus_info));
 
 	caps->version = 1;
@@ -3384,7 +3385,7 @@ uvideo_dqbuf(void *v, struct v4l2_buffer *dqb)
 
 	if (SIMPLEQ_EMPTY(&sc->sc_mmap_q)) {
 		/* mmap queue is empty, block until first frame is queued */
-		error = tsleep_nsec(sc, 0, "vid_mmap", SEC_TO_NSEC(10));
+		error = tsleep(sc, 0, "vid_mmap", 10 * hz);
 		if (error)
 			return (EINVAL);
 	}
@@ -3739,7 +3740,6 @@ uvideo_start_read(void *v)
 
 	return (0);
 }
-#endif
 
 usb_error_t
 uvideo_usb_control(struct uvideo_softc *sc, uint8_t rt, uint8_t r,
