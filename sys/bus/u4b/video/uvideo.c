@@ -24,26 +24,22 @@
 
 #include <sys/param.h>
 #include <sys/systm.h>
+#include <sys/kernel.h>
 #include <sys/malloc.h>
 #include <sys/device.h>
 #include <sys/stat.h>
 #include <sys/kthread.h>
 #include <sys/stdint.h>
-
-// #include <uvm/uvm_extern.h>
-
 #include <sys/bus.h>
 
 #include <bus/u4b/usb.h>
 #include <bus/u4b/usbdi.h>
-//#include <bus/u4b/usbdivar.h>
 #include <bus/u4b/usbdi_util.h>
-//#include <bus/u4b/usbdevs.h>
 #include <bus/u4b/video/uvideo.h>
 
-#include "compat_netbsd.h"
-
 #include <dev/video/video/video_if.h>
+
+MALLOC_DEFINE(M_UVIDEO, "uvideo", "USB video driver");
 
 #ifdef UVIDEO_DEBUG
 int uvideo_debug = 1;
@@ -118,7 +114,7 @@ struct uvideo_softc {
 int		uvideo_open(void *, int, int *, uint8_t *, void (*)(void *),
 		    void *);
 int		uvideo_close(void *);
-int		uvideo_match(struct device *, void *, void *);
+static device_probe_t uvideo_probe;
 void		uvideo_attach(struct device *, struct device *, void *);
 void		uvideo_attach_hook(struct device *);
 int		uvideo_detach(struct device *, int);
@@ -444,20 +440,22 @@ uvideo_close(void *addr)
 	return (0);
 }
 
-int
-uvideo_match(struct device *parent, void *match, void *aux)
+static int
+uvideo_probe(device_t dev)
 {
-	struct usb_attach_arg *uaa = aux;
+	struct usb_attach_arg *uaa = device_get_ivars(dev);
+
 	usb_interface_descriptor_t *id;
-	const struct uvideo_devs *quirk;
+	//const struct uvideo_devs *quirk;
 
 	if (uaa->iface == NULL)
-		return (UMATCH_NONE);
+		return (ENXIO);
 
 	id = usbd_get_interface_descriptor(uaa->iface);
 	if (id == NULL)
-		return (UMATCH_NONE);
+		return (ENXIO);
 
+#ifdef NOTYET
 	/* quirk devices */
 	quirk = uvideo_lookup(uaa->vendor, uaa->product);
 	if (quirk != NULL) {
@@ -469,12 +467,13 @@ uvideo_match(struct device *parent, void *match, void *aux)
 		    id->bInterfaceSubClass == UISUBCLASS_VIDEOCONTROL)
 			return (UMATCH_VENDOR_PRODUCT_CONF_IFACE);
 	}
+#endif
 
 	if (id->bInterfaceClass == UICLASS_VIDEO &&
 	    id->bInterfaceSubClass == UISUBCLASS_VIDEOCONTROL)
-		return (UMATCH_VENDOR_PRODUCT_CONF_IFACE);
+		return (BUS_PROBE_GENERIC);
 
-	return (UMATCH_NONE);
+	return (ENXIO);
 }
 
 void
@@ -1744,7 +1743,7 @@ uvideo_vs_alloc_frame(struct uvideo_softc *sc)
 		return (USBD_NOMEM);
 	}
 
-	fb->buf = kmalloc(fb->buf_size, M_USBDEV, M_NOWAIT);
+	fb->buf = kmalloc(fb->buf_size, M_UVIDEO, M_NOWAIT);
 	if (fb->buf == NULL) {
 		kprintf("%s: can't allocate frame buffer!\n", DEVNAME(sc));
 		return (USBD_NOMEM);
@@ -1768,12 +1767,12 @@ uvideo_vs_free_frame(struct uvideo_softc *sc)
 	struct uvideo_frame_buffer *fb = &sc->sc_frame_buffer;
 
 	if (fb->buf != NULL) {
-		kfree(fb->buf, M_USBDEV);
+		kfree(fb->buf, M_UVIDEO);
 		fb->buf = NULL;
 	}
 
 	if (sc->sc_mmap_buffer != NULL) {
-		kfree(sc->sc_mmap_buffer, M_USBDEV);
+		kfree(sc->sc_mmap_buffer, M_UVIDEO);
 		sc->sc_mmap_buffer = NULL;
 		sc->sc_mmap_buffer_size = 0;
 	}
@@ -3280,7 +3279,7 @@ uvideo_reqbufs(void *v, struct v4l2_requestbuffers *rb)
 	}
 	buf_size_total = sc->sc_mmap_count * buf_size;
 	buf_size_total = round_page(buf_size_total); /* page align buffer */
-	sc->sc_mmap_buffer = kmalloc(buf_size_total, M_USBDEV, M_NOWAIT);
+	sc->sc_mmap_buffer = kmalloc(buf_size_total, M_UVIDEO, M_NOWAIT);
 	if (sc->sc_mmap_buffer == NULL) {
 		kprintf("%s: can't allocate mmap buffer!\n", DEVNAME(sc));
 		sc->sc_mmap_count = 0;
@@ -3438,7 +3437,7 @@ uvideo_queryctrl(void *v, struct v4l2_queryctrl *qctrl)
 		return (EINVAL);
 	}
 
-	ctrl_data = kmalloc(ctrl_len, M_USBDEV, M_WAITOK | M_NULLOK);
+	ctrl_data = kmalloc(ctrl_len, M_UVIDEO, M_WAITOK | M_NULLOK);
 	if (ctrl_data == NULL) {
 		kprintf("%s: could not allocate control data\n", __func__);
 		return (ENOMEM);
@@ -3538,7 +3537,7 @@ uvideo_queryctrl(void *v, struct v4l2_queryctrl *qctrl)
 	qctrl->flags = 0;
 
 out:
-	kfree(ctrl_data, M_USBDEV);
+	kfree(ctrl_data, M_UVIDEO);
 
 	return (ret);
 }
@@ -3562,7 +3561,7 @@ uvideo_g_ctrl(void *v, struct v4l2_control *gctrl)
 		return (EINVAL);
 	}
 
-	ctrl_data = kmalloc(ctrl_len, M_USBDEV, M_WAITOK | M_NULLOK);
+	ctrl_data = kmalloc(ctrl_len, M_UVIDEO, M_WAITOK | M_NULLOK);
 	if (ctrl_data == NULL) {
 		kprintf("%s: could not allocate control data\n", __func__);
 		return (ENOMEM);
@@ -3589,7 +3588,7 @@ uvideo_g_ctrl(void *v, struct v4l2_control *gctrl)
 	}
 
 out:
-	kfree(ctrl_data, M_USBDEV);
+	kfree(ctrl_data, M_UVIDEO);
 
 	return (0);
 }
@@ -3613,7 +3612,7 @@ uvideo_s_ctrl(void *v, struct v4l2_control *sctrl)
 		return (EINVAL);
 	}
 
-	ctrl_data = kmalloc(ctrl_len, M_USBDEV, M_WAITOK | M_NULLOK);
+	ctrl_data = kmalloc(ctrl_len, M_UVIDEO, M_WAITOK | M_NULLOK);
 	if (ctrl_data == NULL) {
 		kprintf("%s: could not allocate control data\n", __func__);
 		return (ENOMEM);
@@ -3636,7 +3635,7 @@ uvideo_s_ctrl(void *v, struct v4l2_control *sctrl)
 	if (error != USB_ERR_NORMAL_COMPLETION)
 		ret = EINVAL;
 
-	kfree(ctrl_data, M_USBDEV);
+	kfree(ctrl_data, M_UVIDEO);
 
 	return (ret);
 }
