@@ -19,6 +19,7 @@
 
 #include <sys/queue.h>
 #include <sys/videoio.h>
+#include "compat_netbsd.h"
 
 /*
  * USB Video Class

@@ -17,6 +17,11 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+/*
+ * USB video specs:
+ *      http://www.usb.org/developers/devclass_docs/USB_Video_Class_1_1.zip
+ */
+
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/malloc.h>
@@ -25,22 +30,24 @@
 #include <sys/kthread.h>
 #include <sys/stdint.h>
 
-#include <uvm/uvm_extern.h>
+// #include <uvm/uvm_extern.h>
 
-#include <machine/bus.h>
+#include <sys/bus.h>
 
-#include <dev/usb/usb.h>
-#include <dev/usb/usbdi.h>
-#include <dev/usb/usbdivar.h>
-#include <dev/usb/usbdi_util.h>
-#include <dev/usb/usbdevs.h>
-#include <dev/usb/uvideo.h>
+#include <bus/u4b/usb.h>
+#include <bus/u4b/usbdi.h>
+//#include <bus/u4b/usbdivar.h>
+#include <bus/u4b/usbdi_util.h>
+//#include <bus/u4b/usbdevs.h>
+#include <bus/u4b/video/uvideo.h>
 
-#include <dev/video_if.h>
+#include "compat_netbsd.h"
+
+#include <dev/video/video/video_if.h>
 
 #ifdef UVIDEO_DEBUG
 int uvideo_debug = 1;
-#define DPRINTF(l, x...) do { if ((l) <= uvideo_debug) printf(x); } while (0)
+#define DPRINTF(l, x...) do { if ((l) <= uvideo_debug) kprintf(x); } while (0)
 #else
 #define DPRINTF(l, x...)
 #endif
@@ -486,7 +493,7 @@ uvideo_attach(struct device *parent, struct device *self, void *aux)
 			break;
 	}
 	if (i == uaa->nifaces) {
-		printf("%s: can't find video interface\n", DEVNAME(sc));
+		kprintf("%s: can't find video interface\n", DEVNAME(sc));
 		return;
 	}
 
@@ -505,7 +512,7 @@ uvideo_attach(struct device *parent, struct device *self, void *aux)
 		desc = usbd_desc_iter_next(&iter);
 	}
 	if (desc == NULL) {
-		printf("%s: can't find interface assoc descriptor\n",
+		kprintf("%s: can't find interface assoc descriptor\n",
 		    DEVNAME(sc));
 		return;
 	}
@@ -517,7 +524,7 @@ uvideo_attach(struct device *parent, struct device *self, void *aux)
 	for (i = iad->bFirstInterface;
 	    i < iad->bFirstInterface + iad->bInterfaceCount; i++) {
 		if (usbd_iface_claimed(sc->sc_udev, i)) {
-			printf("%s: interface already claimed\n",
+			kprintf("%s: interface already claimed\n",
 			    DEVNAME(sc));
 			return;
 		}
@@ -532,7 +539,7 @@ uvideo_attach(struct device *parent, struct device *self, void *aux)
 	sc->sc_quirk = uvideo_lookup(uaa->vendor, uaa->product);
 
 	if (sc->sc_quirk && sc->sc_quirk->flags & UVIDEO_FLAG_NOATTACH) {
-		printf("%s: device not supported\n", DEVNAME(sc));
+		kprintf("%s: device not supported\n", DEVNAME(sc));
 		return;
 	}
 
@@ -552,7 +559,7 @@ uvideo_attach_hook(struct device *self)
 	/* maybe the device needs a firmware */
 	if (sc->sc_quirk && sc->sc_quirk->ucode_name) {
 		error = (sc->sc_quirk->ucode_loader)(sc);
-		if (error != USBD_NORMAL_COMPLETION)
+		if (error != USB_ERR_NORMAL_COMPLETION)
 			return;
 	}
 
@@ -569,7 +576,7 @@ uvideo_attach_hook(struct device *self)
 	/* get the config descriptor */
 	cdesc = usbd_get_config_descriptor(sc->sc_udev);
 	if (cdesc == NULL) {
-		printf("%s: failed to get configuration descriptor\n",
+		kprintf("%s: failed to get configuration descriptor\n",
 		    DEVNAME(sc));
 		return;
 	}
@@ -578,22 +585,22 @@ uvideo_attach_hook(struct device *self)
 #endif
 	/* parse video control descriptors */
 	error = uvideo_vc_parse_desc(sc);
-	if (error != USBD_NORMAL_COMPLETION)
+	if (error != USB_ERR_NORMAL_COMPLETION)
 		return;
 
 	/* parse video stream descriptors */
 	error = uvideo_vs_parse_desc(sc, cdesc);
-	if (error != USBD_NORMAL_COMPLETION)
+	if (error != USB_ERR_NORMAL_COMPLETION)
 		return;
 
 	/* set default video stream interface */
 	error = usbd_set_interface(sc->sc_vs_cur->ifaceh, 0);
-	if (error != USBD_NORMAL_COMPLETION)
+	if (error != USB_ERR_NORMAL_COMPLETION)
 		return;
 
 	/* do device negotiation without commit */
 	error = uvideo_vs_negotiation(sc, 0);
-	if (error != USBD_NORMAL_COMPLETION)
+	if (error != USB_ERR_NORMAL_COMPLETION)
 		return;
 
 	/* init mmap queue */
@@ -659,12 +666,12 @@ uvideo_vc_parse_desc(struct uvideo_softc *sc)
 			if (!uvideo_desc_len(desc, 12, 11, 1, 0))
 				break;
 			if (vc_header_found) {
-				printf("%s: too many VC_HEADERs!\n",
+				kprintf("%s: too many VC_HEADERs!\n",
 				    DEVNAME(sc));
-				return (USBD_INVAL);
+				return (USB_ERR_INVAL);
 			}
 			error = uvideo_vc_parse_desc_header(sc, desc);
-			if (error != USBD_NORMAL_COMPLETION)
+			if (error != USB_ERR_NORMAL_COMPLETION)
 				return (error);
 			vc_header_found = 1;
 			break;
@@ -683,11 +690,11 @@ uvideo_vc_parse_desc(struct uvideo_softc *sc)
 	}
 
 	if (vc_header_found == 0) {
-		printf("%s: no VC_HEADER found!\n", DEVNAME(sc));
-		return (USBD_INVAL);
+		kprintf("%s: no VC_HEADER found!\n", DEVNAME(sc));
+		return (USB_ERR_INVAL);
 	}
 
-	return (USBD_NORMAL_COMPLETION);
+	return (USB_ERR_NORMAL_COMPLETION);
 }
 
 usbd_status
@@ -699,9 +706,9 @@ uvideo_vc_parse_desc_header(struct uvideo_softc *sc,
 	d = (struct usb_video_header_desc *)(uint8_t *)desc;
 
 	if (d->bInCollection == 0) {
-		printf("%s: no VS interface found!\n",
+		kprintf("%s: no VS interface found!\n",
 		    DEVNAME(sc));
-		return (USBD_INVAL);
+		return (USB_ERR_INVAL);
 	}
 	
 	sc->sc_desc_vc_header.fix = d;
@@ -713,7 +720,7 @@ uvideo_vc_parse_desc_header(struct uvideo_softc *sc,
 	else
 		sc->sc_max_ctrl_size = 48;
 
-	return (USBD_NORMAL_COMPLETION);
+	return (USB_ERR_NORMAL_COMPLETION);
 }
 
 usbd_status
@@ -726,14 +733,14 @@ uvideo_vc_parse_desc_pu(struct uvideo_softc *sc,
 	d = (void *)desc;
 
 	if (sc->sc_desc_vc_pu_num == UVIDEO_MAX_PU) {
-		printf("%s: too many PU descriptors found!\n", DEVNAME(sc));
-		return (USBD_INVAL);
+		kprintf("%s: too many PU descriptors found!\n", DEVNAME(sc));
+		return (USB_ERR_INVAL);
 	}
 
 	sc->sc_desc_vc_pu[sc->sc_desc_vc_pu_num] = d;
 	sc->sc_desc_vc_pu_num++;
 
-	return (USBD_NORMAL_COMPLETION);
+	return (USB_ERR_NORMAL_COMPLETION);
 }
 
 usbd_status
@@ -753,10 +760,10 @@ uvideo_vc_get_ctrl(struct uvideo_softc *sc, uint8_t *ctrl_data,
 	if (error) {
 		DPRINTF(1, "%s: %s: could not GET ctrl request: %s\n",
 		    DEVNAME(sc), __func__, usbd_errstr(error));
-		return (USBD_INVAL);
+		return (USB_ERR_INVAL);
 	}
 
-	return (USBD_NORMAL_COMPLETION);
+	return (USB_ERR_NORMAL_COMPLETION);
 }
 
 usbd_status
@@ -776,10 +783,10 @@ uvideo_vc_set_ctrl(struct uvideo_softc *sc, uint8_t *ctrl_data,
 	if (error) {
 		DPRINTF(1, "%s: %s: could not SET ctrl request: %s\n",
 		    DEVNAME(sc), __func__, usbd_errstr(error));
-		return (USBD_INVAL);
+		return (USB_ERR_INVAL);
 	}
 
-	return (USBD_NORMAL_COMPLETION);
+	return (USB_ERR_NORMAL_COMPLETION);
 }
 
 int
@@ -873,7 +880,7 @@ uvideo_vs_parse_desc(struct uvideo_softc *sc, usb_config_descriptor_t *cdesc)
 			if (!uvideo_desc_len(desc, 13, 3, 0, 12))
 				break;
 			error = uvideo_vs_parse_desc_input_header(sc, desc);
-			if (error != USBD_NORMAL_COMPLETION)
+			if (error != USB_ERR_NORMAL_COMPLETION)
 				return (error);
 			break;
 
@@ -885,12 +892,12 @@ uvideo_vs_parse_desc(struct uvideo_softc *sc, usb_config_descriptor_t *cdesc)
 
 	/* parse video stream format descriptors */
 	error = uvideo_vs_parse_desc_format(sc);
-	if (error != USBD_NORMAL_COMPLETION)
+	if (error != USB_ERR_NORMAL_COMPLETION)
 		return (error);
 
 	/* parse video stream frame descriptors */
 	error = uvideo_vs_parse_desc_frame(sc);
-	if (error != USBD_NORMAL_COMPLETION)
+	if (error != USB_ERR_NORMAL_COMPLETION)
 		return (error);
 
 	/* parse interface collection */
@@ -899,9 +906,9 @@ uvideo_vs_parse_desc(struct uvideo_softc *sc, usb_config_descriptor_t *cdesc)
 
 		id = usbd_get_interface_descriptor(&sc->sc_udev->ifaces[iface]);
 		if (id == NULL) {
-			printf("%s: can't get VS interface %d!\n",
+			kprintf("%s: can't get VS interface %d!\n",
 			    DEVNAME(sc), iface);
-			return (USBD_INVAL);
+			return (USB_ERR_INVAL);
 		}
 		usbd_claim_iface(sc->sc_udev, iface);
 
@@ -912,14 +919,14 @@ uvideo_vs_parse_desc(struct uvideo_softc *sc, usb_config_descriptor_t *cdesc)
 		    id->bInterfaceNumber, numalts);
 
 		error = uvideo_vs_parse_desc_alt(sc, i, iface, numalts);
-		if (error != USBD_NORMAL_COMPLETION)
+		if (error != USB_ERR_NORMAL_COMPLETION)
 			return (error);
 	}
 
 	/* XXX for now always use the first video stream */
 	sc->sc_vs_cur = &sc->sc_vs_coll[0];
 
-	return (USBD_NORMAL_COMPLETION);
+	return (USB_ERR_NORMAL_COMPLETION);
 }
 
 usbd_status
@@ -932,14 +939,14 @@ uvideo_vs_parse_desc_input_header(struct uvideo_softc *sc,
 
 	/* on some devices bNumFormats is larger than the truth */
 	if (d->bNumFormats == 0) {
-		printf("%s: no INPUT FORMAT descriptors found!\n", DEVNAME(sc));
-		return (USBD_INVAL);
+		kprintf("%s: no INPUT FORMAT descriptors found!\n", DEVNAME(sc));
+		return (USB_ERR_INVAL);
 	}
 
 	sc->sc_desc_vs_input_header.fix = d;
 	sc->sc_desc_vs_input_header.bmaControls = (uByte *)(d + 1);
 
-	return (USBD_NORMAL_COMPLETION);
+	return (USB_ERR_NORMAL_COMPLETION);
 }
 
 usbd_status
@@ -992,13 +999,13 @@ uvideo_vs_parse_desc_format(struct uvideo_softc *sc)
 	sc->sc_fmtgrp_idx = 0;
 
 	if (sc->sc_fmtgrp_num == 0) {
-		printf("%s: no format descriptors found!\n", DEVNAME(sc));
-		return (USBD_INVAL);
+		kprintf("%s: no format descriptors found!\n", DEVNAME(sc));
+		return (USB_ERR_INVAL);
 	}
 	DPRINTF(1, "%s: number of total format descriptors=%d\n",
 	    DEVNAME(sc), sc->sc_fmtgrp_num);
 
-	return (USBD_NORMAL_COMPLETION);
+	return (USB_ERR_NORMAL_COMPLETION);
 }
 
 usbd_status
@@ -1010,14 +1017,14 @@ uvideo_vs_parse_desc_format_mjpeg(struct uvideo_softc *sc,
 	d = (struct usb_video_format_mjpeg_desc *)(uint8_t *)desc;
 
 	if (d->bNumFrameDescriptors == 0) {
-		printf("%s: no MJPEG frame descriptors available!\n",
+		kprintf("%s: no MJPEG frame descriptors available!\n",
 		    DEVNAME(sc));
-		return (USBD_INVAL);
+		return (USB_ERR_INVAL);
 	}
 
 	if (sc->sc_fmtgrp_idx >= UVIDEO_MAX_FORMAT) {
-		printf("%s: too many format descriptors found!\n", DEVNAME(sc));
-		return (USBD_INVAL);
+		kprintf("%s: too many format descriptors found!\n", DEVNAME(sc));
+		return (USB_ERR_INVAL);
 	}
 
 	sc->sc_fmtgrp[sc->sc_fmtgrp_idx].format =
@@ -1039,7 +1046,7 @@ uvideo_vs_parse_desc_format_mjpeg(struct uvideo_softc *sc,
 	sc->sc_fmtgrp_idx++;
 	sc->sc_fmtgrp_num++;
 
-	return (USBD_NORMAL_COMPLETION);
+	return (USB_ERR_NORMAL_COMPLETION);
 }
 
 usbd_status
@@ -1053,14 +1060,14 @@ uvideo_vs_parse_desc_format_uncompressed(struct uvideo_softc *sc,
 	d = (struct usb_video_format_uncompressed_desc *)(uint8_t *)desc;
 
 	if (d->bNumFrameDescriptors == 0) {
-		printf("%s: no UNCOMPRESSED frame descriptors available!\n",
+		kprintf("%s: no UNCOMPRESSED frame descriptors available!\n",
 		    DEVNAME(sc));
-		return (USBD_INVAL);
+		return (USB_ERR_INVAL);
 	}
 
 	if (sc->sc_fmtgrp_idx >= UVIDEO_MAX_FORMAT) {
-		printf("%s: too many format descriptors found!\n", DEVNAME(sc));
-		return (USBD_INVAL);
+		kprintf("%s: too many format descriptors found!\n", DEVNAME(sc));
+		return (USB_ERR_INVAL);
 	}
 
 	sc->sc_fmtgrp[sc->sc_fmtgrp_idx].format =
@@ -1094,7 +1101,7 @@ uvideo_vs_parse_desc_format_uncompressed(struct uvideo_softc *sc,
 	sc->sc_fmtgrp_idx++;
 	sc->sc_fmtgrp_num++;
 
-	return (USBD_NORMAL_COMPLETION);
+	return (USB_ERR_NORMAL_COMPLETION);
 }
 
 usbd_status
@@ -1127,13 +1134,13 @@ uvideo_vs_parse_desc_frame(struct uvideo_softc *sc)
 		    (desc->bDescriptorSubtype == UDESCSUB_VS_FRAME_MJPEG ||
 		    desc->bDescriptorSubtype == UDESCSUB_VS_FRAME_UNCOMPRESSED)) {
 			error = uvideo_vs_parse_desc_frame_sub(sc, desc);
-			if (error != USBD_NORMAL_COMPLETION)
+			if (error != USB_ERR_NORMAL_COMPLETION)
 				return (error);
 		}
 		desc = usbd_desc_iter_next(&iter);
 	}
 
-	return (USBD_NORMAL_COMPLETION);
+	return (USB_ERR_NORMAL_COMPLETION);
 }
 
 usbd_status
@@ -1148,11 +1155,11 @@ uvideo_vs_parse_desc_frame_sub(struct uvideo_softc *sc,
 	fmtidx = sc->sc_fmtgrp_idx;
 	frame_num = sc->sc_fmtgrp[fmtidx].frame_num;
 	if (frame_num >= UVIDEO_MAX_FRAME) {
-		printf("%s: too many %s frame descriptors found!\n",
+		kprintf("%s: too many %s frame descriptors found!\n",
 		    DEVNAME(sc),
 		    desc->bDescriptorSubtype == UDESCSUB_VS_FRAME_MJPEG ?
 		    "MJPEG" : "UNCOMPRESSED");
-		return (USBD_INVAL);
+		return (USB_ERR_INVAL);
 	}
 	sc->sc_fmtgrp[fmtidx].frame[frame_num] = fd;
 
@@ -1191,7 +1198,7 @@ uvideo_vs_parse_desc_frame_sub(struct uvideo_softc *sc,
 		sc->sc_fmtgrp_idx++;
 	}
 
-	return (USBD_NORMAL_COMPLETION);
+	return (USB_ERR_NORMAL_COMPLETION);
 }
 
 usbd_status
@@ -1268,12 +1275,12 @@ next:
 
 	/* check if we have found a valid alternate interface */
 	if (vs->ifaceh == NULL) {
-		printf("%s: no valid alternate interface found!\n",
+		kprintf("%s: no valid alternate interface found!\n",
 		    DEVNAME(sc));
-		return (USBD_INVAL);
+		return (USB_ERR_INVAL);
 	}
 
-	return (USBD_NORMAL_COMPLETION);
+	return (USB_ERR_NORMAL_COMPLETION);
 }
 
 usbd_status
@@ -1344,12 +1351,12 @@ next:
 	/* set alternate video stream interface */
 	error = usbd_set_interface(ifaceh, sc->sc_vs_cur->curalt);
 	if (error) {
-		printf("%s: could not set alternate interface %d!\n",
+		kprintf("%s: could not set alternate interface %d!\n",
 		    DEVNAME(sc), sc->sc_vs_cur->curalt);
-		return (USBD_INVAL);
+		return (USB_ERR_INVAL);
 	}
 
-	return (USBD_NORMAL_COMPLETION);
+	return (USB_ERR_NORMAL_COMPLETION);
 }
 
 /*
@@ -1440,9 +1447,9 @@ uvideo_vs_negotiation(struct uvideo_softc *sc, int commit)
 
 	/* check if the format descriptor contains frame descriptors */
 	if (fmtgrp->frame_num == 0) {
-		printf("%s: %s: no frame descriptors found!\n",
+		kprintf("%s: %s: no frame descriptors found!\n",
 		    __func__, DEVNAME(sc));
-		return (USBD_INVAL);
+		return (USB_ERR_INVAL);
 	}
 
 	/* set probe */
@@ -1505,13 +1512,13 @@ uvideo_vs_negotiation(struct uvideo_softc *sc, int commit)
 	}
 	USETDW(pc->dwFrameInterval, frame_ival);
 	error = uvideo_vs_set_probe(sc, probe_data);
-	if (error != USBD_NORMAL_COMPLETION)
+	if (error != USB_ERR_NORMAL_COMPLETION)
 		return (error);
 
 	/* get probe */
 	bzero(probe_data, sizeof(probe_data));
 	error = uvideo_vs_get_probe(sc, probe_data, GET_CUR);
-	if (error != USBD_NORMAL_COMPLETION)
+	if (error != USB_ERR_NORMAL_COMPLETION)
 		return (error);
 
 	/* check that the format and frame indexes are what we wanted */
@@ -1530,7 +1537,7 @@ uvideo_vs_negotiation(struct uvideo_softc *sc, int commit)
 		if (i == sc->sc_fmtgrp_num) {
 			DPRINTF(1, "%s: %s: invalid format index 0x%x\n",
 			    DEVNAME(sc), __func__, pc->bFormatIndex);
-			return (USBD_INVAL);
+			return (USB_ERR_INVAL);
 		}
 	}
 	if (pc->bFrameIndex != fmtgrp->frame_cur->bFrameIndex) {
@@ -1547,7 +1554,7 @@ uvideo_vs_negotiation(struct uvideo_softc *sc, int commit)
 		if (i == fmtgrp->frame_num) {
 			DPRINTF(1, "%s: %s: invalid frame index 0x%x\n",
 			    DEVNAME(sc), __func__, pc->bFrameIndex);
-			return (USBD_INVAL);
+			return (USB_ERR_INVAL);
 		}
 	} else
 		frame = fmtgrp->frame_cur;
@@ -1586,17 +1593,17 @@ uvideo_vs_negotiation(struct uvideo_softc *sc, int commit)
 	if (commit) {
 		if (changed > 0) {
 			/* didn't get the frame format or size we wanted */
-			return (USBD_INVAL);
+			return (USB_ERR_INVAL);
 		}
 		error = uvideo_vs_set_commit(sc, probe_data);
-		if (error != USBD_NORMAL_COMPLETION)
+		if (error != USB_ERR_NORMAL_COMPLETION)
 			return (error);
 	}
 
 	/* save a copy of probe commit */
 	bcopy(pc, &sc->sc_desc_probe, sizeof(sc->sc_desc_probe));
 
-	return (USBD_NORMAL_COMPLETION);
+	return (USB_ERR_NORMAL_COMPLETION);
 }
 
 usbd_status
@@ -1619,9 +1626,9 @@ uvideo_vs_set_probe(struct uvideo_softc *sc, uint8_t *probe_data)
 
 	error = usbd_do_request(sc->sc_udev, &req, probe_data);
 	if (error) {
-		printf("%s: could not SET probe request: %s\n",
+		kprintf("%s: could not SET probe request: %s\n",
 		    DEVNAME(sc), usbd_errstr(error));
-		return (USBD_INVAL);
+		return (USB_ERR_INVAL);
 	}
 	DPRINTF(1, "%s: SET probe request successfully\n", DEVNAME(sc));
 
@@ -1640,7 +1647,7 @@ uvideo_vs_set_probe(struct uvideo_softc *sc, uint8_t *probe_data)
 	DPRINTF(1, "dwMaxPayloadTransferSize=%d (bytes)\n",
 	    UGETDW(pc->dwMaxPayloadTransferSize));
 
-	return (USBD_NORMAL_COMPLETION);
+	return (USB_ERR_NORMAL_COMPLETION);
 }
 
 usbd_status
@@ -1664,9 +1671,9 @@ uvideo_vs_get_probe(struct uvideo_softc *sc, uint8_t *probe_data,
 
 	error = usbd_do_request(sc->sc_udev, &req, probe_data);
 	if (error) {
-		printf("%s: could not GET probe request: %s\n",
+		kprintf("%s: could not GET probe request: %s\n",
 		    DEVNAME(sc), usbd_errstr(error));
-		return (USBD_INVAL);
+		return (USB_ERR_INVAL);
 	}
 	DPRINTF(1, "%s: GET probe request successfully\n", DEVNAME(sc));
 
@@ -1685,7 +1692,7 @@ uvideo_vs_get_probe(struct uvideo_softc *sc, uint8_t *probe_data,
 	DPRINTF(1, "dwMaxPayloadTransferSize=%d (bytes)\n",
 	    UGETDW(pc->dwMaxPayloadTransferSize));
 
-	return (USBD_NORMAL_COMPLETION);
+	return (USB_ERR_NORMAL_COMPLETION);
 }
 
 usbd_status
@@ -1705,13 +1712,13 @@ uvideo_vs_set_commit(struct uvideo_softc *sc, uint8_t *probe_data)
 
 	error = usbd_do_request(sc->sc_udev, &req, probe_data);
 	if (error) {
-		printf("%s: could not SET commit request: %s\n",
+		kprintf("%s: could not SET commit request: %s\n",
 		    DEVNAME(sc), usbd_errstr(error));
-		return (USBD_INVAL);
+		return (USB_ERR_INVAL);
 	}
 	DPRINTF(1, "%s: SET commit request successfully\n", DEVNAME(sc));
 
-	return (USBD_NORMAL_COMPLETION);
+	return (USB_ERR_NORMAL_COMPLETION);
 }
 
 usbd_status
@@ -1724,14 +1731,14 @@ uvideo_vs_alloc_frame(struct uvideo_softc *sc)
 	/* don't overflow the upper layer frame buffer */
 	if (sc->sc_max_fbuf_size < fb->buf_size &&
 	    sc->sc_mmap_flag == 0) {
-		printf("%s: software video buffer is too small!\n",
+		kprintf("%s: software video buffer is too small!\n",
 		    DEVNAME(sc));
 		return (USBD_NOMEM);
 	}
 
 	fb->buf = malloc(fb->buf_size, M_USBDEV, M_NOWAIT);
 	if (fb->buf == NULL) {
-		printf("%s: can't allocate frame buffer!\n", DEVNAME(sc));
+		kprintf("%s: can't allocate frame buffer!\n", DEVNAME(sc));
 		return (USBD_NOMEM);
 	}
 
@@ -1744,7 +1751,7 @@ uvideo_vs_alloc_frame(struct uvideo_softc *sc)
 	fb->fmt_flags = sc->sc_fmtgrp_cur->frame_cur->bDescriptorSubtype ==
 	    UDESCSUB_VS_FRAME_UNCOMPRESSED ? 0 : V4L2_FMT_FLAG_COMPRESSED;
 
-	return (USBD_NORMAL_COMPLETION);
+	return (USB_ERR_NORMAL_COMPLETION);
 }
 
 void
@@ -1781,7 +1788,7 @@ uvideo_vs_alloc_isoc(struct uvideo_softc *sc)
 
 		sc->sc_vs_cur->ixfer[i].xfer = usbd_alloc_xfer(sc->sc_udev);	
 		if (sc->sc_vs_cur->ixfer[i].xfer == NULL) {
-			printf("%s: could not allocate isoc VS xfer!\n",
+			kprintf("%s: could not allocate isoc VS xfer!\n",
 			    DEVNAME(sc));
 			return (USBD_NOMEM);	
 		}
@@ -1791,7 +1798,7 @@ uvideo_vs_alloc_isoc(struct uvideo_softc *sc)
 		sc->sc_vs_cur->ixfer[i].buf =
 		    usbd_alloc_buffer(sc->sc_vs_cur->ixfer[i].xfer, size);
 		if (sc->sc_vs_cur->ixfer[i].buf == NULL) {
-			printf("%s: could not allocate isoc VS buffer!\n",
+			kprintf("%s: could not allocate isoc VS buffer!\n",
 			    DEVNAME(sc));
 			return (USBD_NOMEM);
 		}
@@ -1799,7 +1806,7 @@ uvideo_vs_alloc_isoc(struct uvideo_softc *sc)
 		    DEVNAME(sc), size);
 	}
 
-	return (USBD_NORMAL_COMPLETION);
+	return (USB_ERR_NORMAL_COMPLETION);
 }
 
 usbd_status
@@ -1811,7 +1818,7 @@ uvideo_vs_alloc_bulk(struct uvideo_softc *sc)
 
 	sc->sc_vs_cur->bxfer.xfer = usbd_alloc_xfer(sc->sc_udev);
 	if (sc->sc_vs_cur->bxfer.xfer == NULL) {
-		printf("%s: could not allocate bulk VS xfer!\n",
+		kprintf("%s: could not allocate bulk VS xfer!\n",
 		    DEVNAME(sc));
 		return (USBD_NOMEM);
 	}
@@ -1821,14 +1828,14 @@ uvideo_vs_alloc_bulk(struct uvideo_softc *sc)
 	sc->sc_vs_cur->bxfer.buf =
 	    usbd_alloc_buffer(sc->sc_vs_cur->bxfer.xfer, size);
 	if (sc->sc_vs_cur->bxfer.buf == NULL) {
-		printf("%s: could not allocate bulk VS buffer!\n",
+		kprintf("%s: could not allocate bulk VS buffer!\n",
 		    DEVNAME(sc));
 		return (USBD_NOMEM);
 	}
 	DPRINTF(1, "%s: allocated %d bytes bulk VS xfer buffer\n",
 	    DEVNAME(sc), size);
 
-	return (USBD_NORMAL_COMPLETION);
+	return (USB_ERR_NORMAL_COMPLETION);
 }
 
 void
@@ -1877,14 +1884,14 @@ uvideo_vs_open(struct uvideo_softc *sc)
 	if (sc->sc_negotiated_flag == 0) {
 		/* do device negotiation with commit */
 		error = uvideo_vs_negotiation(sc, 1);
-		if (error != USBD_NORMAL_COMPLETION)
+		if (error != USB_ERR_NORMAL_COMPLETION)
 			return (error);
 	}
 
 	error = uvideo_vs_set_alt(sc, sc->sc_vs_cur->ifaceh,
 	    UGETDW(sc->sc_desc_probe.dwMaxPayloadTransferSize));
-	if (error != USBD_NORMAL_COMPLETION) {
-		printf("%s: could not set alternate interface!\n",
+	if (error != USB_ERR_NORMAL_COMPLETION) {
+		kprintf("%s: could not set alternate interface!\n",
 		    DEVNAME(sc));
 		return (error);
 	}
@@ -1893,9 +1900,9 @@ uvideo_vs_open(struct uvideo_softc *sc)
 	ed = usbd_get_endpoint_descriptor(sc->sc_vs_cur->ifaceh,
 	    sc->sc_vs_cur->endpoint);
 	if (ed == NULL) {
-		printf("%s: no endpoint descriptor for VS iface\n",
+		kprintf("%s: no endpoint descriptor for VS iface\n",
 		    DEVNAME(sc));
-		return (USBD_INVAL);
+		return (USB_ERR_INVAL);
 	}
 
 	DPRINTF(1, "%s: open pipe for bEndpointAddress=0x%02x\n",
@@ -1905,8 +1912,8 @@ uvideo_vs_open(struct uvideo_softc *sc)
 	    sc->sc_vs_cur->endpoint,
 	    USBD_EXCLUSIVE_USE,
 	    &sc->sc_vs_cur->pipeh);
-	if (error != USBD_NORMAL_COMPLETION) {
-		printf("%s: could not open VS pipe: %s\n",
+	if (error != USB_ERR_NORMAL_COMPLETION) {
+		kprintf("%s: could not open VS pipe: %s\n",
 		    DEVNAME(sc), usbd_errstr(error));
 		return (error);
 	}
@@ -1926,7 +1933,7 @@ uvideo_vs_open(struct uvideo_softc *sc)
 		sc->sc_nframes = UVIDEO_NFRAMES_MAX;
 	DPRINTF(1, "%s: nframes=%d\n", DEVNAME(sc), sc->sc_nframes);
 
-	return (USBD_NORMAL_COMPLETION);
+	return (USB_ERR_NORMAL_COMPLETION);
 }
 
 void
@@ -1960,28 +1967,28 @@ uvideo_vs_init(struct uvideo_softc *sc)
 
 	/* open video stream pipe */
 	error = uvideo_vs_open(sc);
-	if (error != USBD_NORMAL_COMPLETION)
-		return (USBD_INVAL);
+	if (error != USB_ERR_NORMAL_COMPLETION)
+		return (USB_ERR_INVAL);
 
 	/* allocate video stream xfer buffer */
 	if (sc->sc_vs_cur->bulk_endpoint)
 		error = uvideo_vs_alloc_bulk(sc);
 	else
 		error = uvideo_vs_alloc_isoc(sc);
-	if (error != USBD_NORMAL_COMPLETION)
-		return (USBD_INVAL);
+	if (error != USB_ERR_NORMAL_COMPLETION)
+		return (USB_ERR_INVAL);
 
 	/* allocate video stream frame buffer */
 	error = uvideo_vs_alloc_frame(sc);
-	if (error != USBD_NORMAL_COMPLETION)
-		return (USBD_INVAL);
+	if (error != USB_ERR_NORMAL_COMPLETION)
+		return (USB_ERR_INVAL);
 #ifdef UVIDEO_DUMP
 	if (uvideo_debug_file_open(sc) != 0)
-		return (USBD_INVAL);
+		return (USB_ERR_INVAL);
 	usb_init_task(&sc->sc_task_write, uvideo_debug_file_write_frame, sc,
 	    USB_TASK_TYPE_GENERIC);
 #endif
-	return (USBD_NORMAL_COMPLETION);
+	return (USB_ERR_NORMAL_COMPLETION);
 }
 
 int
@@ -1994,7 +2001,7 @@ uvideo_vs_start_bulk(struct uvideo_softc *sc)
 	error = kthread_create(uvideo_vs_start_bulk_thread, sc, NULL,
 	    DEVNAME(sc));
 	if (error) {
-		printf("%s: can't create kernel thread!", DEVNAME(sc));
+		kprintf("%s: can't create kernel thread!", DEVNAME(sc));
 		return (error);
 	}
 
@@ -2022,7 +2029,7 @@ uvideo_vs_start_bulk_thread(void *arg)
 		    0,
 		    NULL);
 		error = usbd_transfer(sc->sc_vs_cur->bxfer.xfer);
-		if (error != USBD_NORMAL_COMPLETION) {
+		if (error != USB_ERR_NORMAL_COMPLETION) {
 			DPRINTF(1, "%s: error in bulk xfer: %s!\n",
 			    DEVNAME(sc), usbd_errstr(error));
 			break;
@@ -2090,7 +2097,7 @@ uvideo_vs_cb(struct usbd_xfer *xfer, void *priv,
 
 	DPRINTF(2, "%s: %s\n", DEVNAME(sc), __func__);
 
-	if (status != USBD_NORMAL_COMPLETION) {
+	if (status != USB_ERR_NORMAL_COMPLETION) {
 		DPRINTF(1, "%s: %s: %s\n", DEVNAME(sc), __func__,
 		    usbd_errstr(status));
 		return;
@@ -2128,7 +2135,7 @@ uvideo_vs_decode_stream_header(struct uvideo_softc *sc, uint8_t *frame,
 
 	if (frame_size < UVIDEO_SH_MIN_LEN)
 		/* frame too small to contain a valid stream header */
-		return (USBD_INVAL);
+		return (USB_ERR_INVAL);
 
 	sh = (struct usb_video_stream_header *)frame;
 
@@ -2136,10 +2143,10 @@ uvideo_vs_decode_stream_header(struct uvideo_softc *sc, uint8_t *frame,
 
 	if (sh->bLength > UVIDEO_SH_MAX_LEN || sh->bLength < UVIDEO_SH_MIN_LEN)
 		/* invalid header size */
-		return (USBD_INVAL);
+		return (USB_ERR_INVAL);
 	if (sh->bLength == frame_size && !(sh->bFlags & UVIDEO_SH_FLAG_EOF)) {
 		/* stream header without payload and no EOF */
-		return (USBD_INVAL);
+		return (USB_ERR_INVAL);
 	}
 	if (sh->bFlags & UVIDEO_SH_FLAG_ERR) {
 		/* stream error, skip xfer */
@@ -2214,7 +2221,7 @@ uvideo_vs_decode_stream_header(struct uvideo_softc *sc, uint8_t *frame,
 		fb->fid = 0;
 	}
 
-	return (USBD_NORMAL_COMPLETION);
+	return (USB_ERR_NORMAL_COMPLETION);
 }
 
 /*
@@ -2250,7 +2257,7 @@ uvideo_vs_decode_stream_header_isight(struct uvideo_softc *sc, uint8_t *frame,
 
 	if (header && fb->fid == 0) {
 		fb->fid = 1;
-		return (USBD_NORMAL_COMPLETION);
+		return (USB_ERR_NORMAL_COMPLETION);
 	}
 
 	if (header) {
@@ -2272,7 +2279,7 @@ uvideo_vs_decode_stream_header_isight(struct uvideo_softc *sc, uint8_t *frame,
 		}
 	}
 
-	return (USBD_NORMAL_COMPLETION);
+	return (USB_ERR_NORMAL_COMPLETION);
 }
 
 int
@@ -2341,155 +2348,155 @@ uvideo_dump_desc_all(struct uvideo_softc *sc)
 	usbd_desc_iter_init(sc->sc_udev, &iter);
 	desc = usbd_desc_iter_next(&iter);
 	while (desc) {
-		printf("bLength=%d\n", desc->bLength);
-		printf("bDescriptorType=0x%02x", desc->bDescriptorType);
+		kprintf("bLength=%d\n", desc->bLength);
+		kprintf("bDescriptorType=0x%02x", desc->bDescriptorType);
 
 		switch (desc->bDescriptorType) {
 		case UDESC_CS_INTERFACE:
-			printf(" (CS_INTERFACE)\n");
+			kprintf(" (CS_INTERFACE)\n");
 
 			switch (desc->bDescriptorSubtype) {
 			case UDESCSUB_VC_HEADER:
-				printf("bDescriptorSubtype=0x%02x",
+				kprintf("bDescriptorSubtype=0x%02x",
 				    desc->bDescriptorSubtype);
 				if (uvideo_desc_len(desc, 12, 11, 1, 0)) {
-					printf(" (UDESCSUB_VC_HEADER)\n");
-					printf("|\n");
+					kprintf(" (UDESCSUB_VC_HEADER)\n");
+					kprintf("|\n");
 					uvideo_dump_desc_vc_header(sc, desc);
 					break;
 				}
 				if (uvideo_desc_len(desc, 13, 3, 0, 12)) {
-					printf(" (UDESCSUB_VS_INPUT_HEADER)\n");
-					printf("|\n");
+					kprintf(" (UDESCSUB_VS_INPUT_HEADER)\n");
+					kprintf("|\n");
 					uvideo_dump_desc_input_header(sc, desc);
 					break;
 				}
-				printf(" (unknown)\n");
+				kprintf(" (unknown)\n");
 				break;
 			case UDESCSUB_VC_INPUT_TERMINAL:
-				printf("bDescriptorSubtype=0x%02x",
+				kprintf("bDescriptorSubtype=0x%02x",
 				    desc->bDescriptorSubtype);
-				printf(" (UDESCSUB_VC_INPUT_TERMINAL)\n");
-				printf("|\n");
+				kprintf(" (UDESCSUB_VC_INPUT_TERMINAL)\n");
+				kprintf("|\n");
 				uvideo_dump_desc_input(sc, desc);
 				break;
 			case UDESCSUB_VC_OUTPUT_TERMINAL:
-				printf("bDescriptorSubtype=0x%02x",
+				kprintf("bDescriptorSubtype=0x%02x",
 				    desc->bDescriptorSubtype);
-				printf(" (UDESCSUB_VC_OUTPUT)\n");
-				printf("|\n");
+				kprintf(" (UDESCSUB_VC_OUTPUT)\n");
+				kprintf("|\n");
 				uvideo_dump_desc_output(sc, desc);
 				break;
 			case UDESCSUB_VC_SELECTOR_UNIT:
-				printf("bDescriptorSubtype=0x%02x",
+				kprintf("bDescriptorSubtype=0x%02x",
 				    desc->bDescriptorSubtype);
 				if (desc->bLength == 27) {
-					printf(" (UDESCSUB_VS_FORMAT_"
+					kprintf(" (UDESCSUB_VS_FORMAT_"
 					    "UNCOMPRESSED)\n");
 					uvideo_dump_desc_format_uncompressed(
 					    sc, desc);
 				} else {
-					printf(" (UDESCSUB_VC_SELECTOR_"
+					kprintf(" (UDESCSUB_VC_SELECTOR_"
 					    "UNIT)\n");
 					/* TODO */
 				}
 				break;
 			case UDESCSUB_VC_PROCESSING_UNIT:
-				printf("bDescriptorSubtype=0x%02x",
+				kprintf("bDescriptorSubtype=0x%02x",
 				    desc->bDescriptorSubtype);
 				if (desc->bLength >
 				    sizeof(struct usb_video_frame_desc)) {
-					printf(" (UDESCSUB_VS_FRAME_"
+					kprintf(" (UDESCSUB_VS_FRAME_"
 					    "UNCOMPRESSED)\n");
 					uvideo_dump_desc_frame(sc, desc);
 				} else {
-					printf(" (UDESCSUB_VC_PROCESSING_"
+					kprintf(" (UDESCSUB_VC_PROCESSING_"
 					    "UNIT)\n");
-					printf("|\n");
+					kprintf("|\n");
 					uvideo_dump_desc_processing(sc, desc);
 				}
 				break;
 			case UDESCSUB_VC_EXTENSION_UNIT:
-				printf("bDescriptorSubtype=0x%02x",
+				kprintf("bDescriptorSubtype=0x%02x",
 				    desc->bDescriptorSubtype);
 				if (desc->bLength == 11) {
-					printf(" (UDESCSUB_VS_FORMAT_MJPEG)\n");
-					printf("|\n");
+					kprintf(" (UDESCSUB_VS_FORMAT_MJPEG)\n");
+					kprintf("|\n");
 					uvideo_dump_desc_format_mjpeg(sc, desc);
 				} else {
-					printf(" (UDESCSUB_VC_EXTENSION_"
+					kprintf(" (UDESCSUB_VC_EXTENSION_"
 					    "UNIT)\n");
-					printf("|\n");
+					kprintf("|\n");
 					uvideo_dump_desc_extension(sc, desc);
 				}
 				break;
 			case UDESCSUB_VS_FRAME_MJPEG:
-				printf("bDescriptorSubtype=0x%02x",
+				kprintf("bDescriptorSubtype=0x%02x",
 				    desc->bDescriptorSubtype);
-				printf(" (UDESCSUB_VS_FRAME_MJPEG)\n");
+				kprintf(" (UDESCSUB_VS_FRAME_MJPEG)\n");
 				if (desc->bLength >
 				    sizeof(struct usb_video_frame_desc)) {
-					printf("|\n");
+					kprintf("|\n");
 					uvideo_dump_desc_frame(sc, desc);
 				}
 				break;
 			case UDESCSUB_VS_COLORFORMAT:
-				printf("bDescriptorSubtype=0x%02x",
+				kprintf("bDescriptorSubtype=0x%02x",
 				   desc->bDescriptorSubtype);
-				printf(" (UDESCSUB_VS_COLORFORMAT)\n");
-				printf("|\n");
+				kprintf(" (UDESCSUB_VS_COLORFORMAT)\n");
+				kprintf("|\n");
 				uvideo_dump_desc_colorformat(sc, desc);
 				break;
 			}
 
 			break;
 		case UDESC_CS_ENDPOINT:
-			printf(" (UDESC_CS_ENDPOINT)\n");
+			kprintf(" (UDESC_CS_ENDPOINT)\n");
 
 			switch (desc->bDescriptorSubtype) {
 			case EP_INTERRUPT:
-				printf("bDescriptorSubtype=0x%02x",
+				kprintf("bDescriptorSubtype=0x%02x",
 				    desc->bDescriptorSubtype);
-				printf(" (EP_INTERRUPT)\n");
-				printf("|\n");
+				kprintf(" (EP_INTERRUPT)\n");
+				kprintf("|\n");
 				uvideo_dump_desc_cs_endpoint(sc, desc);
 				break;
 			case EP_GENERAL:
-				printf("bDescriptorSubtype=0x%02x",
+				kprintf("bDescriptorSubtype=0x%02x",
 				    desc->bDescriptorSubtype);
-				printf(" (EP_GENERAL)\n");
-				printf("|\n");
+				kprintf(" (EP_GENERAL)\n");
+				kprintf("|\n");
 				uvideo_dump_desc_cs_endpoint(sc, desc);
 				break;
 			}
 
 			break;
 		case UDESC_CONFIG:
-			printf(" (UDESC_CONFIG)\n");
-			printf("|\n");
+			kprintf(" (UDESC_CONFIG)\n");
+			kprintf("|\n");
 			uvideo_dump_desc_config(sc, desc);
 			break;
 		case UDESC_ENDPOINT:
-			printf(" (UDESC_ENDPOINT)\n");
-			printf("|\n");
+			kprintf(" (UDESC_ENDPOINT)\n");
+			kprintf("|\n");
 			uvideo_dump_desc_endpoint(sc, desc);
 			break;
 		case UDESC_INTERFACE:
-			printf(" (UDESC_INTERFACE)\n");
-			printf("|\n");
+			kprintf(" (UDESC_INTERFACE)\n");
+			kprintf("|\n");
 			uvideo_dump_desc_interface(sc, desc);
 			break;
 		case UDESC_IFACE_ASSOC:
-			printf(" (UDESC_IFACE_ASSOC)\n");
-			printf("|\n");
+			kprintf(" (UDESC_IFACE_ASSOC)\n");
+			kprintf("|\n");
 			uvideo_dump_desc_iface_assoc(sc, desc);
 			break;
 		default:
-			printf(" (unknown)\n");
+			kprintf(" (unknown)\n");
 			break;
 		}
 
-		printf("\n");
+		kprintf("\n");
 
 		desc = usbd_desc_iter_next(&iter);
 	}	
@@ -2504,13 +2511,13 @@ uvideo_dump_desc_vc_header(struct uvideo_softc *sc,
 
 	d = (struct usb_video_header_desc *)(uint8_t *)desc;
 
-	printf("bLength=%d\n", d->bLength);
-	printf("bDescriptorType=0x%02x\n", d->bDescriptorType);
-	printf("bDescriptorSubtype=0x%02x\n", d->bDescriptorSubtype);
-	printf("bcdUVC=0x%04x\n", UGETW(d->bcdUVC));
-	printf("wTotalLength=%d\n", UGETW(d->wTotalLength));
-	printf("dwClockFrequency=%d\n", UGETDW(d->dwClockFrequency));
-	printf("bInCollection=0x%02x\n", d->bInCollection);
+	kprintf("bLength=%d\n", d->bLength);
+	kprintf("bDescriptorType=0x%02x\n", d->bDescriptorType);
+	kprintf("bDescriptorSubtype=0x%02x\n", d->bDescriptorSubtype);
+	kprintf("bcdUVC=0x%04x\n", UGETW(d->bcdUVC));
+	kprintf("wTotalLength=%d\n", UGETW(d->wTotalLength));
+	kprintf("dwClockFrequency=%d\n", UGETDW(d->dwClockFrequency));
+	kprintf("bInCollection=0x%02x\n", d->bInCollection);
 }
 
 void
@@ -2521,18 +2528,18 @@ uvideo_dump_desc_input_header(struct uvideo_softc *sc,
 
 	d = (struct usb_video_input_header_desc *)(uint8_t *)desc;
 
-	printf("bLength=%d\n", d->bLength);
-	printf("bDescriptorType=0x%02x\n", d->bDescriptorType);
-	printf("bDescriptorSubtype=0x%02x\n", d->bDescriptorSubtype);
-	printf("bNumFormats=%d\n", d->bNumFormats);
-	printf("wTotalLength=%d\n", UGETW(d->wTotalLength));
-	printf("bEndpointAddress=0x%02x\n", d->bEndpointAddress);
-	printf("bmInfo=0x%02x\n", d->bmInfo);
-	printf("bTerminalLink=0x%02x\n", d->bTerminalLink);
-	printf("bStillCaptureMethod=0x%02x\n", d->bStillCaptureMethod);
-	printf("bTriggerSupport=0x%02x\n", d->bTriggerSupport);
-	printf("bTriggerUsage=0x%02x\n", d->bTriggerUsage);
-	printf("bControlSize=%d\n", d->bControlSize);
+	kprintf("bLength=%d\n", d->bLength);
+	kprintf("bDescriptorType=0x%02x\n", d->bDescriptorType);
+	kprintf("bDescriptorSubtype=0x%02x\n", d->bDescriptorSubtype);
+	kprintf("bNumFormats=%d\n", d->bNumFormats);
+	kprintf("wTotalLength=%d\n", UGETW(d->wTotalLength));
+	kprintf("bEndpointAddress=0x%02x\n", d->bEndpointAddress);
+	kprintf("bmInfo=0x%02x\n", d->bmInfo);
+	kprintf("bTerminalLink=0x%02x\n", d->bTerminalLink);
+	kprintf("bStillCaptureMethod=0x%02x\n", d->bStillCaptureMethod);
+	kprintf("bTriggerSupport=0x%02x\n", d->bTriggerSupport);
+	kprintf("bTriggerUsage=0x%02x\n", d->bTriggerUsage);
+	kprintf("bControlSize=%d\n", d->bControlSize);
 }
 
 void
@@ -2543,13 +2550,13 @@ uvideo_dump_desc_input(struct uvideo_softc *sc,
 
 	d = (struct usb_video_input_terminal_desc *)(uint8_t *)desc;
 
-	printf("bLength=%d\n", d->bLength);
-	printf("bDescriptorType=0x%02x\n", d->bDescriptorType);
-	printf("bDescriptorSubtype=0x%02x\n", d->bDescriptorSubtype);
-	printf("bTerminalID=0x%02x\n", d->bTerminalID);
-	printf("wTerminalType=0x%04x\n", UGETW(d->wTerminalType));
-	printf("bAssocTerminal=0x%02x\n", d->bAssocTerminal);
-	printf("iTerminal=0x%02x\n", d->iTerminal);
+	kprintf("bLength=%d\n", d->bLength);
+	kprintf("bDescriptorType=0x%02x\n", d->bDescriptorType);
+	kprintf("bDescriptorSubtype=0x%02x\n", d->bDescriptorSubtype);
+	kprintf("bTerminalID=0x%02x\n", d->bTerminalID);
+	kprintf("wTerminalType=0x%04x\n", UGETW(d->wTerminalType));
+	kprintf("bAssocTerminal=0x%02x\n", d->bAssocTerminal);
+	kprintf("iTerminal=0x%02x\n", d->iTerminal);
 }
 
 void
@@ -2560,13 +2567,13 @@ uvideo_dump_desc_output(struct uvideo_softc *sc,
 
 	d = (struct usb_video_output_terminal_desc *)(uint8_t *)desc;
 
-	printf("bLength=%d\n", d->bLength);
-	printf("bDescriptorType=0x%02x\n", d->bDescriptorType);
-	printf("bDescriptorSubtype=0x%02x\n", d->bDescriptorSubtype);
-	printf("bTerminalID=0x%02x\n", d->bTerminalID);
-	printf("bAssocTerminal=0x%02x\n", d->bAssocTerminal);
-	printf("bSourceID=0x%02x\n", d->bSourceID);
-	printf("iTerminal=0x%02x\n", d->iTerminal);
+	kprintf("bLength=%d\n", d->bLength);
+	kprintf("bDescriptorType=0x%02x\n", d->bDescriptorType);
+	kprintf("bDescriptorSubtype=0x%02x\n", d->bDescriptorSubtype);
+	kprintf("bTerminalID=0x%02x\n", d->bTerminalID);
+	kprintf("bAssocTerminal=0x%02x\n", d->bAssocTerminal);
+	kprintf("bSourceID=0x%02x\n", d->bSourceID);
+	kprintf("iTerminal=0x%02x\n", d->iTerminal);
 
 }
 
@@ -2578,31 +2585,31 @@ uvideo_dump_desc_endpoint(struct uvideo_softc *sc,
 
 	d = (usb_endpoint_descriptor_t *)(uint8_t *)desc;
 
-	printf("bLength=%d\n", d->bLength);
-	printf("bDescriptorType=0x%02x\n", d->bDescriptorType);
-	printf("bEndpointAddress=0x%02x", d->bEndpointAddress);
+	kprintf("bLength=%d\n", d->bLength);
+	kprintf("bDescriptorType=0x%02x\n", d->bDescriptorType);
+	kprintf("bEndpointAddress=0x%02x", d->bEndpointAddress);
 	if (UE_GET_DIR(d->bEndpointAddress) == UE_DIR_IN)
-		printf(" (IN)\n");
+		kprintf(" (IN)\n");
 	if (UE_GET_DIR(d->bEndpointAddress) == UE_DIR_OUT)
-		printf(" (OUT)\n");
-	printf("bmAttributes=0x%02x", d->bmAttributes);
+		kprintf(" (OUT)\n");
+	kprintf("bmAttributes=0x%02x", d->bmAttributes);
 	if (UE_GET_XFERTYPE(d->bmAttributes) == UE_ISOCHRONOUS) {
-		printf(" (UE_ISOCHRONOUS,");
+		kprintf(" (UE_ISOCHRONOUS,");
 		if (UE_GET_ISO_TYPE(d->bmAttributes) == UE_ISO_ASYNC)
-			printf(" UE_ISO_ASYNC)\n");
+			kprintf(" UE_ISO_ASYNC)\n");
 		if (UE_GET_ISO_TYPE(d->bmAttributes) == UE_ISO_ADAPT)
-			printf(" UE_ISO_ADAPT)\n");
+			kprintf(" UE_ISO_ADAPT)\n");
 		if (UE_GET_ISO_TYPE(d->bmAttributes) == UE_ISO_SYNC)
-			printf(" UE_ISO_SYNC)\n");
+			kprintf(" UE_ISO_SYNC)\n");
 	}
 	if (UE_GET_XFERTYPE(d->bmAttributes) == UE_CONTROL)
-		printf(" (UE_CONTROL)\n");
+		kprintf(" (UE_CONTROL)\n");
 	if (UE_GET_XFERTYPE(d->bmAttributes) == UE_BULK)
-		printf(" (UE_BULK)\n");
+		kprintf(" (UE_BULK)\n");
 	if (UE_GET_XFERTYPE(d->bmAttributes) == UE_INTERRUPT)
-		printf(" (UE_INTERRUPT)\n");
-	printf("wMaxPacketSize=%d\n", UGETW(d->wMaxPacketSize));
-	printf("bInterval=0x%02x\n", d->bInterval);
+		kprintf(" (UE_INTERRUPT)\n");
+	kprintf("wMaxPacketSize=%d\n", UGETW(d->wMaxPacketSize));
+	kprintf("bInterval=0x%02x\n", d->bInterval);
 }
 
 void
@@ -2613,14 +2620,14 @@ uvideo_dump_desc_iface_assoc(struct uvideo_softc *sc,
 
 	d = (usb_interface_assoc_descriptor_t *)(uint8_t *)desc;
 
-	printf("bLength=%d\n", d->bLength);
-	printf("bDescriptorType=0x%02x\n", d->bDescriptorType);
-	printf("bFirstInterface=0x%02x\n", d->bFirstInterface);
-	printf("bInterfaceCount=%d\n", d->bInterfaceCount);
-	printf("bFunctionClass=0x%02x\n", d->bFunctionClass);
-	printf("bFunctionSubClass=0x%02x\n", d->bFunctionSubClass);
-	printf("bFunctionProtocol=0x%02x\n", d->bFunctionProtocol);
-	printf("iFunction=0x%02x\n", d->iFunction);
+	kprintf("bLength=%d\n", d->bLength);
+	kprintf("bDescriptorType=0x%02x\n", d->bDescriptorType);
+	kprintf("bFirstInterface=0x%02x\n", d->bFirstInterface);
+	kprintf("bInterfaceCount=%d\n", d->bInterfaceCount);
+	kprintf("bFunctionClass=0x%02x\n", d->bFunctionClass);
+	kprintf("bFunctionSubClass=0x%02x\n", d->bFunctionSubClass);
+	kprintf("bFunctionProtocol=0x%02x\n", d->bFunctionProtocol);
+	kprintf("iFunction=0x%02x\n", d->iFunction);
 }
 
 void
@@ -2631,15 +2638,15 @@ uvideo_dump_desc_interface(struct uvideo_softc *sc,
 
 	d = (usb_interface_descriptor_t *)(uint8_t *)desc;
 
-	printf("bLength=%d\n", d->bLength);
-	printf("bDescriptorType=0x%02x\n", d->bDescriptorType);
-	printf("bInterfaceNumber=0x%02x\n", d->bInterfaceNumber);
-	printf("bAlternateSetting=0x%02x\n", d->bAlternateSetting);
-	printf("bNumEndpoints=%d\n", d->bNumEndpoints);
-	printf("bInterfaceClass=0x%02x\n", d->bInterfaceClass);
-	printf("bInterfaceSubClass=0x%02x\n", d->bInterfaceSubClass);
-	printf("bInterfaceProtocol=0x%02x\n", d->bInterfaceProtocol);
-	printf("iInterface=0x%02x\n", d->iInterface);
+	kprintf("bLength=%d\n", d->bLength);
+	kprintf("bDescriptorType=0x%02x\n", d->bDescriptorType);
+	kprintf("bInterfaceNumber=0x%02x\n", d->bInterfaceNumber);
+	kprintf("bAlternateSetting=0x%02x\n", d->bAlternateSetting);
+	kprintf("bNumEndpoints=%d\n", d->bNumEndpoints);
+	kprintf("bInterfaceClass=0x%02x\n", d->bInterfaceClass);
+	kprintf("bInterfaceSubClass=0x%02x\n", d->bInterfaceSubClass);
+	kprintf("bInterfaceProtocol=0x%02x\n", d->bInterfaceProtocol);
+	kprintf("iInterface=0x%02x\n", d->iInterface);
 }
 
 void
@@ -2650,14 +2657,14 @@ uvideo_dump_desc_config(struct uvideo_softc *sc,
 
 	d = (usb_config_descriptor_t *)(uint8_t *)desc;
 
-	printf("bLength=%d\n", d->bLength);
-	printf("bDescriptorType=0x%02x\n", d->bDescriptorType);
-	printf("wTotalLength=%d\n", UGETW(d->wTotalLength));
-	printf("bNumInterfaces=0x%02x\n", d->bNumInterfaces);
-	printf("bConfigurationValue=0x%02x\n", d->bConfigurationValue);
-	printf("iConfiguration=0x%02x\n", d->iConfiguration);
-	printf("bmAttributes=0x%02x\n", d->bmAttributes);
-	printf("bMaxPower=0x%02x\n", d->bMaxPower);
+	kprintf("bLength=%d\n", d->bLength);
+	kprintf("bDescriptorType=0x%02x\n", d->bDescriptorType);
+	kprintf("wTotalLength=%d\n", UGETW(d->wTotalLength));
+	kprintf("bNumInterfaces=0x%02x\n", d->bNumInterfaces);
+	kprintf("bConfigurationValue=0x%02x\n", d->bConfigurationValue);
+	kprintf("iConfiguration=0x%02x\n", d->iConfiguration);
+	kprintf("bmAttributes=0x%02x\n", d->bmAttributes);
+	kprintf("bMaxPower=0x%02x\n", d->bMaxPower);
 }
 
 void
@@ -2668,10 +2675,10 @@ uvideo_dump_desc_cs_endpoint(struct uvideo_softc *sc,
 
 	d = (struct usb_video_vc_endpoint_desc *)(uint8_t *)desc;
 
-	printf("bLength=%d\n", d->bLength);
-	printf("bDescriptorType=0x%02x\n", d->bDescriptorType);
-	printf("bDescriptorSubtype=0x%02x\n", d->bDescriptorSubtype);
-	printf("wMaxTransferSize=%d\n", UGETW(d->wMaxTransferSize));
+	kprintf("bLength=%d\n", d->bLength);
+	kprintf("bDescriptorType=0x%02x\n", d->bDescriptorType);
+	kprintf("bDescriptorSubtype=0x%02x\n", d->bDescriptorSubtype);
+	kprintf("wMaxTransferSize=%d\n", UGETW(d->wMaxTransferSize));
 }
 
 void
@@ -2682,13 +2689,13 @@ uvideo_dump_desc_colorformat(struct uvideo_softc *sc,
 
 	d = (struct usb_video_color_matching_descr *)(uint8_t *)desc;
 
-	printf("bLength=%d\n", d->bLength);
-	printf("bDescriptorType=0x%02x\n", d->bDescriptorType);
-	printf("bDescriptorSubtype=0x%02x\n", d->bDescriptorSubtype);
-	printf("bColorPrimaries=0x%02x\n", d->bColorPrimaries);
-	printf("bTransferCharacteristics=0x%02x\n",
+	kprintf("bLength=%d\n", d->bLength);
+	kprintf("bDescriptorType=0x%02x\n", d->bDescriptorType);
+	kprintf("bDescriptorSubtype=0x%02x\n", d->bDescriptorSubtype);
+	kprintf("bColorPrimaries=0x%02x\n", d->bColorPrimaries);
+	kprintf("bTransferCharacteristics=0x%02x\n",
 	    d->bTransferCharacteristics);
-	printf("bMatrixCoefficients=0x%02x\n", d->bMatrixCoefficients);
+	kprintf("bMatrixCoefficients=0x%02x\n", d->bMatrixCoefficients);
 }
 void
 uvideo_dump_desc_format_mjpeg(struct uvideo_softc *sc,
@@ -2698,17 +2705,17 @@ uvideo_dump_desc_format_mjpeg(struct uvideo_softc *sc,
 
 	d = (struct usb_video_format_mjpeg_desc *)(uint8_t *)desc;
 
-	printf("bLength=%d\n", d->bLength);
-	printf("bDescriptorType=0x%02x\n", d->bDescriptorType);
-	printf("bDescriptorSubtype=0x%02x\n", d->bDescriptorSubtype);
-	printf("bFormatIndex=0x%02x\n", d->bFormatIndex);
-	printf("bNumFrameDescriptors=0x%02x\n", d->bNumFrameDescriptors);
-	printf("bmFlags=0x%02x\n", d->bmFlags);
-	printf("bDefaultFrameIndex=0x%02x\n", d->bDefaultFrameIndex);
-	printf("bAspectRatioX=0x%02x\n", d->bAspectRatioX);
-	printf("bAspectRatioY=0x%02x\n", d->bAspectRatioY);
-	printf("bmInterlaceFlags=0x%02x\n", d->bmInterlaceFlags);
-	printf("bCopyProtect=0x%02x\n", d->bCopyProtect);
+	kprintf("bLength=%d\n", d->bLength);
+	kprintf("bDescriptorType=0x%02x\n", d->bDescriptorType);
+	kprintf("bDescriptorSubtype=0x%02x\n", d->bDescriptorSubtype);
+	kprintf("bFormatIndex=0x%02x\n", d->bFormatIndex);
+	kprintf("bNumFrameDescriptors=0x%02x\n", d->bNumFrameDescriptors);
+	kprintf("bmFlags=0x%02x\n", d->bmFlags);
+	kprintf("bDefaultFrameIndex=0x%02x\n", d->bDefaultFrameIndex);
+	kprintf("bAspectRatioX=0x%02x\n", d->bAspectRatioX);
+	kprintf("bAspectRatioY=0x%02x\n", d->bAspectRatioY);
+	kprintf("bmInterlaceFlags=0x%02x\n", d->bmInterlaceFlags);
+	kprintf("bCopyProtect=0x%02x\n", d->bCopyProtect);
 }
 
 void
@@ -2720,20 +2727,20 @@ uvideo_dump_desc_frame(struct uvideo_softc *sc, const usb_descriptor_t *desc)
 
 	d = (struct usb_video_frame_desc *)(uint8_t *)desc;
 
-	printf("bLength=%d\n", d->bLength);
-	printf("bDescriptorType=0x%02x\n", d->bDescriptorType);
-	printf("bDescriptorSubtype=0x%02x\n", d->bDescriptorSubtype);
-	printf("bFrameIndex=0x%02x\n", d->bFrameIndex);
-	printf("bmCapabilities=0x%02x\n", d->bmCapabilities);
-	printf("wWidth=%d\n", UGETW(d->wWidth));
-	printf("wHeight=%d\n", UGETW(d->wHeight));
-	printf("dwMinBitRate=%d\n", UGETDW(d->dwMinBitRate));
-	printf("dwMaxBitRate=%d\n", UGETDW(d->dwMaxBitRate));
-	printf("dwMaxVideoFrameBufferSize=%d\n",
+	kprintf("bLength=%d\n", d->bLength);
+	kprintf("bDescriptorType=0x%02x\n", d->bDescriptorType);
+	kprintf("bDescriptorSubtype=0x%02x\n", d->bDescriptorSubtype);
+	kprintf("bFrameIndex=0x%02x\n", d->bFrameIndex);
+	kprintf("bmCapabilities=0x%02x\n", d->bmCapabilities);
+	kprintf("wWidth=%d\n", UGETW(d->wWidth));
+	kprintf("wHeight=%d\n", UGETW(d->wHeight));
+	kprintf("dwMinBitRate=%d\n", UGETDW(d->dwMinBitRate));
+	kprintf("dwMaxBitRate=%d\n", UGETDW(d->dwMaxBitRate));
+	kprintf("dwMaxVideoFrameBufferSize=%d\n",
 	    UGETDW(d->dwMaxVideoFrameBufferSize));
-	printf("dwDefaultFrameInterval=%d\n",
+	kprintf("dwDefaultFrameInterval=%d\n",
 	    UGETDW(d->dwDefaultFrameInterval));
-	printf("bFrameIntervalType=0x%02x\n", d->bFrameIntervalType);
+	kprintf("bFrameIntervalType=0x%02x\n", d->bFrameIntervalType);
 
 	p = (uint8_t *)d;
 	p += sizeof(struct usb_video_frame_desc);
@@ -2742,13 +2749,13 @@ uvideo_dump_desc_frame(struct uvideo_softc *sc, const usb_descriptor_t *desc)
 		/* continuous */
 		if (d->bLength < (sizeof(struct usb_video_frame_desc) +
 		    sizeof(uDWord) * 3)) {
-			printf("invalid frame descriptor length\n");
+			kprintf("invalid frame descriptor length\n");
 		} else {
-			printf("dwMinFrameInterval = %d\n", UGETDW(p));
+			kprintf("dwMinFrameInterval = %d\n", UGETDW(p));
 			p += sizeof(uDWord);
-			printf("dwMaxFrameInterval = %d\n", UGETDW(p));
+			kprintf("dwMaxFrameInterval = %d\n", UGETDW(p));
 			p += sizeof(uDWord);
-			printf("dwFrameIntervalStep = %d\n", UGETDW(p));
+			kprintf("dwFrameIntervalStep = %d\n", UGETDW(p));
 			p += sizeof(uDWord);
 		}
 	} else {
@@ -2756,10 +2763,10 @@ uvideo_dump_desc_frame(struct uvideo_softc *sc, const usb_descriptor_t *desc)
 		length = d->bLength - sizeof(struct usb_video_frame_desc);
 		for (i = 0; i < d->bFrameIntervalType; i++) {
 			if (length <= 0) {
-				printf("frame descriptor ended early\n");
+				kprintf("frame descriptor ended early\n");
 				break;
 			}
-			printf("dwFrameInterval = %d\n", UGETDW(p));
+			kprintf("dwFrameInterval = %d\n", UGETDW(p));
 			p += sizeof(uDWord);
 			length -= sizeof(uDWord);
 		}
@@ -2774,18 +2781,18 @@ uvideo_dump_desc_format_uncompressed(struct uvideo_softc *sc,
 
 	d = (struct usb_video_format_uncompressed_desc *)(uint8_t *)desc;
 
-	printf("bLength=%d\n", d->bLength);
-	printf("bDescriptorType=0x%02x\n", d->bDescriptorType);
-	printf("bDescriptorSubtype=0x%02x\n", d->bDescriptorSubtype);
-	printf("bFormatIndex=0x%02x\n", d->bFormatIndex);
-	printf("bNumFrameDescriptors=0x%02x\n", d->bNumFrameDescriptors);
-	printf("guidFormat=%s\n", d->guidFormat);
-	printf("bBitsPerPixel=0x%02x\n", d->bBitsPerPixel);
-	printf("bDefaultFrameIndex=0x%02x\n", d->bDefaultFrameIndex);
-	printf("bAspectRatioX=0x%02x\n", d->bAspectRatioX);
-	printf("bAspectRatioY=0x%02x\n", d->bAspectRatioY);
-	printf("bmInterlaceFlags=0x%02x\n", d->bmInterlaceFlags);
-	printf("bCopyProtect=0x%02x\n", d->bCopyProtect);
+	kprintf("bLength=%d\n", d->bLength);
+	kprintf("bDescriptorType=0x%02x\n", d->bDescriptorType);
+	kprintf("bDescriptorSubtype=0x%02x\n", d->bDescriptorSubtype);
+	kprintf("bFormatIndex=0x%02x\n", d->bFormatIndex);
+	kprintf("bNumFrameDescriptors=0x%02x\n", d->bNumFrameDescriptors);
+	kprintf("guidFormat=%s\n", d->guidFormat);
+	kprintf("bBitsPerPixel=0x%02x\n", d->bBitsPerPixel);
+	kprintf("bDefaultFrameIndex=0x%02x\n", d->bDefaultFrameIndex);
+	kprintf("bAspectRatioX=0x%02x\n", d->bAspectRatioX);
+	kprintf("bAspectRatioY=0x%02x\n", d->bAspectRatioY);
+	kprintf("bmInterlaceFlags=0x%02x\n", d->bmInterlaceFlags);
+	kprintf("bCopyProtect=0x%02x\n", d->bCopyProtect);
 }
 
 void
@@ -2797,17 +2804,17 @@ uvideo_dump_desc_processing(struct uvideo_softc *sc,
 	/* PU descriptor is variable sized */
 	d = (void *)desc;
 
-	printf("bLength=%d\n", d->bLength);
-	printf("bDescriptorType=0x%02x\n", d->bDescriptorType);
-	printf("bDescriptorSubtype=0x%02x\n", d->bDescriptorSubtype);
-	printf("bUnitID=0x%02x\n", d->bUnitID);
-	printf("bSourceID=0x%02x\n", d->bSourceID);
-	printf("wMaxMultiplier=%d\n", UGETW(d->wMaxMultiplier));
-	printf("bControlSize=%d\n", d->bControlSize);
-	printf("bmControls=0x");
+	kprintf("bLength=%d\n", d->bLength);
+	kprintf("bDescriptorType=0x%02x\n", d->bDescriptorType);
+	kprintf("bDescriptorSubtype=0x%02x\n", d->bDescriptorSubtype);
+	kprintf("bUnitID=0x%02x\n", d->bUnitID);
+	kprintf("bSourceID=0x%02x\n", d->bSourceID);
+	kprintf("wMaxMultiplier=%d\n", UGETW(d->wMaxMultiplier));
+	kprintf("bControlSize=%d\n", d->bControlSize);
+	kprintf("bmControls=0x");
 	uvideo_hexdump(d->bmControls, d->bControlSize, 1);
-	printf("iProcessing=0x%02x\n", d->bmControls[d->bControlSize]);
-	printf("bmVideoStandards=0x%02x\n", d->bmControls[d->bControlSize + 1]);
+	kprintf("iProcessing=0x%02x\n", d->bmControls[d->bControlSize]);
+	kprintf("bmVideoStandards=0x%02x\n", d->bmControls[d->bControlSize + 1]);
 }
 
 void
@@ -2818,14 +2825,14 @@ uvideo_dump_desc_extension(struct uvideo_softc *sc,
 
 	d = (struct usb_video_vc_extension_desc *)(uint8_t *)desc;
 
-	printf("bLength=%d\n", d->bLength);
-	printf("bDescriptorType=0x%02x\n", d->bDescriptorType);
-	printf("bDescriptorSubtype=0x%02x\n", d->bDescriptorSubtype);
-	printf("bUnitID=0x%02x\n", d->bUnitID);
-	printf("guidExtensionCode=0x");
+	kprintf("bLength=%d\n", d->bLength);
+	kprintf("bDescriptorType=0x%02x\n", d->bDescriptorType);
+	kprintf("bDescriptorSubtype=0x%02x\n", d->bDescriptorSubtype);
+	kprintf("bUnitID=0x%02x\n", d->bUnitID);
+	kprintf("guidExtensionCode=0x");
 	uvideo_hexdump(d->guidExtensionCode, sizeof(d->guidExtensionCode), 1);
-	printf("bNumControls=0x%02x\n", d->bNumControls);
-	printf("bNrInPins=0x%02x\n", d->bNrInPins);
+	kprintf("bNumControls=0x%02x\n", d->bNumControls);
+	kprintf("bNrInPins=0x%02x\n", d->bNrInPins);
 }
 
 void
@@ -2836,13 +2843,13 @@ uvideo_hexdump(void *buf, int len, int quiet)
 	for (i = 0; i < len; i++) {
 		if (quiet == 0) {
 			if (i % 16 == 0)
-				printf("%s%5i:", i ? "\n" : "", i);
+				kprintf("%s%5i:", i ? "\n" : "", i);
 			if (i % 4 == 0)
-				printf(" ");
+				kprintf(" ");
 		}
-		printf("%02x", (int)*((u_char *)buf + i));
+		kprintf("%02x", (int)*((u_char *)buf + i));
 	}
-	printf("\n");
+	kprintf("\n");
 }
 
 int
@@ -2883,7 +2890,7 @@ uvideo_debug_file_write_frame(void *arg)
 	int error;
 
 	if (sc->sc_vp == NULL) {
-		printf("%s: %s: no file open!\n", DEVNAME(sc), __func__);
+		kprintf("%s: %s: no file open!\n", DEVNAME(sc), __func__);
 		return;
 	}
 
@@ -3053,7 +3060,7 @@ uvideo_enum_fivals(void *v, struct v4l2_frmivalenum *fivals)
 			return (EINVAL);
 		p += sizeof(uDWord) * fivals->index;
 		if (p > frame->bLength + (uint8_t *)frame) {
-			printf("%s: frame desc too short?\n", __func__);
+			kprintf("%s: frame desc too short?\n", __func__);
 			return (EINVAL);
 		}
 		fivals->type = V4L2_FRMIVAL_TYPE_DISCRETE;
@@ -3092,7 +3099,7 @@ uvideo_s_fmt(void *v, struct v4l2_format *fmt)
 
 	/* check if the format descriptor contains frame descriptors */
 	if (sc->sc_fmtgrp[i].frame_num == 0) {
-		printf("%s: %s: no frame descriptors found!\n",
+		kprintf("%s: %s: no frame descriptors found!\n",
 		    __func__, DEVNAME(sc));
 		return (EINVAL);
 	}
@@ -3112,7 +3119,7 @@ uvideo_s_fmt(void *v, struct v4l2_format *fmt)
 
 	/* do device negotiation with commit */
 	error = uvideo_vs_negotiation(sc, 1);
-	if (error != USBD_NORMAL_COMPLETION) {
+	if (error != USB_ERR_NORMAL_COMPLETION) {
 		sc->sc_fmtgrp_cur = fmtgrp_save;
 		sc->sc_fmtgrp_cur->frame_cur = frame_save;
 		return (EINVAL);
@@ -3176,7 +3183,7 @@ uvideo_s_parm(void *v, struct v4l2_streamparm *parm)
 	/* renegotiate if necessary */
 	if (sc->sc_negotiated_flag) {
 		error = uvideo_vs_negotiation(sc, 1);
-		if (error != USBD_NORMAL_COMPLETION)
+		if (error != USB_ERR_NORMAL_COMPLETION)
 			return (error);
 	}
 
@@ -3259,7 +3266,7 @@ uvideo_reqbufs(void *v, struct v4l2_requestbuffers *rb)
 	/* allocate the total mmap buffer */	
 	buf_size = UGETDW(sc->sc_desc_probe.dwMaxVideoFrameSize);
 	if (buf_size >= SIZE_MAX / UVIDEO_MAX_BUFFERS) {
-		printf("%s: video frame size too large!\n", DEVNAME(sc));
+		kprintf("%s: video frame size too large!\n", DEVNAME(sc));
 		sc->sc_mmap_count = 0;
 		return (EINVAL);
 	}
@@ -3267,7 +3274,7 @@ uvideo_reqbufs(void *v, struct v4l2_requestbuffers *rb)
 	buf_size_total = round_page(buf_size_total); /* page align buffer */
 	sc->sc_mmap_buffer = malloc(buf_size_total, M_USBDEV, M_NOWAIT);
 	if (sc->sc_mmap_buffer == NULL) {
-		printf("%s: can't allocate mmap buffer!\n", DEVNAME(sc));
+		kprintf("%s: can't allocate mmap buffer!\n", DEVNAME(sc));
 		sc->sc_mmap_count = 0;
 		return (EINVAL);
 	}
@@ -3383,7 +3390,7 @@ uvideo_streamon(void *v, int type)
 	usbd_status error;
 
 	error = uvideo_vs_init(sc);
-	if (error != USBD_NORMAL_COMPLETION)
+	if (error != USB_ERR_NORMAL_COMPLETION)
 		return (EINVAL);
 
 	if (sc->sc_vs_cur->bulk_endpoint)
@@ -3419,13 +3426,13 @@ uvideo_queryctrl(void *v, struct v4l2_queryctrl *qctrl)
 
 	ctrl_len = uvideo_ctrls[i].ctrl_len;
 	if (ctrl_len < 1 || ctrl_len > 2) {
-		printf("%s: invalid control length: %d\n", __func__, ctrl_len);
+		kprintf("%s: invalid control length: %d\n", __func__, ctrl_len);
 		return (EINVAL);
 	}
 
 	ctrl_data = malloc(ctrl_len, M_USBDEV, M_WAITOK | M_CANFAIL);
 	if (ctrl_data == NULL) {
-		printf("%s: could not allocate control data\n", __func__);
+		kprintf("%s: could not allocate control data\n", __func__);
 		return (ENOMEM);
 	}
 
@@ -3439,7 +3446,7 @@ uvideo_queryctrl(void *v, struct v4l2_queryctrl *qctrl)
 	error = uvideo_vc_get_ctrl(sc, ctrl_data, GET_MIN,
 	    sc->sc_desc_vc_pu_cur->bUnitID,
 	    uvideo_ctrls[i].ctrl_selector, uvideo_ctrls[i].ctrl_len);
-	if (error != USBD_NORMAL_COMPLETION) {
+	if (error != USB_ERR_NORMAL_COMPLETION) {
 		ret = EINVAL;
 		goto out;
 	}
@@ -3460,7 +3467,7 @@ uvideo_queryctrl(void *v, struct v4l2_queryctrl *qctrl)
 	error = uvideo_vc_get_ctrl(sc, ctrl_data, GET_MAX,
 	    sc->sc_desc_vc_pu_cur->bUnitID,
 	    uvideo_ctrls[i].ctrl_selector, uvideo_ctrls[i].ctrl_len);
-	if (error != USBD_NORMAL_COMPLETION) {
+	if (error != USB_ERR_NORMAL_COMPLETION) {
 		ret = EINVAL;
 		goto out;
 	}
@@ -3481,7 +3488,7 @@ uvideo_queryctrl(void *v, struct v4l2_queryctrl *qctrl)
 	error = uvideo_vc_get_ctrl(sc, ctrl_data, GET_RES,
 	    sc->sc_desc_vc_pu_cur->bUnitID,
 	    uvideo_ctrls[i].ctrl_selector, uvideo_ctrls[i].ctrl_len);
-	if (error != USBD_NORMAL_COMPLETION) {
+	if (error != USB_ERR_NORMAL_COMPLETION) {
 		ret = EINVAL;
 		goto out;
 	}
@@ -3502,7 +3509,7 @@ uvideo_queryctrl(void *v, struct v4l2_queryctrl *qctrl)
 	error = uvideo_vc_get_ctrl(sc, ctrl_data, GET_DEF,
 	    sc->sc_desc_vc_pu_cur->bUnitID,
 	    uvideo_ctrls[i].ctrl_selector, uvideo_ctrls[i].ctrl_len);
-	if (error != USBD_NORMAL_COMPLETION) {
+	if (error != USB_ERR_NORMAL_COMPLETION) {
 		ret = EINVAL;
 		goto out;
 	}
@@ -3543,20 +3550,20 @@ uvideo_g_ctrl(void *v, struct v4l2_control *gctrl)
 
 	ctrl_len = uvideo_ctrls[i].ctrl_len;
 	if (ctrl_len < 1 || ctrl_len > 2) {
-		printf("%s: invalid control length: %d\n", __func__, ctrl_len);
+		kprintf("%s: invalid control length: %d\n", __func__, ctrl_len);
 		return (EINVAL);
 	}
 
 	ctrl_data = malloc(ctrl_len, M_USBDEV, M_WAITOK | M_CANFAIL);
 	if (ctrl_data == NULL) {
-		printf("%s: could not allocate control data\n", __func__);
+		kprintf("%s: could not allocate control data\n", __func__);
 		return (ENOMEM);
 	}
 
 	error = uvideo_vc_get_ctrl(sc, ctrl_data, GET_CUR,
 	    sc->sc_desc_vc_pu_cur->bUnitID,
 	    uvideo_ctrls[i].ctrl_selector, uvideo_ctrls[i].ctrl_len);
-	if (error != USBD_NORMAL_COMPLETION) {
+	if (error != USB_ERR_NORMAL_COMPLETION) {
 		ret = EINVAL;
 		goto out;
 	}
@@ -3594,13 +3601,13 @@ uvideo_s_ctrl(void *v, struct v4l2_control *sctrl)
 
 	ctrl_len = uvideo_ctrls[i].ctrl_len;
 	if (ctrl_len < 1 || ctrl_len > 2) {
-		printf("%s: invalid control length: %d\n", __func__, ctrl_len);
+		kprintf("%s: invalid control length: %d\n", __func__, ctrl_len);
 		return (EINVAL);
 	}
 
 	ctrl_data = malloc(ctrl_len, M_USBDEV, M_WAITOK | M_CANFAIL);
 	if (ctrl_data == NULL) {
-		printf("%s: could not allocate control data\n", __func__);
+		kprintf("%s: could not allocate control data\n", __func__);
 		return (ENOMEM);
 	}
 
@@ -3618,7 +3625,7 @@ uvideo_s_ctrl(void *v, struct v4l2_control *sctrl)
 	error = uvideo_vc_set_ctrl(sc, ctrl_data, SET_CUR,
 	    sc->sc_desc_vc_pu_cur->bUnitID,
 	    uvideo_ctrls[i].ctrl_selector, uvideo_ctrls[i].ctrl_len);
-	if (error != USBD_NORMAL_COMPLETION)
+	if (error != USB_ERR_NORMAL_COMPLETION)
 		ret = EINVAL;
 
 	free(ctrl_data, M_USBDEV, ctrl_len);
@@ -3700,7 +3707,7 @@ uvideo_start_read(void *v)
 		sc->sc_mmap_flag = 0;
 
 	error = uvideo_vs_init(sc);
-	if (error != USBD_NORMAL_COMPLETION)
+	if (error != USB_ERR_NORMAL_COMPLETION)
 		return (EINVAL);
 
 	if (sc->sc_vs_cur->bulk_endpoint)
@@ -3725,10 +3732,10 @@ uvideo_usb_control(struct uvideo_softc *sc, uint8_t rt, uint8_t r,
 	USETW(req.wLength, length);
 
 	err = usbd_do_request(sc->sc_udev, &req, data);
-	if (err != USBD_NORMAL_COMPLETION)
+	if (err != USB_ERR_NORMAL_COMPLETION)
 		return (err);
 
-	return (USBD_NORMAL_COMPLETION);
+	return (USB_ERR_NORMAL_COMPLETION);
 }
 
 usbd_status
@@ -3744,14 +3751,14 @@ uvideo_ucode_loader_ricoh(struct uvideo_softc *sc)
 	cbuf = 0;
 	error = uvideo_usb_control(sc, UT_READ_VENDOR_DEVICE,
 	    0xa4, 0, &cbuf, sizeof cbuf);
-	if (error != USBD_NORMAL_COMPLETION) {
-		printf("%s: ucode status error=%s!\n",
+	if (error != USB_ERR_NORMAL_COMPLETION) {
+		kprintf("%s: ucode status error=%s!\n",
 		    DEVNAME(sc), usbd_errstr(error));
-		return (USBD_INVAL);
+		return (USB_ERR_INVAL);
 	}
 	if (cbuf) {
 		DPRINTF(1, "%s: microcode already loaded\n", DEVNAME(sc));
-		return (USBD_NORMAL_COMPLETION);
+		return (USB_ERR_NORMAL_COMPLETION);
 	} else {
 		DPRINTF(1, "%s: microcode not loaded\n", DEVNAME(sc));
 	}
@@ -3759,17 +3766,17 @@ uvideo_ucode_loader_ricoh(struct uvideo_softc *sc)
 	/* open microcode file */
 	error = loadfirmware(sc->sc_quirk->ucode_name, &ucode, &ucode_size);
 	if (error != 0) {
-		printf("%s: loadfirmware error=%d!\n", DEVNAME(sc), error);
-		return (USBD_INVAL);
+		kprintf("%s: loadfirmware error=%d!\n", DEVNAME(sc), error);
+		return (USB_ERR_INVAL);
 	}
 
 	/* upload microcode */
 	remain = ucode_size;
 	while (remain > 0) {
 		if (remain < 3) {
-			printf("%s: ucode file incomplete!\n", DEVNAME(sc));
+			kprintf("%s: ucode file incomplete!\n", DEVNAME(sc));
 			free(ucode, M_DEVBUF, ucode_size);
-			return (USBD_INVAL);
+			return (USB_ERR_INVAL);
 		}
 
 		len = ucode[offset];
@@ -3779,11 +3786,11 @@ uvideo_ucode_loader_ricoh(struct uvideo_softc *sc)
 
 		error = uvideo_usb_control(sc, UT_WRITE_VENDOR_DEVICE,
 		    0xa0, addr, &ucode[offset], len);
-		if (error != USBD_NORMAL_COMPLETION) {
-			printf("%s: ucode upload error=%s!\n",
+		if (error != USB_ERR_NORMAL_COMPLETION) {
+			kprintf("%s: ucode upload error=%s!\n",
 			    DEVNAME(sc), usbd_errstr(error));
 			free(ucode, M_DEVBUF, ucode_size);
-			return (USBD_INVAL);
+			return (USB_ERR_INVAL);
 		}
 		DPRINTF(1, "%s: uploaded %d bytes ucode to addr 0x%x\n",
 		    DEVNAME(sc), len, addr);
@@ -3797,14 +3804,14 @@ uvideo_ucode_loader_ricoh(struct uvideo_softc *sc)
 	cbuf = 0;
 	error = uvideo_usb_control(sc, UT_WRITE_VENDOR_DEVICE,
 	    0xa1, 0, &cbuf, sizeof cbuf);
-	if (error != USBD_NORMAL_COMPLETION) {
-		printf("%s: ucode activate error=%s!\n",
+	if (error != USB_ERR_NORMAL_COMPLETION) {
+		kprintf("%s: ucode activate error=%s!\n",
 		    DEVNAME(sc), usbd_errstr(error));
-		return (USBD_INVAL);
+		return (USB_ERR_INVAL);
 	}
 	DPRINTF(1, "%s: ucode activated\n", DEVNAME(sc));
 
-	return (USBD_NORMAL_COMPLETION);
+	return (USB_ERR_NORMAL_COMPLETION);
 }
 
 /*
@@ -3823,8 +3830,8 @@ uvideo_ucode_loader_apple_isight(struct uvideo_softc *sc)
 	/* open microcode file */
 	error = loadfirmware(sc->sc_quirk->ucode_name, &ucode, &ucode_size);
 	if (error != 0) {
-		printf("%s: loadfirmware error=%d!\n", DEVNAME(sc), error);
-		return (USBD_INVAL);
+		kprintf("%s: loadfirmware error=%d!\n", DEVNAME(sc), error);
+		return (USB_ERR_INVAL);
 	}
 
 	/* send init request */
@@ -3832,7 +3839,7 @@ uvideo_ucode_loader_apple_isight(struct uvideo_softc *sc)
 	error = uvideo_usb_control(sc, UT_WRITE_VENDOR_DEVICE, 0xa0, 0xe600,
 	    &cbuf, sizeof(cbuf));
 	if (error) {
-		printf("%s: failed to init firmware loading state: %s\n",
+		kprintf("%s: failed to init firmware loading state: %s\n",
 		    DEVNAME(sc), usbd_errstr(error));
 		return (error);
 	}
@@ -3845,10 +3852,10 @@ uvideo_ucode_loader_apple_isight(struct uvideo_softc *sc)
 		DPRINTF(1, "%s: ucode data len=%d, request=0x%x\n",
 		    DEVNAME(sc), len, req);
 		if (len < 1 || len > 1023) {
-			printf("%s: ucode header contains wrong value!\n",
+			kprintf("%s: ucode header contains wrong value!\n",
 			    DEVNAME(sc));
 			free(ucode, M_DEVBUF, ucode_size);
-			return (USBD_INVAL);
+			return (USB_ERR_INVAL);
 		}
 		code += 4;
 
@@ -3862,10 +3869,10 @@ uvideo_ucode_loader_apple_isight(struct uvideo_softc *sc)
 			error = uvideo_usb_control(sc, UT_WRITE_VENDOR_DEVICE,
 			    0xa0, req, code, llen);
 			if (error) {
-				printf("%s: ucode load failed: %s\n",
+				kprintf("%s: ucode load failed: %s\n",
 				    DEVNAME(sc), usbd_errstr(error));
 				free(ucode, M_DEVBUF, ucode_size);
-				return (USBD_INVAL);
+				return (USB_ERR_INVAL);
 			}
 
 			code += llen;
@@ -3877,10 +3884,10 @@ uvideo_ucode_loader_apple_isight(struct uvideo_softc *sc)
 	cbuf = 0;
 	error = uvideo_usb_control(sc, UT_WRITE_VENDOR_DEVICE, 0xa0, 0xe600,
 	    &cbuf, sizeof(cbuf));
-	if (error != USBD_NORMAL_COMPLETION) {
+	if (error != USB_ERR_NORMAL_COMPLETION) {
 		printf("%s: ucode activate error=%s!\n",
 		    DEVNAME(sc), usbd_errstr(error));
-		return (USBD_INVAL);
+		return (USB_ERR_INVAL);
 	}
 	DPRINTF(1, "%s: ucode activated\n", DEVNAME(sc));
 
@@ -3888,5 +3895,5 @@ uvideo_ucode_loader_apple_isight(struct uvideo_softc *sc)
 	 * We will always return from the attach routine since the device
 	 * will reset and re-attach at this point.
 	 */
-	return (USBD_INVAL);
+	return (USB_ERR_INVAL);
 }
