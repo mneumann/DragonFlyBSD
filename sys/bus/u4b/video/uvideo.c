@@ -476,6 +476,7 @@ uvideo_probe(device_t dev)
 	return (ENXIO);
 }
 
+#if defined(NOTYET)
 void
 uvideo_attach(struct device *parent, struct device *self, void *aux)
 {
@@ -618,6 +619,7 @@ uvideo_attach_hook(struct device *self)
 	sc->sc_videodev = video_attach_mi(&uvideo_hw_if, sc, &sc->sc_dev);
 }
 
+
 int
 uvideo_detach(struct device *self, int flags)
 {
@@ -634,7 +636,28 @@ uvideo_detach(struct device *self, int flags)
 
 	return (rv);
 }
+#endif
 
+static devclass_t uvideo_devclass;
+
+static device_method_t uvideo_methods[] = {
+	DEVMETHOD(device_probe, uvideo_probe),
+	// DEVMETHOD(device_attach, uvideo_attach),
+
+	DEVMETHOD_END
+};
+
+static driver_t uvideo_driver = {
+	.name = "uvideo",
+	.methods = uvideo_methods,
+	.size = sizeof(struct uvideo_softc),
+};
+
+DRIVER_MODULE_ORDERED(uvideo, uhub, uvideo_driver, &uvideo_devclass, NULL, NULL, SI_ORDER_ANY);
+MODULE_DEPEND(uvideo, usb, 1, 1, 1);
+MODULE_VERSION(uvideo, 1);
+
+#if defined(NOTYET)
 usb_error_t
 uvideo_vc_parse_desc(struct uvideo_softc *sc)
 {
@@ -3904,3 +3927,5 @@ uvideo_ucode_loader_apple_isight(struct uvideo_softc *sc)
 	 */
 	return (USB_ERR_INVAL);
 }
+
+#endif
