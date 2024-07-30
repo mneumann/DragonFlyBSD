@@ -259,16 +259,6 @@ int		uvideo_start_read(void *);
 usb_error_t	uvideo_ucode_loader_ricoh(struct uvideo_softc *);
 usb_error_t	uvideo_ucode_loader_apple_isight(struct uvideo_softc *);
 
-#if defined(NOTYET)
-struct cfdriver uvideo_cd = {
-	NULL, "uvideo", DV_DULL
-};
-
-const struct cfattach uvideo_ca = {
-	sizeof(struct uvideo_softc), uvideo_match, uvideo_attach, uvideo_detach
-};
-#endif
-
 const struct video_hw_if uvideo_hw_if = {
 	uvideo_open,		/* open */
 	uvideo_close,		/* close */
