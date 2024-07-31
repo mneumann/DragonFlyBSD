@@ -875,13 +875,11 @@ uvideo_has_ctrl(const struct usb_video_vc_processing_desc *desc, int ctrl_bit)
 	return (desc->bmControls[byteof(ctrl_bit)] & bitof(ctrl_bit));
 }
 
-#if defined(NOTYET)
 
 usb_error_t
 uvideo_vs_parse_desc(struct uvideo_softc *sc, usb_config_descriptor_t *cdesc)
 {
-	struct usbd_desc_iter iter;
-	const usb_descriptor_t *desc;
+	usb_descriptor_t *desc;
 	usb_interface_descriptor_t *id;
 	int i, iface, numalts;
 	usb_error_t error;
@@ -891,8 +889,7 @@ uvideo_vs_parse_desc(struct uvideo_softc *sc, usb_config_descriptor_t *cdesc)
 	DPRINTF("%s: number of VS interfaces=%d\n",
 	    DEVNAME(sc), sc->sc_desc_vc_header.fix->bInCollection);
 
-	usbd_desc_iter_init(sc->sc_udev, &iter);
-	desc = usbd_desc_iter_next(&iter);
+	desc = usb_desc_foreach(cdesc, NULL);
 	while (desc) {
 		/* Skip all interfaces until we found our first. */
 		if (desc->bDescriptorType == UDESC_INTERFACE) {
@@ -900,14 +897,14 @@ uvideo_vs_parse_desc(struct uvideo_softc *sc, usb_config_descriptor_t *cdesc)
 			if (id->bInterfaceNumber == sc->sc_iface)
 				break;
 		}
-		desc = usbd_desc_iter_next(&iter);
+		desc = usb_desc_foreach(cdesc, desc);
 	}
 	while (desc) {
 		/* Crossed device function boundary. */
 		if (desc->bDescriptorType == UDESC_IFACE_ASSOC)
 			break;
 		if (desc->bDescriptorType != UDESC_CS_INTERFACE) {
-			desc = usbd_desc_iter_next(&iter);
+			desc = usb_desc_foreach(cdesc, desc);
 			continue;
 		}
 
@@ -923,7 +920,7 @@ uvideo_vs_parse_desc(struct uvideo_softc *sc, usb_config_descriptor_t *cdesc)
 		/* TODO: which VS descriptors do we need else? */
 		}
 
-		desc = usbd_desc_iter_next(&iter);
+		desc = usb_desc_foreach(cdesc, desc);
 	}
 
 	/* parse video stream format descriptors */
@@ -938,17 +935,21 @@ uvideo_vs_parse_desc(struct uvideo_softc *sc, usb_config_descriptor_t *cdesc)
 
 	/* parse interface collection */
 	for (i = 0; i < sc->sc_desc_vc_header.fix->bInCollection; i++) {
+		// XXX: index or interface number?
 		iface = sc->sc_desc_vc_header.baInterfaceNr[i];
 
-		id = usbd_get_interface_descriptor(&sc->sc_udev->ifaces[iface]);
+		id = usbd_get_interface_descriptor(usbd_get_iface(sc->sc_udev, iface));
 		if (id == NULL) {
-			kprintf("%s: can't get VS interface %d!\n",
-			    DEVNAME(sc), iface);
+			device_printf(sc->sc_dev,
+			    "can't get VS interface %d!\n",
+			    iface);
 			return (USB_ERR_INVAL);
 		}
+#if 0
 		usbd_claim_iface(sc->sc_udev, iface);
+#endif
 
-		numalts = usbd_get_no_alts(cdesc, id->bInterfaceNumber);
+		numalts = usbd_get_no_alts(cdesc, id);
 
 		DPRINTF("%s: VS interface %d, ", DEVNAME(sc), i);
 		DPRINTF("bInterfaceNumber=0x%02x, numalts=%d\n",
@@ -964,6 +965,8 @@ uvideo_vs_parse_desc(struct uvideo_softc *sc, usb_config_descriptor_t *cdesc)
 
 	return (USB_ERR_NORMAL_COMPLETION);
 }
+
+#if defined(NOTYET)
 
 usb_error_t
 uvideo_vs_parse_desc_input_header(struct uvideo_softc *sc,
