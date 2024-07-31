@@ -119,7 +119,7 @@ int		uvideo_open(void *, int, int *, uint8_t *, void (*)(void *),
 		    void *);
 int		uvideo_close(void *);
 static device_probe_t uvideo_probe;
-void		uvideo_attach(struct device *, struct device *, void *);
+static device_attach_t uvideo_attach;
 void		uvideo_attach_hook(struct device *);
 int		uvideo_detach(struct device *, int);
 
@@ -470,24 +470,33 @@ uvideo_probe(device_t dev)
 	return (ENXIO);
 }
 
-#if defined(NOTYET)
-void
-uvideo_attach(struct device *parent, struct device *self, void *aux)
+static int
+uvideo_attach(device_t dev)
 {
-	struct uvideo_softc *sc = (struct uvideo_softc *)self;
-	struct usb_attach_arg *uaa = aux;
+	struct usb_attach_arg *uaa = device_get_ivars(dev);
+	struct uvideo_softc *sc = device_get_softc(dev);
+
+#if 0
 	usb_interface_assoc_descriptor_t *iad;
 	usb_interface_descriptor_t *id;
 	const usb_descriptor_t *desc;
-	struct usbd_desc_iter iter;
 	int i;
+#endif
 
+	sc->sc_dev = dev;
 	sc->sc_udev = uaa->device;
 
+	device_printf(dev, "uvideo_attach\n");
+
+	return (ENXIO);
+
+#if 0
 	/* Find the first unclaimed video interface. */
 	for (i = 0; i < uaa->nifaces; i++) {
+#if 0
 		if (usbd_iface_claimed(sc->sc_udev, i))
 			continue;
+#endif
 		id = usbd_get_interface_descriptor(&sc->sc_udev->ifaces[i]);
 		if (id == NULL)
 			continue;
@@ -495,7 +504,7 @@ uvideo_attach(struct device *parent, struct device *self, void *aux)
 			break;
 	}
 	if (i == uaa->nifaces) {
-		kprintf("%s: can't find video interface\n", DEVNAME(sc));
+		device_printf(dev, "can't find video interface\n");
 		return;
 	}
 
@@ -514,8 +523,7 @@ uvideo_attach(struct device *parent, struct device *self, void *aux)
 		desc = usbd_desc_iter_next(&iter);
 	}
 	if (desc == NULL) {
-		kprintf("%s: can't find interface assoc descriptor\n",
-		    DEVNAME(sc));
+		device_printf(dev, "can't find interface assoc descriptor\n");
 		return;
 	}
 
@@ -526,8 +534,7 @@ uvideo_attach(struct device *parent, struct device *self, void *aux)
 	for (i = iad->bFirstInterface;
 	    i < iad->bFirstInterface + iad->bInterfaceCount; i++) {
 		if (usbd_iface_claimed(sc->sc_udev, i)) {
-			kprintf("%s: interface already claimed\n",
-			    DEVNAME(sc));
+			device_printf(dev, "interface already claimed\n");
 			return;
 		}
 		usbd_claim_iface(sc->sc_udev, i);
@@ -545,12 +552,16 @@ uvideo_attach(struct device *parent, struct device *self, void *aux)
 		return;
 	}
 
+#if 0
 	if (sc->sc_quirk && sc->sc_quirk->ucode_name)
 		config_mountroot(self, uvideo_attach_hook);
 	else
 		uvideo_attach_hook(self);
+#endif
+#endif
 }
 
+#if defined(NOTYET)
 void
 uvideo_attach_hook(struct device *self)
 {
@@ -636,7 +647,7 @@ static devclass_t uvideo_devclass;
 
 static device_method_t uvideo_methods[] = {
 	DEVMETHOD(device_probe, uvideo_probe),
-	// DEVMETHOD(device_attach, uvideo_attach),
+	DEVMETHOD(device_attach, uvideo_attach),
 
 	DEVMETHOD_END
 };
