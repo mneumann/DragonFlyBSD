@@ -986,19 +986,23 @@ uvideo_vs_parse_desc_input_header(struct uvideo_softc *sc,
 	return (USB_ERR_NORMAL_COMPLETION);
 }
 
-#if defined(NOTYET)
 
 usb_error_t
 uvideo_vs_parse_desc_format(struct uvideo_softc *sc)
 {
-	struct usbd_desc_iter iter;
-	const usb_descriptor_t *desc;
-	usb_interface_descriptor_t *id;
+	usb_descriptor_t *desc;
+	const usb_interface_descriptor_t *id;
+	usb_config_descriptor_t *cdesc;
 
 	DPRINTF("%s: %s\n", DEVNAME(sc), __func__);
 
-	usbd_desc_iter_init(sc->sc_udev, &iter);
-	desc = usbd_desc_iter_next(&iter);
+	cdesc = usbd_get_config_descriptor(sc->sc_udev);
+	if (cdesc == NULL) {
+		device_printf(sc->sc_dev, "failed to get configuration descriptor\n");
+		return (USB_ERR_INVAL);
+	}
+
+	desc = usb_desc_foreach(cdesc, NULL);
 	while (desc) {
 		/* Skip all interfaces until we found our first. */
 		if (desc->bDescriptorType == UDESC_INTERFACE) {
@@ -1006,14 +1010,14 @@ uvideo_vs_parse_desc_format(struct uvideo_softc *sc)
 			if (id->bInterfaceNumber == sc->sc_iface)
 				break;
 		}
-		desc = usbd_desc_iter_next(&iter);
+		desc = usb_desc_foreach(cdesc, desc);
 	}
 	while (desc) {
 		/* Crossed device function boundary. */
 		if (desc->bDescriptorType == UDESC_IFACE_ASSOC)
 			break;
 		if (desc->bDescriptorType != UDESC_CS_INTERFACE) {
-			desc = usbd_desc_iter_next(&iter);
+			desc = usb_desc_foreach(cdesc, desc);
 			continue;
 		}
 
@@ -1032,7 +1036,7 @@ uvideo_vs_parse_desc_format(struct uvideo_softc *sc)
 			break;
 		}
 
-		desc = usbd_desc_iter_next(&iter);
+		desc = usb_desc_foreach(cdesc, desc);
 	}
 
 	sc->sc_fmtgrp_idx = 0;
@@ -1046,6 +1050,8 @@ uvideo_vs_parse_desc_format(struct uvideo_softc *sc)
 
 	return (USB_ERR_NORMAL_COMPLETION);
 }
+
+#if defined(NOTYET)
 
 usb_error_t
 uvideo_vs_parse_desc_format_mjpeg(struct uvideo_softc *sc,
