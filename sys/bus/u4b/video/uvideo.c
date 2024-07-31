@@ -966,15 +966,13 @@ uvideo_vs_parse_desc(struct uvideo_softc *sc, usb_config_descriptor_t *cdesc)
 	return (USB_ERR_NORMAL_COMPLETION);
 }
 
-#if defined(NOTYET)
-
 usb_error_t
 uvideo_vs_parse_desc_input_header(struct uvideo_softc *sc,
     const usb_descriptor_t *desc)
 {
-	struct usb_video_input_header_desc *d;
+	const struct usb_video_input_header_desc *d;
 
-	d = (struct usb_video_input_header_desc *)(uint8_t *)desc;
+	d = (const struct usb_video_input_header_desc *)(const uint8_t *)desc;
 
 	/* on some devices bNumFormats is larger than the truth */
 	if (d->bNumFormats == 0) {
@@ -983,10 +981,12 @@ uvideo_vs_parse_desc_input_header(struct uvideo_softc *sc,
 	}
 
 	sc->sc_desc_vs_input_header.fix = d;
-	sc->sc_desc_vs_input_header.bmaControls = (uByte *)(d + 1);
+	sc->sc_desc_vs_input_header.bmaControls = (const uByte *)(d + 1);
 
 	return (USB_ERR_NORMAL_COMPLETION);
 }
+
+#if defined(NOTYET)
 
 usb_error_t
 uvideo_vs_parse_desc_format(struct uvideo_softc *sc)

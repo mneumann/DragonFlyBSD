@@ -259,8 +259,8 @@ struct usb_video_input_header_desc {
 } __packed;
 
 struct usb_video_input_header_desc_all {
-	struct usb_video_input_header_desc	*fix;
-	uByte					*bmaControls;
+	const struct usb_video_input_header_desc	*fix;
+	const uByte					*bmaControls;
 };
 
 /* Table 3-18: Color Matching Descriptor */
