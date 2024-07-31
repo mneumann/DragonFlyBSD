@@ -91,8 +91,8 @@ struct uvideo_softc {
 
 #define UVIDEO_MAX_PU				 8
 	int					 sc_desc_vc_pu_num;
-	struct usb_video_vc_processing_desc	*sc_desc_vc_pu_cur;
-	struct usb_video_vc_processing_desc	*sc_desc_vc_pu[UVIDEO_MAX_PU];
+	const struct usb_video_vc_processing_desc	*sc_desc_vc_pu_cur;
+	const struct usb_video_vc_processing_desc	*sc_desc_vc_pu[UVIDEO_MAX_PU];
 
 #define UVIDEO_MAX_FORMAT			 8
 	int					 sc_fmtgrp_idx;
@@ -133,7 +133,7 @@ usb_error_t	uvideo_vc_get_ctrl(struct uvideo_softc *, uint8_t *, uint8_t,
 usb_error_t	uvideo_vc_set_ctrl(struct uvideo_softc *, uint8_t *, uint8_t,
 		    uint8_t, uint16_t, uint16_t);
 int		uvideo_find_ctrl(struct uvideo_softc *, int);
-int		uvideo_has_ctrl(struct usb_video_vc_processing_desc *, int);
+int		uvideo_has_ctrl(const struct usb_video_vc_processing_desc *, int);
 
 usb_error_t	uvideo_vs_parse_desc(struct uvideo_softc *,
 		    usb_config_descriptor_t *);
@@ -756,16 +756,15 @@ uvideo_vc_parse_desc_header(struct uvideo_softc *sc,
 	return (USB_ERR_NORMAL_COMPLETION);
 }
 
-#if defined(NOTYET)
 
 usb_error_t
 uvideo_vc_parse_desc_pu(struct uvideo_softc *sc,
     const usb_descriptor_t *desc)
 {
-	struct usb_video_vc_processing_desc *d;
+	const struct usb_video_vc_processing_desc *d;
 
 	/* PU descriptor is variable sized */
-	d = (void *)desc;
+	d = (const void *)desc;
 
 	if (sc->sc_desc_vc_pu_num == UVIDEO_MAX_PU) {
 		device_printf(sc->sc_dev, "too many PU descriptors found!\n");
@@ -868,13 +867,15 @@ uvideo_find_ctrl(struct uvideo_softc *sc, int id)
 }
 
 int
-uvideo_has_ctrl(struct usb_video_vc_processing_desc *desc, int ctrl_bit)
+uvideo_has_ctrl(const struct usb_video_vc_processing_desc *desc, int ctrl_bit)
 {
 	if (desc->bControlSize * 8 <= ctrl_bit)
 		return (0);
 
 	return (desc->bmControls[byteof(ctrl_bit)] & bitof(ctrl_bit));
 }
+
+#if defined(NOTYET)
 
 usb_error_t
 uvideo_vs_parse_desc(struct uvideo_softc *sc, usb_config_descriptor_t *cdesc)
