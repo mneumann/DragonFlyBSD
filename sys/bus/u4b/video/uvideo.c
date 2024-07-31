@@ -1194,13 +1194,12 @@ uvideo_vs_parse_desc_frame(struct uvideo_softc *sc)
 	return (USB_ERR_NORMAL_COMPLETION);
 }
 
-#if defined(NOTYET)
 usb_error_t
 uvideo_vs_parse_desc_frame_sub(struct uvideo_softc *sc,
     const usb_descriptor_t *desc)
 {
-	struct usb_video_frame_desc *fd = 
-	    (struct usb_video_frame_desc *)(uint8_t *)desc;
+	const struct usb_video_frame_desc *fd = 
+	    (const struct usb_video_frame_desc *)(const uint8_t *)desc;
 	int fmtidx, frame_num;
 	uint32_t fbuf_size;
 
@@ -1252,6 +1251,7 @@ uvideo_vs_parse_desc_frame_sub(struct uvideo_softc *sc,
 
 	return (USB_ERR_NORMAL_COMPLETION);
 }
+#if defined(NOTYET)
 
 usb_error_t
 uvideo_vs_parse_desc_alt(struct uvideo_softc *sc, int vs_nr, int iface, int numalts)
