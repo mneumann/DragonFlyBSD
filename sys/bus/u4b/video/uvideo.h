@@ -472,11 +472,11 @@ typedef SIMPLEQ_HEAD(, uvideo_mmap) q_mmap;
 struct uvideo_format_group {
 	uint32_t				 pixelformat;
 	uint8_t					 format_dfidx;
-	struct uvideo_format_desc		*format;
+	const struct uvideo_format_desc		*format;
 	/* frame descriptors for mjpeg and uncompressed are identical */
 #define UVIDEO_MAX_FRAME			 32
-	struct usb_video_frame_desc		*frame_cur;
-	struct usb_video_frame_desc		*frame[UVIDEO_MAX_FRAME];
+	const struct usb_video_frame_desc		*frame_cur;
+	const struct usb_video_frame_desc		*frame[UVIDEO_MAX_FRAME];
 	int					 frame_num;
 };
 

@@ -1051,15 +1051,13 @@ uvideo_vs_parse_desc_format(struct uvideo_softc *sc)
 	return (USB_ERR_NORMAL_COMPLETION);
 }
 
-#if defined(NOTYET)
-
 usb_error_t
 uvideo_vs_parse_desc_format_mjpeg(struct uvideo_softc *sc,
     const usb_descriptor_t *desc)
 {
-	struct usb_video_format_mjpeg_desc *d;
+	const struct usb_video_format_mjpeg_desc *d;
 
-	d = (struct usb_video_format_mjpeg_desc *)(uint8_t *)desc;
+	d = (const struct usb_video_format_mjpeg_desc *)(const uint8_t *)desc;
 
 	if (d->bNumFrameDescriptors == 0) {
 		device_printf(sc->sc_dev,
@@ -1074,7 +1072,7 @@ uvideo_vs_parse_desc_format_mjpeg(struct uvideo_softc *sc,
 	}
 
 	sc->sc_fmtgrp[sc->sc_fmtgrp_idx].format =
-	    (struct uvideo_format_desc *)d;
+	    (const struct uvideo_format_desc *)d;
 	if (d->bDefaultFrameIndex > d->bNumFrameDescriptors ||
 	    d->bDefaultFrameIndex < 1) {
 		/* sanitize wrong bDefaultFrameIndex value */
@@ -1099,11 +1097,11 @@ usb_error_t
 uvideo_vs_parse_desc_format_uncompressed(struct uvideo_softc *sc,
     const usb_descriptor_t *desc)
 {
-	struct usb_video_format_uncompressed_desc *d;
+	const struct usb_video_format_uncompressed_desc *d;
 	uint8_t guid_8bit_ir[16] = UVIDEO_FORMAT_GUID_KSMEDIA_L8_IR;
 	int i;
 
-	d = (struct usb_video_format_uncompressed_desc *)(uint8_t *)desc;
+	d = (const struct usb_video_format_uncompressed_desc *)(const uint8_t *)desc;
 
 	if (d->bNumFrameDescriptors == 0) {
 		device_printf(sc->sc_dev,
@@ -1118,7 +1116,7 @@ uvideo_vs_parse_desc_format_uncompressed(struct uvideo_softc *sc,
 	}
 
 	sc->sc_fmtgrp[sc->sc_fmtgrp_idx].format =
-	    (struct uvideo_format_desc *)d;
+	    (const struct uvideo_format_desc *)d;
 	if (d->bDefaultFrameIndex > d->bNumFrameDescriptors ||
 	    d->bDefaultFrameIndex < 1) {
 		/* sanitize wrong bDefaultFrameIndex value */
@@ -1151,6 +1149,7 @@ uvideo_vs_parse_desc_format_uncompressed(struct uvideo_softc *sc,
 	return (USB_ERR_NORMAL_COMPLETION);
 }
 
+#if defined(NOTYET)
 usb_error_t
 uvideo_vs_parse_desc_frame(struct uvideo_softc *sc)
 {
@@ -3072,8 +3071,8 @@ uvideo_enum_fivals(void *v, struct v4l2_frmivalenum *fivals)
 	struct uvideo_softc *sc = v;
 	int idx;
 	struct uvideo_format_group *fmtgrp = NULL;
-	struct usb_video_frame_desc *frame = NULL;
-	uint8_t *p;
+	const struct usb_video_frame_desc *frame = NULL;
+	const uint8_t *p;
 
 	for (idx = 0; idx < sc->sc_fmtgrp_num; idx++) {
 		if (sc->sc_fmtgrp[idx].pixelformat == fivals->pixel_format) {
@@ -3095,7 +3094,7 @@ uvideo_enum_fivals(void *v, struct v4l2_frmivalenum *fivals)
 		return (EINVAL);
 
 	/* byte-wise pointer to start of frame intervals */
-	p = (uint8_t *)frame;
+	p = (const uint8_t *)frame;
 	p += sizeof(struct usb_video_frame_desc);
 
 	if (frame->bFrameIntervalType == 0) {
@@ -3115,7 +3114,7 @@ uvideo_enum_fivals(void *v, struct v4l2_frmivalenum *fivals)
 		if (fivals->index >= frame->bFrameIntervalType)
 			return (EINVAL);
 		p += sizeof(uDWord) * fivals->index;
-		if (p > frame->bLength + (uint8_t *)frame) {
+		if (p > frame->bLength + (const uint8_t *)frame) {
 			kprintf("%s: frame desc too short?\n", __func__);
 			return (EINVAL);
 		}
@@ -3132,7 +3131,7 @@ uvideo_s_fmt(void *v, struct v4l2_format *fmt)
 {
 	struct uvideo_softc *sc = v;
 	struct uvideo_format_group *fmtgrp_save;
-	struct usb_video_frame_desc *frame_save;
+	const struct usb_video_frame_desc *frame_save;
 	struct uvideo_res r;
 	int found, i;
 	usb_error_t error;
