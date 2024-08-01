@@ -38,6 +38,7 @@
 #include <bus/u4b/video/uvideo.h>
 
 #include <dev/video/video/video_if.h>
+#include <limits.h>
 
 MALLOC_DEFINE(M_UVIDEO, "uvideo", "USB video driver");
 
@@ -149,7 +150,7 @@ usb_error_t	uvideo_vs_parse_desc_frame_sub(struct uvideo_softc *,
 		    const usb_descriptor_t *);
 usb_error_t	uvideo_vs_parse_desc_alt(struct uvideo_softc *, int, int, int);
 usb_error_t	uvideo_vs_set_alt(struct uvideo_softc *,
-		    struct usbd_interface *, int);
+		    struct usb_interface *, int);
 int		uvideo_desc_len(const usb_descriptor_t *, int, int, int, int);
 void		uvideo_find_res(struct uvideo_softc *, int, int, int,
 		    struct uvideo_res *);
@@ -1251,22 +1252,27 @@ uvideo_vs_parse_desc_frame_sub(struct uvideo_softc *sc,
 
 	return (USB_ERR_NORMAL_COMPLETION);
 }
-#if defined(NOTYET)
 
 usb_error_t
 uvideo_vs_parse_desc_alt(struct uvideo_softc *sc, int vs_nr, int iface, int numalts)
 {
 	struct uvideo_vs_iface *vs;
-	struct usbd_desc_iter iter;
-	const usb_descriptor_t *desc;
+	usb_config_descriptor_t *cdesc;
+	usb_descriptor_t *desc;
 	usb_interface_descriptor_t *id;
 	usb_endpoint_descriptor_t *ed;
 	uint8_t ep_dir, ep_type;
 
 	vs = &sc->sc_vs_coll[vs_nr];
 
-	usbd_desc_iter_init(sc->sc_udev, &iter);
-	desc = usbd_desc_iter_next(&iter);
+	cdesc = usbd_get_config_descriptor(sc->sc_udev);
+	if (cdesc == NULL) {
+		device_printf(sc->sc_dev, "failed to get configuration descriptor\n");
+		return (USB_ERR_INVAL);
+	}
+
+
+	desc = usb_desc_foreach(cdesc, NULL);
 	while (desc) {
 		/* Skip all interfaces until we found our first. */
 		if (desc->bDescriptorType == UDESC_INTERFACE) {
@@ -1274,7 +1280,7 @@ uvideo_vs_parse_desc_alt(struct uvideo_softc *sc, int vs_nr, int iface, int numa
 			if (id->bInterfaceNumber == sc->sc_iface)
 				break;
 		}
-		desc = usbd_desc_iter_next(&iter);
+		desc = usb_desc_foreach(cdesc, desc);
 	}
 	while (desc) {
 		/* Crossed device function boundary. */
@@ -1294,7 +1300,8 @@ uvideo_vs_parse_desc_alt(struct uvideo_softc *sc, int vs_nr, int iface, int numa
 		}
 
 		/* jump to corresponding endpoint descriptor */
-		while ((desc = usbd_desc_iter_next(&iter))) {
+
+		while ((desc = usb_desc_foreach(cdesc, desc))) {
 			if (desc->bDescriptorType == UDESC_ENDPOINT)
 				break;
 		}
@@ -1314,7 +1321,7 @@ uvideo_vs_parse_desc_alt(struct uvideo_softc *sc, int vs_nr, int iface, int numa
 
 		/* save endpoint with largest bandwidth */
 		if (UGETW(ed->wMaxPacketSize) > vs->psize) {
-			vs->ifaceh = &sc->sc_udev->ifaces[iface];
+			vs->ifaceh = usbd_get_iface(sc->sc_udev, iface);
 			vs->endpoint = ed->bEndpointAddress;
 			vs->numalts = numalts;
 			vs->curalt = id->bAlternateSetting;
@@ -1322,7 +1329,7 @@ uvideo_vs_parse_desc_alt(struct uvideo_softc *sc, int vs_nr, int iface, int numa
 			vs->iface = iface;
 		}
 next:
-		desc = usbd_desc_iter_next(&iter);
+		desc = usb_desc_foreach(cdesc, desc);
 	}
 
 	/* check if we have found a valid alternate interface */
@@ -1336,19 +1343,24 @@ next:
 }
 
 usb_error_t
-uvideo_vs_set_alt(struct uvideo_softc *sc, struct usbd_interface *ifaceh,
+uvideo_vs_set_alt(struct uvideo_softc *sc, struct usb_interface *ifaceh,
     int max_packet_size)
 {
-	struct usbd_desc_iter iter;
-	const usb_descriptor_t *desc;
+	usb_config_descriptor_t *cdesc;
+	usb_descriptor_t *desc;
 	usb_interface_descriptor_t *id;
 	usb_endpoint_descriptor_t *ed;
 	int diff, best_diff = INT_MAX;
 	usb_error_t error;
 	uint32_t psize;
 
-	usbd_desc_iter_init(sc->sc_udev, &iter);
-	desc = usbd_desc_iter_next(&iter);
+	cdesc = usbd_get_config_descriptor(sc->sc_udev);
+	if (cdesc == NULL) {
+		device_printf(sc->sc_dev, "failed to get configuration descriptor\n");
+		return (USB_ERR_INVAL);
+	}
+
+	desc = usb_desc_foreach(cdesc, NULL);
 	while (desc) {
 		/* Skip all interfaces until we found our first. */
 		if (desc->bDescriptorType == UDESC_INTERFACE) {
@@ -1356,7 +1368,7 @@ uvideo_vs_set_alt(struct uvideo_softc *sc, struct usbd_interface *ifaceh,
 			if (id->bInterfaceNumber == sc->sc_iface)
 				break;
 		}
-		desc = usbd_desc_iter_next(&iter);
+		desc = usb_desc_foreach(cdesc, desc);
 	}
 	while (desc) {
 		/* Crossed device function boundary. */
@@ -1372,7 +1384,7 @@ uvideo_vs_set_alt(struct uvideo_softc *sc, struct usbd_interface *ifaceh,
 			goto next;
 
 		/* jump to corresponding endpoint descriptor */
-		desc = usbd_desc_iter_next(&iter);
+		desc = usb_desc_foreach(cdesc, desc);
 		if (desc->bDescriptorType != UDESC_ENDPOINT)
 			goto next;
 		ed = (usb_endpoint_descriptor_t *)(uint8_t *)desc;
@@ -1393,7 +1405,7 @@ uvideo_vs_set_alt(struct uvideo_softc *sc, struct usbd_interface *ifaceh,
 				break;
 		}
 next:
-		desc = usbd_desc_iter_next(&iter);
+		desc = usb_desc_foreach(cdesc, desc);
 	}
 
 	DPRINTF("%s: set alternate iface to ", DEVNAME(sc));
@@ -1401,16 +1413,18 @@ next:
 	    sc->sc_vs_cur->curalt, sc->sc_vs_cur->psize, max_packet_size);
 
 	/* set alternate video stream interface */
-	error = usbd_set_interface(ifaceh, sc->sc_vs_cur->curalt);
+	error = usbd_set_alt_interface_index(sc->sc_udev, ifaceh->idesc->bInterfaceNumber, sc->sc_vs_cur->curalt);
 	if (error) {
-		kprintf("%s: could not set alternate interface %d!\n",
-		    DEVNAME(sc), sc->sc_vs_cur->curalt);
+		device_printf(sc->sc_dev,
+		    "could not set alternate interface %d!\n",
+		    sc->sc_vs_cur->curalt);
 		return (USB_ERR_INVAL);
 	}
 
 	return (USB_ERR_NORMAL_COMPLETION);
 }
 
+#if defined(NEXT_NOTYET)
 /*
  * Thanks to the retarded USB Video Class specs there are different
  * descriptors types with the same bDescriptorSubtype which makes

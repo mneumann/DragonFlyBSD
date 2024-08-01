@@ -543,6 +543,8 @@ struct usb_endpoint_descriptor {
 #define	UE_ISO_SYNC	0x0c
 #define	UE_GET_ISO_TYPE(a)	((a) & UE_ISO_TYPE)
 	uWord	wMaxPacketSize;
+#define UE_GET_TRANS(a)	(((a) >> 11) & 0x3)
+#define UE_GET_SIZE(a)	((a) & 0x7ff)
 #define	UE_ZERO_MPS 0xFFFF		/* for internal use only */
 	uByte	bInterval;
 } __packed;

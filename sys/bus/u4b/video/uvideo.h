@@ -434,7 +434,7 @@ struct uvideo_bulk_xfer {
 
 #define UVIDEO_IXFERS		3
 struct uvideo_vs_iface {
-	struct usbd_interface	*ifaceh;
+	struct usb_interface	*ifaceh;
 	struct usbd_pipe	*pipeh;
 	int			 iface;
 	int			 numalts;
