@@ -249,7 +249,7 @@ static void
 dmtc_crypto_clear(void *buf, size_t len)
 {
 	memset(buf, 0xFF, len);
-	bzero(buf, len);
+	explicit_bzero(buf, len);
 }
 
 /*
