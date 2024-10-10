@@ -108,7 +108,6 @@ MAN=	aac.4 \
 	gpio_acpi.4 \
 	gpio_intel.4 \
 	gre.4 \
-	hifn.4 \
 	hpt27xx.4 \
 	hptiop.4 \
 	hptmv.4 \
@@ -266,7 +265,6 @@ MAN=	aac.4 \
 	run.4 \
 	runfw.4 \
 	sa.4 \
-	safe.4 \
 	sbp.4 \
 	sbsh.4 \
 	screen.4 \
@@ -337,7 +335,6 @@ MAN=	aac.4 \
 	txp.4 \
 	uark.4 \
 	ubsa.4 \
-	ubsec.4 \
 	ubser.4 \
 	ubt.4 \
 	uchcom.4 \
