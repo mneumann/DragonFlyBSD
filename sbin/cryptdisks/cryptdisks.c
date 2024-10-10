@@ -41,7 +41,6 @@
 #include <err.h>
 
 #include <libcryptsetup.h>
-#include <tcplay_api.h>
 
 #include "safe_mem.h"
 
@@ -284,7 +283,6 @@ static int
 entry_parser(char **tokens, char **options, int type)
 {
 	struct crypt_options co;
-	tc_api_task tcplay_task;
 	struct generic_opts go;
 	int r, i, error, isluks;
 
@@ -311,17 +309,14 @@ entry_parser(char **tokens, char **options, int type)
 	generic_opts_to_luks(&co, &go);
 
 	/*
-	 * Check whether the device is a LUKS-formatted device; otherwise
-	 * we assume its a TrueCrypt volume.
+	 * Check whether the device is a LUKS-formatted device
 	 */
 	isluks = !crypt_isLuks(&co);
 
 	if (!isluks) {
-		if ((error = tc_api_init(0)) != 0) {
-			fprintf(stderr, "crypttab: line %d: tc_api could not "
-			    "be initialized\n", line_no);
-			return 1;
-		}
+		fprintf(stderr, "crypttab: line %d: not a LUKS-formatted device\n",
+		    line_no);
+		return 1;
 	}
 
 	if (type == CRYPTDISKS_STOP) {
@@ -335,33 +330,6 @@ entry_parser(char **tokens, char **options, int type)
 
 			/* Actually close the device */
 			crypt_remove_device(&co);
-		} else {
-			/* Assume tcplay volume */
-			if ((tcplay_task = tc_api_task_init("unmap")) == NULL) {
-				fprintf(stderr, "tc_api_task_init failed.\n");
-				goto tcplay_err;
-			}
-			if ((error = tc_api_task_set(tcplay_task, "dev", go.device))) {
-				fprintf(stderr, "tc_api_task_set dev failed\n");
-				goto tcplay_err;
-			}
-			if ((error = tc_api_task_set(tcplay_task, "map_name",
-			    go.map_name))) {
-				fprintf(stderr, "tc_api_task_set map_name failed\n");
-				goto tcplay_err;
-			}
-			if ((error = tc_api_task_do(tcplay_task))) {
-				fprintf(stderr, "crypttab: line %d: device %s "
-				    "could not be unmapped: %s\n",
-				    line_no, go.device,
-				    tc_api_task_get_error(tcplay_task));
-				goto tcplay_err;
-			}
-			if ((error = tc_api_task_uninit(tcplay_task))) {
-				fprintf(stderr, "tc_api_task_uninit failed\n");
-				goto tcplay_err;
-			}
-
 		}
 	} else if (type == CRYPTDISKS_START) {
 		/* Open the device */
@@ -372,73 +340,10 @@ entry_parser(char **tokens, char **options, int type)
 				    line_no, co.device);
 				return 1;
 			}
-		} else {
-			if ((tcplay_task = tc_api_task_init("map")) == NULL) {
-				fprintf(stderr, "tc_api_task_init failed.\n");
-				goto tcplay_err;
-			}
-			if ((error = tc_api_task_set(tcplay_task, "dev", go.device))) {
-				fprintf(stderr, "tc_api_task_set dev failed\n");
-				goto tcplay_err;
-			}
-			if ((error = tc_api_task_set(tcplay_task, "map_name",
-			    go.map_name))) {
-				fprintf(stderr, "tc_api_task_set map_name failed\n");
-				goto tcplay_err;
-			}
-			if ((error = tc_api_task_set(tcplay_task, "interactive",
-			    (go.passphrase != NULL) ? 0 : 1))) {
-				fprintf(stderr, "tc_api_task_set map_name failed\n");
-				goto tcplay_err;
-			}
-			if ((error = tc_api_task_set(tcplay_task, "retries",
-			    go.ntries))) {
-				fprintf(stderr, "tc_api_task_set map_name failed\n");
-				goto tcplay_err;
-			}
-			if ((error = tc_api_task_set(tcplay_task, "timeout",
-			    go.timeout))) {
-				fprintf(stderr, "tc_api_task_set map_name failed\n");
-				goto tcplay_err;
-			}
-
-			if (go.passphrase != NULL) {
-				if ((error = tc_api_task_set(tcplay_task, "passphrase",
-				    go.passphrase))) {
-					fprintf(stderr, "tc_api_task_set map_name failed\n");
-					goto tcplay_err;
-				}
-			}
-
-			for (i = 0; i < go.nkeyfiles; i++) {
-				if ((error = tc_api_task_set(tcplay_task, "keyfiles",
-				    go.keyfiles[i]))) {
-					fprintf(stderr, "tc_api_task_set keyfile failed\n");
-					goto tcplay_err;
-				}
-			}
-			if ((error = tc_api_task_do(tcplay_task))) {
-				fprintf(stderr, "crypttab: line %d: device %s "
-				    "could not be mapped/opened: %s\n",
-				    line_no, go.device,
-				    tc_api_task_get_error(tcplay_task));
-				goto tcplay_err;
-			}
-			if ((error = tc_api_task_uninit(tcplay_task))) {
-				fprintf(stderr, "tc_api_task_uninit failed\n");
-				goto tcplay_err;
-			}
 		}
 	}
 
-	if (!isluks)
-		tc_api_uninit();
-
 	return 0;
-
-tcplay_err:
-	tc_api_uninit();
-	return 1;
 }
 
 static int

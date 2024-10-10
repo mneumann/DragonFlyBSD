@@ -97,7 +97,6 @@ SUBDIR=	adjkerntz \
 	svc \
 	swapon \
 	sysctl \
-	tcplay \
 	tunefs \
 	udevd \
 	umount \

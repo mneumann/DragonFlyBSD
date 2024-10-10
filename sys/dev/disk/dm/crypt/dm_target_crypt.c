@@ -1,8 +1,9 @@
 /*
- * Copyright (c) 2010 The DragonFly Project.  All rights reserved.
+ * Copyright (c) 2010, 2024 The DragonFly Project.  All rights reserved.
  *
  * This code is derived from software contributed to The DragonFly Project
- * by Alex Hornung <ahornung@gmail.com>
+ * by Alex Hornung <ahornung@gmail.com> and
+ * Michael Neumann <mneumann@ntecs.de>.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,64 +36,98 @@
 /*
  * This file implements initial version of device-mapper crypt target.
  */
-#include <sys/endian.h>
 
+#include <sys/systm.h>
+#include <sys/endian.h>
 #include <sys/bio.h>
-#include <sys/globaldata.h>
 #include <sys/kerneldump.h>
 #include <sys/malloc.h>
-#include <sys/mpipe.h>
 #include <sys/md5.h>
 #include <crypto/sha1.h>
 #include <crypto/sha2/sha2.h>
-#include <opencrypto/cryptodev.h>
-#include <opencrypto/rmd160.h>
-#include <machine/cpufunc.h>
+#include <crypto/rmd160/rmd160.h>
+#include <crypto/crypto_cipher.h>
+#include <dev/disk/dm/dm.h>
+
+#include <sys/lock.h>
+#include <sys/kthread.h>
+#include <sys/queue.h>
+#include <sys/proc.h>
+#include <sys/types.h>
 #include <cpu/atomic.h>
 
-#include <sys/ktr.h>
-#include <sys/spinlock2.h>
-
-#include <dev/disk/dm/dm.h>
 MALLOC_DEFINE(M_DMCRYPT, "dm_crypt", "Device Mapper Target Crypt");
 
-KTR_INFO_MASTER(dmcrypt);
+/**
+ * A Multi Producer Single Consumer queue.
+ *
+ * Multiple threads can submit "jobs" to queues. Each queue
+ * is served by exactly one worker thread.
+ */
 
-#if !defined(KTR_DMCRYPT)
-#define KTR_DMCRYPT	KTR_ALL
-#endif
+typedef void workqueue_job_callback(void *arg1, void *arg2, void *ctx);
 
-KTR_INFO(KTR_DMCRYPT, dmcrypt, crypto_dispatch, 0,
-    "crypto_dispatch(%p)", struct cryptop *crp);
-KTR_INFO(KTR_DMCRYPT, dmcrypt, crypt_strategy, 0,
-    "crypt_strategy(b_cmd = %d, bp = %p)", int cmd, struct buf *bp);
-KTR_INFO(KTR_DMCRYPT, dmcrypt, crypto_write_start, 1,
-    "crypto_write_start(crp = %p, bp = %p, sector = %d/%d)",
-    struct cryptop *crp, struct buf *bp, int i, int sectors);
-KTR_INFO(KTR_DMCRYPT, dmcrypt, crypto_cb_write_done, 1,
-    "crypto_cb_write_done(crp = %p, bp = %p, n = %d)",
-    struct cryptop *crp, struct buf *bp, int n);
-KTR_INFO(KTR_DMCRYPT, dmcrypt, bio_write_done, 1,
-    "bio_write_done(bp = %p)", struct buf *bp);
-KTR_INFO(KTR_DMCRYPT, dmcrypt, crypto_write_retry, 1,
-    "crypto_write_retry(crp = %p)", struct buf *bp);
-KTR_INFO(KTR_DMCRYPT, dmcrypt, bio_read_done, 2,
-    "bio_read_done(bp = %p)", struct buf *bp);
-KTR_INFO(KTR_DMCRYPT, dmcrypt, crypto_read_start, 2,
-    "crypto_read_start(crp = %p, bp = %p, sector = %d/%d)",
-    struct cryptop *crp, struct buf *bp, int i, int sectors);
-KTR_INFO(KTR_DMCRYPT, dmcrypt, crypto_cb_read_done, 2,
-    "crypto_cb_read_done(crp = %p, bp = %p, n = %d)",
-    struct cryptop *crp, struct buf *bp, int n);
+struct workqueue_job {
+	workqueue_job_callback *wqj_cb;
+	void *wqj_arg1;
+	void *wqj_arg2;
+	bool wqj_is_free;
+	STAILQ_ENTRY(workqueue_job) wqj_next;
+};
 
+struct workqueue {
+	struct lock wq_lock;
+	bool wq_is_closing;
+	void *wq_ctx;
+	struct thread *wq_worker;
+
+	STAILQ_HEAD(, workqueue_job) wq_jobs;
+
+	/**
+	 * We use a preallocated list of free `struct workqueue_job`s,
+	 * so in case of low-memory situations, we can still
+	 * submit a fixed number of requests to the queue before
+	 * we block (or retry).
+	 *
+	 * In the case of dm_target_crypt, wherer we distribute
+	 * jobs to multiple queues, that's probably not required
+	 * and a bounded queue of size 1 would suffice.
+	 */
+	STAILQ_HEAD(, workqueue_job) wq_free_jobs;
+};
+
+static int workqueue_submit_job(struct workqueue *wq,
+    workqueue_job_callback *wqj_cb, void *wqj_arg1, void *wqj_arg2);
+
+static void workqueue_start(struct workqueue *wq, int cpu, void *ctx,
+    int bounded_size);
+
+static void workqueue_stop(struct workqueue *wq);
+
+static int workqueue_dequeue_job_into(struct workqueue *wq,
+    struct workqueue_job *job_copy);
+
+/**
+ * Each worker "owns" it's own memory, so there is no need
+ * to allocate the "data_buf" memory from a mpipe.
+ */
+struct worker_context {
+	uint8_t *data_buf;
+	size_t data_buf_size;
+	volatile bool data_buf_busy;
+};
+
+/**
+ * End of MPSC queue
+ */
+ 
 struct target_crypt_config;
 
-typedef void dispatch_t(void *);
-typedef void ivgen_t(struct target_crypt_config *, u_int8_t *, size_t, off_t,
-    void *);
+typedef void ivgen_t(struct target_crypt_config *, u_int8_t *, size_t, off_t);
 
 typedef int ivgen_ctor_t(struct target_crypt_config *, char *, void **);
 typedef int ivgen_dtor_t(struct target_crypt_config *, void *);
+
 
 struct iv_generator {
 	const char	*name;
@@ -101,19 +136,9 @@ struct iv_generator {
 	ivgen_t		*gen_iv;
 };
 
-struct essiv_ivgen_data {
-	struct essiv_ivgen_data *next;
-	void		*ivpriv;
-	void		*opaque;
-	struct cryptop	crp;
-	struct cryptodesc crd;
-};
-
 struct essiv_ivgen_priv {
-	struct cryptoini	crypto_session;
-	struct spinlock		ivdata_spin;
-	struct essiv_ivgen_data	*ivdata_base;
-	u_int64_t		crypto_sid;
+	struct crypto_cipher_context crypto_context;
+	const struct crypto_cipher  *crypto_cipher;
 	size_t			keyhash_len;
 	u_int8_t		crypto_keyhash[SHA512_DIGEST_LENGTH];
 };
@@ -122,30 +147,39 @@ typedef struct target_crypt_config {
 	size_t	params_len;
 	dm_pdev_t *pdev;
 	char	*status_str;
-	int	crypto_alg;
+	const struct crypto_cipher *crypto_cipher;
 	int	crypto_klen;
 	u_int8_t	crypto_key[512>>3];
+	struct crypto_cipher_context	crypto_context;
 
-	u_int64_t	crypto_sid;
 	u_int64_t	block_offset;
 	int64_t		iv_offset;
 	SHA512_CTX	essivsha512_ctx;
 
-	struct cryptoini	crypto_session;
-
 	struct iv_generator	*ivgen;
 	void	*ivgen_priv;
 
-	struct malloc_pipe	read_mpipe;
-	struct malloc_pipe	write_mpipe;
-} dm_target_crypt_config_t;
+	/**
+	 * per-CPU work queues and worker contexts [0..ncpus)
+	 *
+	 * We use separate workqueues for read and write requests.
+	 * Read requests do not cause long stalls, as they are synchronous
+	 * operations from userspace, but writes can cause long stalls
+	 * due to write buffering.
+	 */
+	struct workqueue	*crypto_read_workqueues;
+	struct worker_context  	*crypto_read_worker_contexts;
+	struct workqueue	*crypto_write_workqueues;
+	struct worker_context  	*crypto_write_worker_contexts;
 
-struct dmtc_helper {
-	dm_target_crypt_config_t *priv;
-	caddr_t	free_addr;
-	caddr_t	orig_buf;
-	caddr_t data_buf;
-};
+	/**
+	 * Atomic counter used to distribute requests
+	 * to the crypto work queues using round robin.
+	 */
+	int crypto_read_workqueue_next_rr;
+	int crypto_write_workqueue_next_rr;
+
+} dm_target_crypt_config_t;
 
 struct dmtc_dump_helper {
 	dm_target_crypt_config_t *priv;
@@ -153,33 +187,28 @@ struct dmtc_dump_helper {
 	size_t length;
 	off_t offset;
 
-	int sectors;
-	int *ident;
-
-	struct cryptodesc crd[128];
-	struct cryptop crp[128];
 	u_char space[65536];
 };
 
-#define DMTC_BUF_SIZE_WRITE \
-    (MAXPHYS + sizeof(struct dmtc_helper) + \
-     MAXPHYS/DEV_BSIZE*(sizeof(struct cryptop) + sizeof(struct cryptodesc)))
-#define DMTC_BUF_SIZE_READ \
-    (sizeof(struct dmtc_helper) + \
-     MAXPHYS/DEV_BSIZE*(sizeof(struct cryptop) + sizeof(struct cryptodesc)))
+static const struct crypto_cipher *
+dmtc_find_crypto_cipher(const char *crypto_alg, const char *crypto_mode,
+    int klen_in_bits);
 
-static void dmtc_crypto_dispatch(void *arg);
-static void dmtc_crypto_dump_start(dm_target_crypt_config_t *priv,
-				struct dmtc_dump_helper *dump_helper);
-static void dmtc_crypto_read_start(dm_target_crypt_config_t *priv,
-				struct bio *bio);
-static void dmtc_crypto_write_start(dm_target_crypt_config_t *priv,
-				struct bio *bio);
+#define DMTC_BUF_SIZE (MAXPHYS)
+
+static void dmtc_crypto_dump(dm_target_crypt_config_t *priv,
+    struct dmtc_dump_helper *dump_helper);
+
+static int dmtc_bio_encdec(dm_target_crypt_config_t *priv, uint8_t *data_buf,
+    int bytes, off_t offset, crypto_cipher_blockfn_t blockfn);
+
 static void dmtc_bio_read_done(struct bio *bio);
+static void dmtc_bio_read_decrypt(dm_target_crypt_config_t *priv,
+    struct bio *bio);
+
+static void dmtc_bio_write_encrypt(dm_target_crypt_config_t *priv,
+    struct bio *bio);
 static void dmtc_bio_write_done(struct bio *bio);
-static int dmtc_crypto_cb_dump_done(struct cryptop *crp);
-static int dmtc_crypto_cb_read_done(struct cryptop *crp);
-static int dmtc_crypto_cb_write_done(struct cryptop *crp);
 
 static ivgen_ctor_t	essiv_ivgen_ctor;
 static ivgen_dtor_t	essiv_ivgen_dtor;
@@ -195,52 +224,167 @@ static struct iv_generator ivgens[] = {
 	{ NULL, NULL, NULL, NULL }
 };
 
-/*
- * Number of crypto buffers.  All crypto buffers will be preallocated
- * in order to avoid kmalloc() deadlocks in critical low-memory paging
- * paths.
+/**
+ * MPSC queue implementation
  */
-static __inline int
-dmtc_get_nmax(void)
-{
-	int nmax;
-
-	nmax = (physmem * 2 / 1000 * PAGE_SIZE) /
-	       (DMTC_BUF_SIZE_WRITE + DMTC_BUF_SIZE_READ) + 1;
-
-	if (nmax < 2)
-		nmax = 2;
-	if (nmax > 8 + ncpus * 2)
-		nmax = 8 + ncpus * 2;
-
-	return nmax;
-}
-
-/*
- * Initialize the crypto buffer mpipe.  Preallocate all crypto buffers
- * to avoid making any kmalloc()s in the critical path.
- */
-static void
-dmtc_init_mpipe(struct target_crypt_config *priv)
-{
-	int nmax;
-
-	nmax = dmtc_get_nmax();
-
-	kprintf("dm_target_crypt: Setting %d mpipe buffers\n", nmax);
-
-	mpipe_init(&priv->write_mpipe, M_DMCRYPT, DMTC_BUF_SIZE_WRITE,
-		   nmax, nmax, MPF_NOZERO | MPF_CALLBACK, NULL, NULL, NULL);
-	mpipe_init(&priv->read_mpipe, M_DMCRYPT, DMTC_BUF_SIZE_READ,
-		   nmax, nmax, MPF_NOZERO | MPF_CALLBACK, NULL, NULL, NULL);
-}
 
 static void
-dmtc_destroy_mpipe(struct target_crypt_config *priv)
+workqueue_stop(struct workqueue *wq)
 {
-	mpipe_done(&priv->write_mpipe);
-	mpipe_done(&priv->read_mpipe);
+	lockmgr(&wq->wq_lock, LK_EXCLUSIVE);
+	wq->wq_is_closing = true;
+	lockmgr(&wq->wq_lock, LK_RELEASE);
+
+	while (true) {
+		wakeup(&wq->wq_jobs);
+		if (tsleep(wq, 0, "shutdown workqueue", 500) == 0)
+			break;
+	}
+
+	lockmgr(&wq->wq_lock, LK_EXCLUSIVE);
+
+	KKASSERT(STAILQ_FIRST(&wq->wq_jobs) == NULL);
+
+	/**
+	 * Free pre-allocated jobs.
+	 */
+	struct workqueue_job *free_job;
+	while ((free_job = STAILQ_FIRST(&wq->wq_free_jobs)) != NULL) {
+		KKASSERT(free_job->wqj_is_free);
+		STAILQ_REMOVE_HEAD(&wq->wq_free_jobs, wqj_next);
+		kfree(free_job, M_DMCRYPT);
+	}
+	KKASSERT(STAILQ_FIRST(&wq->wq_free_jobs) == NULL);
+
+	lockmgr(&wq->wq_lock, LK_RELEASE);
+	lockuninit(&wq->wq_lock);
 }
+
+static int
+workqueue_submit_job(struct workqueue *wq, workqueue_job_callback *wqj_cb,
+    void *wqj_arg1, void *wqj_arg2)
+{
+	struct workqueue_job *job = NULL;
+
+	if (wq->wq_is_closing) {
+		return (EPIPE);
+	}
+
+	lockmgr(&wq->wq_lock, LK_EXCLUSIVE);
+
+	while (!wq->wq_is_closing) {
+		job = STAILQ_FIRST(&wq->wq_free_jobs);
+		if (job) {
+			KKASSERT(job->wqj_is_free);
+
+			STAILQ_REMOVE_HEAD(&wq->wq_free_jobs, wqj_next);
+			job->wqj_cb = wqj_cb;
+			job->wqj_arg1 = wqj_arg1;
+			job->wqj_arg2 = wqj_arg2;
+
+			STAILQ_INSERT_TAIL(&wq->wq_jobs, job, wqj_next);
+			lockmgr(&wq->wq_lock, LK_RELEASE);
+			wakeup_one(&wq->wq_jobs);
+
+			return (0);
+		} else {
+			/**
+			 * Wait until the worker has put back an item to the
+			 * free list.
+			 */
+			lksleep(&wq->wq_free_jobs, &wq->wq_lock, 0,
+			    "dm_target_crypt: wq free list empty", 0);
+		}
+	}
+
+	lockmgr(&wq->wq_lock, LK_RELEASE);
+
+	return (EPIPE);
+}
+
+static int
+workqueue_dequeue_job_into(struct workqueue *wq, struct workqueue_job *job_copy)
+{
+	lockmgr(&wq->wq_lock, LK_EXCLUSIVE);
+
+	bzero(job_copy, sizeof(struct workqueue_job));
+
+	/*
+	 * In case the queue is closing, no further jobs can be submitted, but
+	 * dequeue will drain the queue until empty.
+	 */
+
+	while (true) {
+		struct workqueue_job *job = STAILQ_FIRST(&wq->wq_jobs);
+		if (job) {
+			STAILQ_REMOVE_HEAD(&wq->wq_jobs, wqj_next);
+
+			/*
+			 * Copy the job definition to the caller-passed pointer
+			 * and then put back the job to the free-list.
+			 */
+			memcpy(job_copy, job, sizeof(struct workqueue_job));
+
+			job->wqj_is_free = true;
+			STAILQ_INSERT_TAIL(&wq->wq_free_jobs, job, wqj_next);
+
+			lockmgr(&wq->wq_lock, LK_RELEASE);
+			wakeup(&wq->wq_free_jobs);
+			return (0);
+
+		} else if (wq->wq_is_closing) {
+			lockmgr(&wq->wq_lock, LK_RELEASE);
+			return (EPIPE);
+		} else {
+			lksleep(&wq->wq_jobs, &wq->wq_lock, 0,
+			    "dm_target_crypt: wq empty", 0);
+		}
+	}
+}
+
+static void
+workqueue_worker(void *wq_arg)
+{
+	struct workqueue *wq = wq_arg;
+	struct workqueue_job job;
+
+	while (workqueue_dequeue_job_into(wq, &job) == 0) {
+		job.wqj_cb(job.wqj_arg1, job.wqj_arg2, wq->wq_ctx);
+	}
+
+	wakeup(wq);
+}
+
+static void
+workqueue_start(struct workqueue *wq, int cpu, void *ctx, int bounded_size)
+{
+	bzero(wq, sizeof(*wq));
+
+	lockinit(&wq->wq_lock, "dm_target_crypt: wq", 0, LK_CANRECURSE);
+
+	STAILQ_INIT(&wq->wq_jobs);
+	STAILQ_INIT(&wq->wq_free_jobs);
+
+	wq->wq_is_closing = false;
+	wq->wq_ctx = ctx;
+
+	/**
+	 * Initialize free-list
+	 */
+	for (int i = 0; i < bounded_size; ++i) {
+		struct workqueue_job *free_job = kmalloc(
+		    sizeof(struct workqueue_job), M_DMCRYPT, M_ZERO | M_WAITOK);
+		free_job->wqj_is_free = true;
+		STAILQ_INSERT_TAIL(&wq->wq_free_jobs, free_job, wqj_next);
+	}
+
+	kthread_create_cpu(workqueue_worker, wq, &wq->wq_worker, cpu,
+	    "dm_target_crypt: crypto worker");
+}
+
+/**
+ * End of MPSC queue implementation
+ */
 
 /*
  * Overwrite private information (in buf) to avoid leaking it
@@ -249,7 +393,7 @@ static void
 dmtc_crypto_clear(void *buf, size_t len)
 {
 	memset(buf, 0xFF, len);
-	bzero(buf, len);
+	explicit_bzero(buf, len);
 }
 
 /*
@@ -262,50 +406,49 @@ essiv_ivgen_ctor(struct target_crypt_config *priv, char *iv_hash, void **p_ivpri
 	u_int8_t crypto_keyhash[SHA512_DIGEST_LENGTH];
 	unsigned int klen, hashlen;
 	int error;
-	int nmax;
 
 	klen = (priv->crypto_klen >> 3);
 
 	if (iv_hash == NULL)
 		return EINVAL;
 
-	if (!strcmp(iv_hash, "sha1")) {
+	if (strcmp(iv_hash, "sha1") == 0) {
 		SHA1_CTX ctx;
 
 		hashlen = SHA1_RESULTLEN;
 		SHA1Init(&ctx);
 		SHA1Update(&ctx, priv->crypto_key, klen);
 		SHA1Final(crypto_keyhash, &ctx);
-	} else if (!strcmp(iv_hash, "sha256")) {
+	} else if (strcmp(iv_hash, "sha256") == 0) {
 		SHA256_CTX ctx;
 
 		hashlen = SHA256_DIGEST_LENGTH;
 		SHA256_Init(&ctx);
 		SHA256_Update(&ctx, priv->crypto_key, klen);
 		SHA256_Final(crypto_keyhash, &ctx);
-	} else if (!strcmp(iv_hash, "sha384")) {
+	} else if (strcmp(iv_hash, "sha384") == 0) {
 		SHA384_CTX ctx;
 
 		hashlen = SHA384_DIGEST_LENGTH;
 		SHA384_Init(&ctx);
 		SHA384_Update(&ctx, priv->crypto_key, klen);
 		SHA384_Final(crypto_keyhash, &ctx);
-	} else if (!strcmp(iv_hash, "sha512")) {
+	} else if (strcmp(iv_hash, "sha512") == 0) {
 		SHA512_CTX ctx;
 
 		hashlen = SHA512_DIGEST_LENGTH;
 		SHA512_Init(&ctx);
 		SHA512_Update(&ctx, priv->crypto_key, klen);
 		SHA512_Final(crypto_keyhash, &ctx);
-	} else if (!strcmp(iv_hash, "md5")) {
+	} else if (strcmp(iv_hash, "md5") == 0) {
 		MD5_CTX ctx;
 
 		hashlen = MD5_DIGEST_LENGTH;
 		MD5Init(&ctx);
 		MD5Update(&ctx, priv->crypto_key, klen);
 		MD5Final(crypto_keyhash, &ctx);
-	} else if (!strcmp(iv_hash, "rmd160") ||
-		   !strcmp(iv_hash, "ripemd160")) {
+	} else if (strcmp(iv_hash, "rmd160") == 0 ||
+		   strcmp(iv_hash, "ripemd160") == 0) {
 		RMD160_CTX ctx;
 
 		hashlen = 160/8;
@@ -325,20 +468,18 @@ essiv_ivgen_ctor(struct target_crypt_config *priv, char *iv_hash, void **p_ivpri
 	ivpriv->keyhash_len = sizeof(crypto_keyhash);
 	dmtc_crypto_clear(crypto_keyhash, sizeof(crypto_keyhash));
 
-	ivpriv->crypto_session.cri_alg = priv->crypto_alg;
-	ivpriv->crypto_session.cri_key = (u_int8_t *)ivpriv->crypto_keyhash;
-	ivpriv->crypto_session.cri_klen = hashlen;
-	ivpriv->crypto_session.cri_mlen = 0;
-	ivpriv->crypto_session.cri_next = NULL;
 
 	/*
 	 * XXX: in principle we also need to check if the block size of the
 	 *	cipher is a valid iv size for the block cipher.
 	 */
 
-	error = crypto_newsession(&ivpriv->crypto_sid,
-				  &ivpriv->crypto_session,
-				  CRYPTOCAP_F_SOFTWARE | CRYPTOCAP_F_HARDWARE);
+	ivpriv->crypto_cipher = priv->crypto_cipher;
+
+	error = ivpriv->crypto_cipher->setkey(&ivpriv->crypto_context,
+		(const uint8_t *)ivpriv->crypto_keyhash,
+		hashlen / 8);
+
 	if (error) {
 		kprintf("dm_target_crypt: Error during crypto_newsession "
 			"for essiv_ivgen, error = %d\n",
@@ -348,22 +489,6 @@ essiv_ivgen_ctor(struct target_crypt_config *priv, char *iv_hash, void **p_ivpri
 		return ENOTSUP;
 	}
 
-	/*
-	 * mpipe for 512-byte ivgen elements, make sure there are enough
-	 * to cover all in-flight read and write buffers.
-	 */
-	nmax = dmtc_get_nmax() * (int)(MAXPHYS / DEV_BSIZE) * 2;
-
-	spin_init(&ivpriv->ivdata_spin, "ivdata");
-
-	while (nmax) {
-		struct essiv_ivgen_data *ivdata;
-
-		ivdata = kmalloc(sizeof(*ivdata), M_DMCRYPT, M_WAITOK|M_ZERO);
-		ivdata->next = ivpriv->ivdata_base;
-		ivpriv->ivdata_base = ivdata;
-		--nmax;
-	}
 	*p_ivpriv = ivpriv;
 
 	return 0;
@@ -373,18 +498,11 @@ static int
 essiv_ivgen_dtor(struct target_crypt_config *priv, void *arg)
 {
 	struct essiv_ivgen_priv *ivpriv;
-	struct essiv_ivgen_data *ivdata;
 
 	ivpriv = (struct essiv_ivgen_priv *)arg;
 	KKASSERT(ivpriv != NULL);
 
-	crypto_freesession(ivpriv->crypto_sid);
-
-	while ((ivdata = ivpriv->ivdata_base) != NULL) {
-		ivpriv->ivdata_base = ivdata->next;
-		kfree(ivdata, M_DMCRYPT);
-	}
-	spin_uninit(&ivpriv->ivdata_spin);
+	dmtc_crypto_clear(&ivpriv->crypto_context, sizeof(ivpriv->crypto_context));
 
 	dmtc_crypto_clear(ivpriv->crypto_keyhash, ivpriv->keyhash_len);
 	kfree(ivpriv, M_DMCRYPT);
@@ -392,103 +510,31 @@ essiv_ivgen_dtor(struct target_crypt_config *priv, void *arg)
 	return 0;
 }
 
-static int
-essiv_ivgen_done(struct cryptop *crp)
-{
-	struct essiv_ivgen_priv *ivpriv;
-	struct essiv_ivgen_data *ivdata;
-	void *opaque;
-
-
-	if (crp->crp_etype == EAGAIN)
-		return crypto_dispatch(crp);
-
-	if (crp->crp_etype != 0) {
-		kprintf("dm_target_crypt: essiv_ivgen_done, "
-			"crp->crp_etype = %d\n", crp->crp_etype);
-	}
-
-	ivdata = (void *)crp->crp_opaque;
-
-	/*
-	 * In-memory structure is:
-	 * |  ivpriv  |  opaque  |     crp     |      crd      |
-	 * | (void *) | (void *) |   (cryptop) |  (cryptodesc) |
-	 */
-	ivpriv = ivdata->ivpriv;
-	opaque = ivdata->opaque;
-
-	spin_lock(&ivpriv->ivdata_spin);
-	ivdata->next = ivpriv->ivdata_base;
-	ivpriv->ivdata_base = ivdata;
-	spin_unlock(&ivpriv->ivdata_spin);
-
-	dmtc_crypto_dispatch(opaque);
-
-	return 0;
-}
-
 static void
 essiv_ivgen(dm_target_crypt_config_t *priv, u_int8_t *iv,
-	    size_t iv_len, off_t sector, void *opaque)
+	    size_t iv_len, off_t sector)
 {
 	struct essiv_ivgen_priv *ivpriv;
-	struct essiv_ivgen_data *ivdata;
-	struct cryptodesc *crd;
-	struct cryptop *crp;
 	int error;
 
 	ivpriv = priv->ivgen_priv;
 	KKASSERT(ivpriv != NULL);
 
-	/*
-	 * We preallocated all necessary ivdata's, so pull one off and use
-	 * it.
-	 */
-	spin_lock(&ivpriv->ivdata_spin);
-	ivdata = ivpriv->ivdata_base;
-	ivpriv->ivdata_base = ivdata->next;
-	spin_unlock(&ivpriv->ivdata_spin);
-
-	KKASSERT(ivdata != NULL);
-
-	ivdata->ivpriv = ivpriv;
-	ivdata->opaque = opaque;
-	crp = &ivdata->crp;
-	crd = &ivdata->crd;
-
 	bzero(iv, iv_len);
-	bzero(crd, sizeof(struct cryptodesc));
-	bzero(crp, sizeof(struct cryptop));
 	*((off_t *)iv) = htole64(sector + priv->iv_offset);
-	crp->crp_buf = (caddr_t)iv;
 
-	crp->crp_sid = ivpriv->crypto_sid;
-	crp->crp_ilen = crp->crp_olen = iv_len;
+	struct crypto_cipher_iv iv2;
+	bzero(&iv2, sizeof(iv2));
 
-	crp->crp_opaque =  (caddr_t)ivdata;
+	error = ivpriv->crypto_cipher->encrypt(
+			&ivpriv->crypto_context,
+			(uint8_t*)iv,
+			iv_len,
+			&iv2
+			);
 
-	crp->crp_callback = essiv_ivgen_done;
+	explicit_bzero(&iv2, sizeof(iv2));
 
-	crp->crp_desc = crd;
-	crp->crp_etype = 0;
-	crp->crp_flags = CRYPTO_F_CBIFSYNC | CRYPTO_F_REL | CRYPTO_F_BATCH;
-
-	crd->crd_alg = priv->crypto_alg;
-#if 0
-	crd->crd_key = (caddr_t)priv->crypto_keyhash;
-	crd->crd_klen = priv->crypto_klen;
-#endif
-
-	bzero(crd->crd_iv, sizeof(crd->crd_iv));
-
-	crd->crd_skip = 0;
-	crd->crd_len = iv_len;
-	crd->crd_flags = CRD_F_IV_EXPLICIT | CRD_F_IV_PRESENT;
-	crd->crd_flags |= CRD_F_ENCRYPT;
-	crd->crd_next = NULL;
-
-	error = crypto_dispatch(crp);
 	if (error)
 		kprintf("dm_target_crypt: essiv_ivgen, error = %d\n", error);
 }
@@ -496,39 +542,19 @@ essiv_ivgen(dm_target_crypt_config_t *priv, u_int8_t *iv,
 
 static void
 plain_ivgen(dm_target_crypt_config_t *priv, u_int8_t *iv,
-	    size_t iv_len, off_t sector, void *opaque)
+	    size_t iv_len, off_t sector)
 {
 	bzero(iv, iv_len);
 	*((uint32_t *)iv) = htole32((uint32_t)(sector + priv->iv_offset));
-	dmtc_crypto_dispatch(opaque);
 }
 
 static void
 plain64_ivgen(dm_target_crypt_config_t *priv, u_int8_t *iv,
-    size_t iv_len, off_t sector, void *opaque)
+    size_t iv_len, off_t sector)
 {
 	bzero(iv, iv_len);
 	*((uint64_t *)iv) = htole64((uint64_t)(sector + priv->iv_offset));
-	dmtc_crypto_dispatch(opaque);
 }
-
-#if 0
-static void
-geli_ivgen(dm_target_crypt_config_t *priv, u_int8_t *iv,
-	   size_t iv_len, off_t sector, void *opaque)
-{
-
-	SHA512_CTX	ctx512;
-	u_int8_t	md[SHA512_DIGEST_LENGTH]; /* Max. Digest Size */
-
-	memcpy(&ctx512, &priv->essivsha512_ctx, sizeof(SHA512_CTX));
-	SHA512_Update(&ctx512, (u_int8_t*)&sector, sizeof(off_t));
-	SHA512_Final(md, &ctx512);
-
-	memcpy(iv, md, iv_len);
-	dmtc_crypto_dispatch(opaque);
-}
-#endif
 
 /*
  * Init function called from dm_table_load_ioctl.
@@ -553,14 +579,38 @@ hex2key(char *hex, size_t key_len, u_int8_t *key)
 	return 0;
 }
 
+/**
+ * Map between dm_target_crypt algorithm naming and our own crypto/crypt_cipher
+ * naming It happens that they are identical, but it doesn't have to be this
+ * way.
+ */
+static const struct crypto_cipher *
+dmtc_find_crypto_cipher(const char *crypto_alg, const char *crypto_mode,
+    int klen_in_bits)
+{
+#define ALGO_MODE_EQ(algo, mode) \
+	((strcmp(crypto_alg, algo) == 0) && (strcmp(crypto_mode, mode) == 0))
+
+	if (ALGO_MODE_EQ("aes", "cbc"))
+		return crypto_cipher_find("aes", "cbc", klen_in_bits);
+
+	if (ALGO_MODE_EQ("aes", "xts"))
+		return crypto_cipher_find("aes", "xts", klen_in_bits);
+
+	kprintf("dm_target_crypt: unsupported algo: %s and mode: %s\n",
+	    crypto_alg, crypto_mode);
+
+	return NULL;
+}
+
 static int
 dm_target_crypt_init(dm_table_entry_t *table_en, int argc, char **argv)
 {
 	dm_target_crypt_config_t *priv;
 	size_t len;
-	char *crypto_alg, *crypto_mode, *iv_mode, *iv_opt, *key, *dev;
+	char *crypto_alg, *crypto_mode, *iv_mode, *iv_opt, *hex_key, *dev;
 	char *status_str;
-	int i, klen, error;
+	int i, klen_in_bits, error;
 	uint64_t iv_offset, block_offset;
 
 	if (argc != 5) {
@@ -581,18 +631,18 @@ dm_target_crypt_init(dm_table_entry_t *table_en, int argc, char **argv)
 	crypto_mode = strsep(&argv[0], "-");
 	iv_opt = strsep(&argv[0], "-");
 	iv_mode = strsep(&iv_opt, ":");
-	key = argv[1];
+	hex_key = argv[1];
 	iv_offset = strtouq(argv[2], NULL, 0);
 	dev = argv[3];
 	block_offset = strtouq(argv[4], NULL, 0);
-	/* bits / 8 = bytes, 1 byte = 2 hexa chars, so << 2 */
-	klen = strlen(key) << 2;
+	/* hex_key is specified in hex, so one hex char == 4 bits */
+	klen_in_bits = strlen(hex_key) * 4;
 
 #if 0
 	kprintf("dm_target_crypt - new: dev=%s, crypto_alg=%s, crypto_mode=%s, "
 		"iv_mode=%s, iv_opt=%s, key=%s, iv_offset=%ju, "
 		"block_offset=%ju\n",
-		dev, crypto_alg, crypto_mode, iv_mode, iv_opt, key, iv_offset,
+		dev, crypto_alg, crypto_mode, iv_mode, iv_opt, hex_key, iv_offset,
 		block_offset);
 #endif
 
@@ -605,103 +655,13 @@ dm_target_crypt_init(dm_table_entry_t *table_en, int argc, char **argv)
 		return ENOENT;
 	}
 
-	/*
-	 * This code checks for valid combinations of algorithm and mode.
-	 * Currently supported options are:
-	 *
-	 * *-cbc
-	 * aes-xts
-	 * twofish-xts
-	 * serpent-xts
-	 */
-	if ((strcmp(crypto_mode, "cbc") != 0) &&
-	    !((strcmp(crypto_mode, "xts") == 0) &&
-	    ((strcmp(crypto_alg, "aes") == 0) ||
-	    (strcmp(crypto_alg, "twofish") == 0) ||
-	    (strcmp(crypto_alg, "serpent") == 0))))
-	{
-		kprintf("dm_target_crypt: only support 'cbc' chaining mode,"
-		    " aes-xts, twofish-xts and serpent-xts, "
-		    "invalid mode '%s-%s'\n",
-		    crypto_alg, crypto_mode);
+	priv->crypto_cipher = dmtc_find_crypto_cipher(crypto_alg, crypto_mode, klen_in_bits);
+	priv->crypto_klen = klen_in_bits;
+	if (priv->crypto_cipher == NULL)
 		goto notsup;
-	}
 
-	if (!strcmp(crypto_alg, "aes")) {
-		if (!strcmp(crypto_mode, "xts")) {
-			priv->crypto_alg = CRYPTO_AES_XTS;
-			if (klen != 256 && klen != 512)
-				goto notsup;
-		} else if (!strcmp(crypto_mode, "cbc")) {
-			priv->crypto_alg = CRYPTO_AES_CBC;
-			if (klen != 128 && klen != 192 && klen != 256)
-				goto notsup;
-		} else {
-			goto notsup;
-		}
-		priv->crypto_klen = klen;
-	} else if (!strcmp(crypto_alg, "twofish")) {
-		if (!strcmp(crypto_mode, "xts")) {
-			priv->crypto_alg = CRYPTO_TWOFISH_XTS;
-			if (klen != 256 && klen != 512)
-				goto notsup;
-		} else if (!strcmp(crypto_mode, "cbc")) {
-			priv->crypto_alg = CRYPTO_TWOFISH_CBC;
-			if (klen != 128 && klen != 192 && klen != 256)
-				goto notsup;
-		} else {
-			goto notsup;
-		}
-		priv->crypto_klen = klen;
-	} else if (!strcmp(crypto_alg, "serpent")) {
-		if (!strcmp(crypto_mode, "xts")) {
-			priv->crypto_alg = CRYPTO_SERPENT_XTS;
-			if (klen != 256 && klen != 512)
-				goto notsup;
-		} else if (!strcmp(crypto_mode, "cbc")) {
-			priv->crypto_alg = CRYPTO_SERPENT_CBC;
-			if (klen != 128 && klen != 192 && klen != 256)
-				goto notsup;
-		} else {
-			goto notsup;
-		}
-		priv->crypto_klen = klen;
-	} else if (!strcmp(crypto_alg, "blowfish")) {
-		priv->crypto_alg = CRYPTO_BLF_CBC;
-		if (klen < 128 || klen > 448 || (klen % 8) != 0)
-			goto notsup;
-		priv->crypto_klen = klen;
-	} else if (!strcmp(crypto_alg, "3des") ||
-		   !strncmp(crypto_alg, "des3", 4)) {
-		priv->crypto_alg = CRYPTO_3DES_CBC;
-		if (klen != 168)
-			goto notsup;
-		priv->crypto_klen = 168;
-	} else if (!strcmp(crypto_alg, "camellia")) {
-		priv->crypto_alg = CRYPTO_CAMELLIA_CBC;
-		if (klen != 128 && klen != 192 && klen != 256)
-			goto notsup;
-		priv->crypto_klen = klen;
-	} else if (!strcmp(crypto_alg, "skipjack")) {
-		priv->crypto_alg = CRYPTO_SKIPJACK_CBC;
-		if (klen != 80)
-			goto notsup;
-		priv->crypto_klen = 80;
-	} else if (!strcmp(crypto_alg, "cast5")) {
-		priv->crypto_alg = CRYPTO_CAST_CBC;
-		if (klen != 128)
-			goto notsup;
-		priv->crypto_klen = 128;
-	} else if (!strcmp(crypto_alg, "null")) {
-		priv->crypto_alg = CRYPTO_NULL_CBC;
-		if (klen != 128)
-			goto notsup;
-		priv->crypto_klen = 128;
-	} else {
-		kprintf("dm_target_crypt: Unsupported crypto algorithm: %s\n",
-			crypto_alg);
-		goto notsup;
-	}
+	kprintf("dm_target_crypt: using crypto_cipher: %s\n",
+			priv->crypto_cipher->description);
 
 	/* Save length of param string */
 	priv->params_len = len;
@@ -712,7 +672,7 @@ dm_target_crypt_init(dm_table_entry_t *table_en, int argc, char **argv)
 
 	dm_table_init_target(table_en, priv);
 
-	error = hex2key(key, priv->crypto_klen >> 3,
+	error = hex2key(hex_key, priv->crypto_klen / 8,
 			(u_int8_t *)priv->crypto_key);
 
 	if (error) {
@@ -723,7 +683,7 @@ dm_target_crypt_init(dm_table_entry_t *table_en, int argc, char **argv)
 
 	/* Handle cmd */
 	for(i = 0; ivgens[i].name != NULL; i++) {
-		if (!strcmp(iv_mode, ivgens[i].name))
+		if (strcmp(iv_mode, ivgens[i].name) == 0)
 			break;
 	}
 
@@ -746,15 +706,10 @@ dm_target_crypt_init(dm_table_entry_t *table_en, int argc, char **argv)
 
 	priv->ivgen = &ivgens[i];
 
-	priv->crypto_session.cri_alg = priv->crypto_alg;
-	priv->crypto_session.cri_key = (u_int8_t *)priv->crypto_key;
-	priv->crypto_session.cri_klen = priv->crypto_klen;
-	priv->crypto_session.cri_mlen = 0;
-	priv->crypto_session.cri_next = NULL;
+	error = priv->crypto_cipher->setkey(&priv->crypto_context,
+		(const u_int8_t *)priv->crypto_key,
+		priv->crypto_klen / 8);
 
-	error = crypto_newsession(&priv->crypto_sid,
-				  &priv->crypto_session,
-				  CRYPTOCAP_F_SOFTWARE | CRYPTOCAP_F_HARDWARE);
 	if (error) {
 		kprintf("dm_target_crypt: Error during crypto_newsession, "
 			"error = %d\n",
@@ -762,20 +717,53 @@ dm_target_crypt_init(dm_table_entry_t *table_en, int argc, char **argv)
 		goto notsup;
 	}
 
-	memset(key, '0', strlen(key));
+	memset(hex_key, '0', strlen(hex_key));
 	if (iv_opt) {
 		ksprintf(status_str, "%s-%s-%s:%s %s %ju %s %ju",
 		    crypto_alg, crypto_mode, iv_mode, iv_opt,
-		    key, iv_offset, dev, block_offset);
+		    hex_key, iv_offset, dev, block_offset);
 	} else {
 		ksprintf(status_str, "%s-%s-%s %s %ju %s %ju",
 		    crypto_alg, crypto_mode, iv_mode,
-		    key, iv_offset, dev, block_offset);
+		    hex_key, iv_offset, dev, block_offset);
 	}
 	priv->status_str = status_str;
 
-	/* Initialize mpipes */
-	dmtc_init_mpipe(priv);
+	/**
+	 * Allocate and start work queues / workers.
+	 */
+	priv->crypto_read_worker_contexts =
+	    kmalloc(sizeof(struct worker_context) * ncpus, M_DMCRYPT,
+		M_WAITOK | M_ZERO);
+	priv->crypto_write_worker_contexts =
+	    kmalloc(sizeof(struct worker_context) * ncpus, M_DMCRYPT,
+		M_WAITOK | M_ZERO);
+	priv->crypto_read_workqueues = kmalloc(sizeof(struct workqueue) * ncpus,
+	    M_DMCRYPT, M_WAITOK | M_ZERO);
+	priv->crypto_write_workqueues = kmalloc(sizeof(struct workqueue) *
+		ncpus,
+	    M_DMCRYPT, M_WAITOK | M_ZERO);
+
+	for (int cpu = 0; cpu < ncpus; ++cpu) {
+		priv->crypto_read_worker_contexts[cpu].data_buf =
+		    kmalloc(DMTC_BUF_SIZE, M_DMCRYPT, M_WAITOK);
+		priv->crypto_read_worker_contexts[cpu].data_buf_size =
+		    DMTC_BUF_SIZE;
+		priv->crypto_read_worker_contexts[cpu].data_buf_busy = false;
+		workqueue_start(&priv->crypto_read_workqueues[cpu], cpu,
+		    &priv->crypto_read_worker_contexts[cpu], 10);
+
+		priv->crypto_write_worker_contexts[cpu].data_buf =
+		    kmalloc(DMTC_BUF_SIZE, M_DMCRYPT, M_WAITOK);
+		priv->crypto_write_worker_contexts[cpu].data_buf_size =
+		    DMTC_BUF_SIZE;
+		priv->crypto_write_worker_contexts[cpu].data_buf_busy = false;
+		workqueue_start(&priv->crypto_write_workqueues[cpu], cpu,
+		    &priv->crypto_write_worker_contexts[cpu], 5);
+	}
+
+	priv->crypto_read_workqueue_next_rr = 0;
+	priv->crypto_write_workqueue_next_rr = 0;
 
 	return 0;
 
@@ -816,6 +804,25 @@ dm_target_crypt_destroy(dm_table_entry_t *table_en)
 	dm_pdev_decr(priv->pdev);
 
 	/*
+	 * Stop work queues / free allocated memory.
+	 */
+
+	for (int cpu = 0; cpu < ncpus; cpu++) {
+		workqueue_stop(&priv->crypto_read_workqueues[cpu]);
+		kfree(priv->crypto_read_worker_contexts[cpu].data_buf,
+		    M_DMCRYPT);
+
+		workqueue_stop(&priv->crypto_write_workqueues[cpu]);
+		kfree(priv->crypto_write_worker_contexts[cpu].data_buf,
+		    M_DMCRYPT);
+	}
+	kfree(priv->crypto_read_worker_contexts, M_DMCRYPT);
+	kfree(priv->crypto_read_workqueues, M_DMCRYPT);
+
+	kfree(priv->crypto_write_worker_contexts, M_DMCRYPT);
+	kfree(priv->crypto_write_workqueues, M_DMCRYPT);
+
+	/*
 	 * Clean up the crypt config
 	 *
 	 * Overwrite the private information before freeing memory to
@@ -824,15 +831,11 @@ dm_target_crypt_destroy(dm_table_entry_t *table_en)
 	if (priv->status_str) {
 		dmtc_crypto_clear(priv->status_str, strlen(priv->status_str));
 		kfree(priv->status_str, M_DMCRYPT);
-		crypto_freesession(priv->crypto_sid);
 	}
 
 	if ((priv->ivgen) && (priv->ivgen->dtor != NULL)) {
 		priv->ivgen->dtor(priv, priv->ivgen_priv);
 	}
-
-	/* Destroy mpipes */
-	dmtc_destroy_mpipe(priv);
 
 	dmtc_crypto_clear(priv, sizeof(dm_target_crypt_config_t));
 	kfree(priv, M_DMCRYPT);
@@ -844,23 +847,17 @@ dm_target_crypt_destroy(dm_table_entry_t *table_en)
  *			STRATEGY SUPPORT FUNCTIONS			*
  ************************************************************************
  *
- * READ PATH:	doio -> bio_read_done -> crypto_work -> crypto_cb_read_done
- * WRITE PATH:	crypto_work -> crypto_cb_write_done -> doio -> bio_write_done
+ * READ PATH:	doio -> bio_read_done -> bio_read_decrypt
+ * WRITE PATH:	bio_write_encrypt -> doio -> bio_write_done
  */
 
-/*
- * Wrapper around crypto_dispatch() to match dispatch_t type
+/**
+ * Use of bio_caller_infoX:
+ *
+ * bio_caller_info1: priv
+ * bio_caller_info2: orig b_data pointer (WRITE PATH only)
+ * bio_caller_info3: data_buf (WRITE PATH only)
  */
-static void
-dmtc_crypto_dispatch(void *arg)
-{
-	struct cryptop *crp;
-
-	crp = (struct cryptop *)arg;
-	KKASSERT(crp != NULL);
-	KTR_LOG(dmcrypt_crypto_dispatch, crp);
-	crypto_dispatch(crp);
-}
 
 /*
  * Start IO operation, called from dmstrategy routine.
@@ -874,11 +871,14 @@ dm_target_crypt_strategy(dm_table_entry_t *table_en, struct buf *bp)
 	priv = table_en->target_config;
 
 	/* Get rid of stuff we can't really handle */
-	if ((bp->b_cmd == BUF_CMD_READ) || (bp->b_cmd == BUF_CMD_WRITE)) {
-		if (((bp->b_bcount % DEV_BSIZE) != 0) || (bp->b_bcount == 0)) {
-			kprintf("dm_target_crypt_strategy: can't really "
-				"handle bp->b_bcount = %d\n",
-				bp->b_bcount);
+	if ((bp->b_cmd == BUF_CMD_READ) ||
+	    (bp->b_cmd == BUF_CMD_WRITE)) {
+		if (((bp->b_bcount % DEV_BSIZE) != 0) ||
+		    (bp->b_bcount == 0)) {
+			kprintf(
+			    "dm_target_crypt_strategy: can't really "
+			    "handle bp->b_bcount = %d\n",
+			    bp->b_bcount);
 			bp->b_error = EINVAL;
 			bp->b_flags |= B_ERROR | B_INVAL;
 			biodone(&bp->b_bio1);
@@ -886,13 +886,11 @@ dm_target_crypt_strategy(dm_table_entry_t *table_en, struct buf *bp)
 		}
 	}
 
-	KTR_LOG(dmcrypt_crypt_strategy, bp->b_cmd, bp);
-
 	switch (bp->b_cmd) {
 	case BUF_CMD_READ:
 		bio = push_bio(&bp->b_bio1);
 		bio->bio_offset = bp->b_bio1.bio_offset +
-				  priv->block_offset * DEV_BSIZE;
+		    priv->block_offset * DEV_BSIZE;
 		bio->bio_caller_info1.ptr = priv;
 		bio->bio_done = dmtc_bio_read_done;
 		vn_strategy(priv->pdev->pdev_vnode, bio);
@@ -900,9 +898,9 @@ dm_target_crypt_strategy(dm_table_entry_t *table_en, struct buf *bp)
 	case BUF_CMD_WRITE:
 		bio = push_bio(&bp->b_bio1);
 		bio->bio_offset = bp->b_bio1.bio_offset +
-				  priv->block_offset * DEV_BSIZE;
+		    priv->block_offset * DEV_BSIZE;
 		bio->bio_caller_info1.ptr = priv;
-		dmtc_crypto_write_start(priv, bio);
+		dmtc_bio_write_encrypt(priv, bio);
 		break;
 	default:
 		vn_strategy(priv->pdev->pdev_vnode, &bp->b_bio1);
@@ -911,9 +909,26 @@ dm_target_crypt_strategy(dm_table_entry_t *table_en, struct buf *bp)
 	return 0;
 }
 
+__inline static int
+select_read_workqueue_index(dm_target_crypt_config_t *priv)
+{
+	return atomic_fetchadd_int(&priv->crypto_read_workqueue_next_rr,
+		   1) %
+	    ncpus;
+}
+
+__inline static int
+select_write_workqueue_index(dm_target_crypt_config_t *priv)
+{
+	return atomic_fetchadd_int(
+		   &priv->crypto_write_workqueue_next_rr, 1) %
+	    ncpus;
+}
+
 /*
- * STRATEGY READ PATH PART 1/3 (after read BIO completes)
+ * STRATEGY READ PATH (after read BIO completes)
  */
+
 static void
 dmtc_bio_read_done(struct bio *bio)
 {
@@ -921,384 +936,231 @@ dmtc_bio_read_done(struct bio *bio)
 
 	dm_target_crypt_config_t *priv;
 
-	KTR_LOG(dmcrypt_bio_read_done, bio->bio_buf);
-
 	/*
 	 * If a read error occurs we shortcut the operation, otherwise
-	 * go on to stage 2.
+	 * go on to stage 2 (decrypt).
 	 */
 	if (bio->bio_buf->b_flags & B_ERROR) {
 		obio = pop_bio(bio);
 		biodone(obio);
 	} else {
 		priv = bio->bio_caller_info1.ptr;
-		dmtc_crypto_read_start(priv, bio);
+		dmtc_bio_read_decrypt(priv, bio);
 	}
 }
 
-/*
- * STRATEGY READ PATH PART 2/3
- */
-static void
-dmtc_crypto_read_retry(void *arg1, void *arg2)
-{
-	dm_target_crypt_config_t *priv = arg1;
-	struct bio *bio = arg2;
+__inline static void
+dmtc_bio_read_decrypt_job_do(dm_target_crypt_config_t *priv,
+    struct bio *bio, struct worker_context *ctx);
 
-	dmtc_crypto_read_start(priv, bio);
+static void
+dmtc_bio_read_decrypt_job(void *arg1, void *arg2, void *ctx)
+{
+	dmtc_bio_read_decrypt_job_do(arg1, arg2, ctx);
 }
 
-static void
-dmtc_crypto_read_start(dm_target_crypt_config_t *priv, struct bio *bio)
+__inline static void
+dmtc_bio_read_decrypt_job_do(dm_target_crypt_config_t *priv,
+    struct bio *bio, struct worker_context *ctx)
 {
-	struct dmtc_helper *dmtc;
-	struct cryptodesc *crd;
-	struct cryptop *crp;
-	int i, bytes, sectors, sz;
-	off_t isector;
-	u_char *ptr, *space;
+	uint8_t *data_buf = ctx->data_buf;
+
+	KKASSERT(ctx->data_buf_busy == false);
 
 	/*
 	 * Note: b_resid no good after read I/O, it will be 0, use
 	 *	 b_bcount.
 	 */
-	bytes = bio->bio_buf->b_bcount;
-	isector = bio->bio_offset / DEV_BSIZE;	/* ivgen salt base? */
-	sectors = bytes / DEV_BSIZE;		/* Number of sectors */
-	sz = sectors * (sizeof(*crp) + sizeof(*crd));
+	int bytes = bio->bio_buf->b_bcount;
 
 	/*
+	 * Unconditionally copy in data. Never decrypt in place!
+	 *
 	 * For reads with bogus page we can't decrypt in place as stuff
 	 * can get ripped out from under us.
-	 *
-	 * XXX actually it looks like we can, and in any case the initial
-	 * read already completed and threw crypted data into the buffer
-	 * cache buffer.  Disable for now.
 	 */
-	space = mpipe_alloc_callback(&priv->read_mpipe,
-				     dmtc_crypto_read_retry, priv, bio);
-	if (space == NULL)
-		return;
+	memcpy(data_buf, bio->bio_buf->b_data, bytes);
 
-	dmtc = (struct dmtc_helper *)space;
-	dmtc->free_addr = space;
-	space += sizeof(struct dmtc_helper);
-	dmtc->orig_buf = NULL;
-	dmtc->data_buf = bio->bio_buf->b_data;
-	dmtc->priv = priv;
-	bio->bio_caller_info2.ptr = dmtc;
-	bio->bio_buf->b_error = 0;
+	bio->bio_buf->b_error = dmtc_bio_encdec(priv, data_buf, bytes,
+	    bio->bio_offset, priv->crypto_cipher->decrypt);
 
-	/*
-	 * Load crypto descriptors (crp/crd loop)
-	 */
-	bzero(space, sz);
-	ptr = space;
-	bio->bio_caller_info3.value = sectors;
-	cpu_sfence();
-#if 0
-	kprintf("Read, bytes = %d (b_bcount), "
-		"sectors = %d (bio = %p, b_cmd = %d)\n",
-		bytes, sectors, bio, bio->bio_buf->b_cmd);
-#endif
-	for (i = 0; i < sectors; i++) {
-		crp = (struct cryptop *)ptr;
-		ptr += sizeof(*crp);
-		crd = (struct cryptodesc *)ptr;
-		ptr += sizeof (*crd);
+	if (bio->bio_buf->b_error) {
+		kprintf(
+		    "dm_target_crypt: dmtc_bio_read_decrypt error = %d\n",
+		    bio->bio_buf->b_error);
 
-		crp->crp_buf = dmtc->data_buf + i * DEV_BSIZE;
-
-		crp->crp_sid = priv->crypto_sid;
-		crp->crp_ilen = crp->crp_olen = DEV_BSIZE;
-
-		crp->crp_opaque = (void *)bio;
-
-		crp->crp_callback = dmtc_crypto_cb_read_done;
-		crp->crp_desc = crd;
-		crp->crp_etype = 0;
-		crp->crp_flags = CRYPTO_F_CBIFSYNC | CRYPTO_F_REL |
-				 CRYPTO_F_BATCH;
-
-		crd->crd_alg = priv->crypto_alg;
-#if 0
-		crd->crd_key = (caddr_t)priv->crypto_key;
-		crd->crd_klen = priv->crypto_klen;
-#endif
-
-		crd->crd_skip = 0;
-		crd->crd_len = DEV_BSIZE /* XXX */;
-		crd->crd_flags = CRD_F_IV_EXPLICIT | CRD_F_IV_PRESENT;
-		crd->crd_next = NULL;
-
-		crd->crd_flags &= ~CRD_F_ENCRYPT;
-
-		KTR_LOG(dmcrypt_crypto_read_start, crp, bio->bio_buf, i,
-		    sectors);
-
-		/*
-		 * Note: last argument is used to generate salt(?) and is
-		 *	 a 64 bit value, but the original code passed an
-		 *	 int.  Changing it now will break pre-existing
-		 *	 crypt volumes.
-		 */
-		priv->ivgen->gen_iv(priv, crd->crd_iv, sizeof(crd->crd_iv),
-				    isector + i, crp);
+		bio->bio_buf->b_flags |= B_ERROR;
+	} else {
+		memcpy(bio->bio_buf->b_data, data_buf, bytes);
 	}
+#if 0
+	else if (bio->bio_buf->b_flags & B_HASBOGUS) {
+		memcpy(bio->bio_buf->b_data, dmtc->data_buf,
+		       bio->bio_buf->b_bcount);
+	}
+#endif
+	struct bio *obio = pop_bio(bio);
+	biodone(obio);
 }
 
-/*
- * STRATEGY READ PATH PART 3/3
- */
-static int
-dmtc_crypto_cb_read_done(struct cryptop *crp)
+static void
+dmtc_bio_read_decrypt(dm_target_crypt_config_t *priv, struct bio *bio)
 {
-	struct dmtc_helper *dmtc;
-	struct bio *bio, *obio;
-	int n;
+	int error = workqueue_submit_job(
+	    &priv->crypto_read_workqueues[select_read_workqueue_index(
+		priv)],
+	    dmtc_bio_read_decrypt_job, (void *)priv, (void *)bio);
+	if (error) {
+		bio->bio_buf->b_error = error;
+		kprintf(
+		    "dm_target_crypt: dmtc_bio_read_decrypt error = %d\n",
+		    bio->bio_buf->b_error);
 
-	if (crp->crp_etype == EAGAIN)
-		return crypto_dispatch(crp);
-
-	bio = (struct bio *)crp->crp_opaque;
-	KKASSERT(bio != NULL);
-
-	/*
-	 * Cumulative error
-	 */
-	if (crp->crp_etype) {
-		kprintf("dm_target_crypt: dmtc_crypto_cb_read_done "
-			"crp_etype = %d\n",
-			crp->crp_etype);
-		bio->bio_buf->b_error = crp->crp_etype;
-	}
-
-	/*
-	 * On the last chunk of the decryption we do any required copybacks
-	 * and complete the I/O.
-	 */
-	n = atomic_fetchadd_int(&bio->bio_caller_info3.value, -1);
-#if 0
-	kprintf("dmtc_crypto_cb_read_done %p, n = %d\n", bio, n);
-#endif
-
-	KTR_LOG(dmcrypt_crypto_cb_read_done, crp, bio->bio_buf, n);
-
-	if (n == 1) {
-		/*
-		 * For the B_HASBOGUS case we didn't decrypt in place,
-		 * so we need to copy stuff back into the buf.
-		 *
-		 * (disabled for now).
-		 */
-		dmtc = bio->bio_caller_info2.ptr;
-		if (bio->bio_buf->b_error) {
-			bio->bio_buf->b_flags |= B_ERROR;
-		}
-#if 0
-		else if (bio->bio_buf->b_flags & B_HASBOGUS) {
-			memcpy(bio->bio_buf->b_data, dmtc->data_buf,
-			       bio->bio_buf->b_bcount);
-		}
-#endif
-		mpipe_free(&dmtc->priv->read_mpipe, dmtc->free_addr);
-		obio = pop_bio(bio);
+		bio->bio_buf->b_flags |= B_ERROR;
+		struct bio *obio = pop_bio(bio);
 		biodone(obio);
 	}
-	return 0;
 }
+
 /* END OF STRATEGY READ SECTION */
 
 /*
- * STRATEGY WRITE PATH PART 1/3
+ * STRATEGY WRITE PATH
  */
 
+__inline static void
+dmtc_bio_write_encrypt_job_do(dm_target_crypt_config_t *priv,
+    struct bio *bio, struct worker_context *ctx);
+
 static void
-dmtc_crypto_write_retry(void *arg1, void *arg2)
+dmtc_bio_write_encrypt_job(void *arg1, void *arg2, void *ctx)
 {
-	dm_target_crypt_config_t *priv = arg1;
-	struct bio *bio = arg2;
-
-	KTR_LOG(dmcrypt_crypto_write_retry, bio->bio_buf);
-
-	dmtc_crypto_write_start(priv, bio);
+	dmtc_bio_write_encrypt_job_do(arg1, arg2, ctx);
 }
 
-static void
-dmtc_crypto_write_start(dm_target_crypt_config_t *priv, struct bio *bio)
+__inline static void
+dmtc_bio_write_encrypt_job_do(dm_target_crypt_config_t *priv,
+    struct bio *bio, struct worker_context *ctx)
 {
-	struct dmtc_helper *dmtc;
-	struct cryptodesc *crd;
-	struct cryptop *crp;
-	int i, bytes, sectors, sz;
-	off_t isector;
-	u_char *ptr, *space;
+	uint8_t *data_buf = ctx->data_buf;
+
+	KKASSERT(ctx->data_buf_busy == false);
+
+	ctx->data_buf_busy = true;
 
 	/*
 	 * Use b_bcount for consistency
 	 */
-	bytes = bio->bio_buf->b_bcount;
+	int bytes = bio->bio_buf->b_bcount;
 
-	isector = bio->bio_offset / DEV_BSIZE;	/* ivgen salt base? */
-	sectors = bytes / DEV_BSIZE;		/* Number of sectors */
-	sz = sectors * (sizeof(*crp) + sizeof(*crd));
+	KKASSERT(bytes <= ctx->data_buf_size);
 
-	/*
-	 * For writes and reads with bogus page don't decrypt in place.
-	 */
-	space = mpipe_alloc_callback(&priv->write_mpipe,
-				     dmtc_crypto_write_retry, priv, bio);
-	if (space == NULL)
-		return;
+	memcpy(data_buf, bio->bio_buf->b_data, bytes);
 
-	dmtc = (struct dmtc_helper *)space;
-	dmtc->free_addr = space;
-	space += sizeof(struct dmtc_helper);
-	memcpy(space + sz, bio->bio_buf->b_data, bytes);
+	bio->bio_buf->b_error = dmtc_bio_encdec(priv, data_buf, bytes,
+	    bio->bio_offset, priv->crypto_cipher->encrypt);
 
-	bio->bio_caller_info2.ptr = dmtc;
-	bio->bio_buf->b_error = 0;
+	if (bio->bio_buf->b_error) {
+		kprintf(
+		    "dm_target_crypt: dmtc_bio_write_encrypt error = %d\n",
+		    bio->bio_buf->b_error);
 
-	dmtc->orig_buf = bio->bio_buf->b_data;
-	dmtc->data_buf = space + sz;
-	dmtc->priv = priv;
-
-	/*
-	 * Load crypto descriptors (crp/crd loop)
-	 */
-	bzero(space, sz);
-	ptr = space;
-	bio->bio_caller_info3.value = sectors;
-	cpu_sfence();
-#if 0
-	kprintf("Write, bytes = %d (b_bcount), "
-		"sectors = %d (bio = %p, b_cmd = %d)\n",
-		bytes, sectors, bio, bio->bio_buf->b_cmd);
-#endif
-	for (i = 0; i < sectors; i++) {
-		crp = (struct cryptop *)ptr;
-		ptr += sizeof(*crp);
-		crd = (struct cryptodesc *)ptr;
-		ptr += sizeof (*crd);
-
-		crp->crp_buf = dmtc->data_buf + i * DEV_BSIZE;
-
-		crp->crp_sid = priv->crypto_sid;
-		crp->crp_ilen = crp->crp_olen = DEV_BSIZE;
-
-		crp->crp_opaque = (void *)bio;
-
-		crp->crp_callback = dmtc_crypto_cb_write_done;
-		crp->crp_desc = crd;
-		crp->crp_etype = 0;
-		crp->crp_flags = CRYPTO_F_CBIFSYNC | CRYPTO_F_REL |
-				 CRYPTO_F_BATCH;
-
-		crd->crd_alg = priv->crypto_alg;
-#if 0
-		crd->crd_key = (caddr_t)priv->crypto_key;
-		crd->crd_klen = priv->crypto_klen;
-#endif
-
-		crd->crd_skip = 0;
-		crd->crd_len = DEV_BSIZE /* XXX */;
-		crd->crd_flags = CRD_F_IV_EXPLICIT | CRD_F_IV_PRESENT;
-		crd->crd_next = NULL;
-
-		crd->crd_flags |= CRD_F_ENCRYPT;
+		bio->bio_buf->b_flags |= B_ERROR;
+		struct bio *obio = pop_bio(bio);
+		biodone(obio);
+	} else {
+		bio->bio_caller_info2.ptr =
+		    bio->bio_buf->b_data; /* orig_buf */
+		bio->bio_caller_info3.ptr = ctx;
+		bio->bio_buf->b_data = data_buf;
+		bio->bio_done = dmtc_bio_write_done;
 
 		/*
-		 * Note: last argument is used to generate salt(?) and is
-		 *	 a 64 bit value, but the original code passed an
-		 *	 int.  Changing it now will break pre-existing
-		 *	 crypt volumes.
+		 * TODO: @dillon can't we just copy back data_buf to
+		 * bio->bio_buf->b_data and then call vn_stategy with
+		 * it, or do we have to call vn_strategy pointing to our
+		 * own local allocated memory?
 		 */
+		vn_strategy(priv->pdev->pdev_vnode, bio);
 
-		KTR_LOG(dmcrypt_crypto_write_start, crp, bio->bio_buf,
-		    i, sectors);
-
-		priv->ivgen->gen_iv(priv, crd->crd_iv, sizeof(crd->crd_iv),
-				    isector + i, crp);
-	}
-}
-
-/*
- * STRATEGY WRITE PATH PART 2/3
- */
-static int
-dmtc_crypto_cb_write_done(struct cryptop *crp)
-{
-	struct dmtc_helper *dmtc;
-	dm_target_crypt_config_t *priv;
-	struct bio *bio, *obio;
-	int n;
-
-	if (crp->crp_etype == EAGAIN)
-		return crypto_dispatch(crp);
-
-	bio = (struct bio *)crp->crp_opaque;
-	KKASSERT(bio != NULL);
-
-	/*
-	 * Cumulative error
-	 */
-	if (crp->crp_etype != 0) {
-		kprintf("dm_target_crypt: dmtc_crypto_cb_write_done "
-			"crp_etype = %d\n",
-		crp->crp_etype);
-		bio->bio_buf->b_error = crp->crp_etype;
-	}
-
-	/*
-	 * On the last chunk of the encryption we issue the write
-	 */
-	n = atomic_fetchadd_int(&bio->bio_caller_info3.value, -1);
-#if 0
-	kprintf("dmtc_crypto_cb_write_done %p, n = %d\n", bio, n);
-#endif
-
-	KTR_LOG(dmcrypt_crypto_cb_write_done, crp, bio->bio_buf, n);
-
-	if (n == 1) {
-		dmtc = bio->bio_caller_info2.ptr;
-		priv = (dm_target_crypt_config_t *)bio->bio_caller_info1.ptr;
-
-		if (bio->bio_buf->b_error) {
-			bio->bio_buf->b_flags |= B_ERROR;
-			mpipe_free(&dmtc->priv->write_mpipe, dmtc->free_addr);
-			obio = pop_bio(bio);
-			biodone(obio);
-		} else {
-			dmtc->orig_buf = bio->bio_buf->b_data;
-			bio->bio_buf->b_data = dmtc->data_buf;
-			bio->bio_done = dmtc_bio_write_done;
-			vn_strategy(priv->pdev->pdev_vnode, bio);
+		while (ctx->data_buf_busy) {
+			tsleep(ctx, 0,
+			    "wait for dmtc_bio_write_done to complete",
+			    100);
 		}
 	}
-	return 0;
 }
 
-/*
- * STRATEGY WRITE PATH PART 3/3
- */
 static void
 dmtc_bio_write_done(struct bio *bio)
 {
-	struct dmtc_helper *dmtc;
-	struct bio *obio;
+	struct worker_context *ctx = bio->bio_caller_info3.ptr;
 
-	dmtc = bio->bio_caller_info2.ptr;
-	bio->bio_buf->b_data = dmtc->orig_buf;
-	mpipe_free(&dmtc->priv->write_mpipe, dmtc->free_addr);
+	ctx->data_buf_busy = false;
+	wakeup(ctx);
 
-	KTR_LOG(dmcrypt_bio_write_done, bio->bio_buf);
+	// Restore original bio buffer
+	bio->bio_buf->b_data = bio->bio_caller_info2.ptr;
 
-	obio = pop_bio(bio);
+	struct bio *obio = pop_bio(bio);
 	biodone(obio);
 }
+
+static void
+dmtc_bio_write_encrypt(dm_target_crypt_config_t *priv, struct bio *bio)
+{
+	int error = workqueue_submit_job(
+	    &priv->crypto_write_workqueues[select_write_workqueue_index(
+		priv)],
+	    dmtc_bio_write_encrypt_job, (void *)priv, (void *)bio);
+	if (error) {
+		bio->bio_buf->b_error = error;
+		kprintf(
+		    "dm_target_crypt: dmtc_bio_write_encrypt error = %d\n",
+		    bio->bio_buf->b_error);
+
+		bio->bio_buf->b_flags |= B_ERROR;
+		struct bio *obio = pop_bio(bio);
+		biodone(obio);
+	}
+}
+
 /* END OF STRATEGY WRITE SECTION */
 
+static int
+dmtc_bio_encdec(dm_target_crypt_config_t *priv, uint8_t *data_buf,
+    int bytes, off_t offset, crypto_cipher_blockfn_t blockfn)
+{
+	struct crypto_cipher_iv iv;
+	int sectors = bytes / DEV_BSIZE;    /* Number of sectors */
+	off_t isector = offset / DEV_BSIZE; /* ivgen salt base? */
+	int error = 0;
 
+	KKASSERT((sectors * DEV_BSIZE) == bytes);
+
+	for (int i = 0; i < sectors; i++) {
+		/*
+		 * Note: last argument is used to generate salt(?) and
+		 * is a 64 bit value, but the original code passed an
+		 *	 int.  Changing it now will break pre-existing
+		 *	 crypt volumes.
+		 */
+		priv->ivgen->gen_iv(priv, (uint8_t *)&iv, sizeof(iv),
+		    isector + i);
+
+		error = blockfn(&priv->crypto_context,
+		    data_buf + i * DEV_BSIZE, DEV_BSIZE, &iv);
+
+		if (error) {
+			break;
+		}
+	}
+
+	// TODO: required?
+	explicit_bzero(&iv, sizeof(iv));
+
+	return (error);
+}
 
 /* DUMPING MAGIC */
 
@@ -1309,7 +1171,6 @@ dm_target_crypt_dump(dm_table_entry_t *table_en, void *data, size_t length, off_
 {
 	static struct dmtc_dump_helper dump_helper;
 	dm_target_crypt_config_t *priv;
-	int id;
 	static int first_call = 1;
 
 	priv = table_en->target_config;
@@ -1321,7 +1182,6 @@ dm_target_crypt_dump(dm_table_entry_t *table_en, void *data, size_t length, off_
 
 	/* Magically enable tsleep */
 	tsleep_crypto_dump = 1;
-	id = 0;
 
 	/*
 	 * 0 length means flush buffers and return
@@ -1343,18 +1203,7 @@ dm_target_crypt_dump(dm_table_entry_t *table_en, void *data, size_t length, off_
 	dump_helper.length = length;
 	dump_helper.offset = offset +
 	    priv->block_offset * DEV_BSIZE;
-	dump_helper.ident = &id;
-	dmtc_crypto_dump_start(priv, &dump_helper);
-
-	/*
-	 * Hackery to make stuff appear synchronous. The crypto callback will
-	 * set id to 1 and call wakeup on it. If the request completed
-	 * synchronously, id will be 1 and we won't bother to sleep. If not,
-	 * the crypto request will complete asynchronously and we sleep until
-	 * it's done.
-	 */
-	if (id == 0)
-		tsleep(&dump_helper, 0, "cryptdump", 0);
+	dmtc_crypto_dump(priv, &dump_helper);
 
 	dump_helper.offset = dm_pdev_correct_dump_offset(priv->pdev,
 	    dump_helper.offset);
@@ -1368,95 +1217,20 @@ dm_target_crypt_dump(dm_table_entry_t *table_en, void *data, size_t length, off_
 }
 
 static void
-dmtc_crypto_dump_start(dm_target_crypt_config_t *priv, struct dmtc_dump_helper *dump_helper)
+dmtc_crypto_dump(dm_target_crypt_config_t *priv, struct dmtc_dump_helper *dump_helper)
 {
-	struct cryptodesc *crd;
-	struct cryptop *crp;
-	int i, bytes, sectors;
-	off_t isector;
+	int bytes = dump_helper->length;
 
-	bytes = dump_helper->length;
-
-	isector = dump_helper->offset / DEV_BSIZE;	/* ivgen salt base? */
-	sectors = bytes / DEV_BSIZE;		/* Number of sectors */
-	dump_helper->sectors = sectors;
-#if 0
-	kprintf("Dump, bytes = %d, "
-		"sectors = %d, LENGTH=%zu\n", bytes, sectors, dump_helper->length);
-#endif
 	KKASSERT(dump_helper->length <= 65536);
 
 	memcpy(dump_helper->space, dump_helper->data, bytes);
 
-	cpu_sfence();
-
-	for (i = 0; i < sectors; i++) {
-		crp = &dump_helper->crp[i];
-		crd = &dump_helper->crd[i];
-
-		crp->crp_buf = dump_helper->space + i * DEV_BSIZE;
-
-		crp->crp_sid = priv->crypto_sid;
-		crp->crp_ilen = crp->crp_olen = DEV_BSIZE;
-
-		crp->crp_opaque = (void *)dump_helper;
-
-		crp->crp_callback = dmtc_crypto_cb_dump_done;
-		crp->crp_desc = crd;
-		crp->crp_etype = 0;
-		crp->crp_flags = CRYPTO_F_CBIFSYNC | CRYPTO_F_REL |
-				 CRYPTO_F_BATCH;
-
-		crd->crd_alg = priv->crypto_alg;
-
-		crd->crd_skip = 0;
-		crd->crd_len = DEV_BSIZE /* XXX */;
-		crd->crd_flags = CRD_F_IV_EXPLICIT | CRD_F_IV_PRESENT;
-		crd->crd_next = NULL;
-
-		crd->crd_flags |= CRD_F_ENCRYPT;
-
-		/*
-		 * Note: last argument is used to generate salt(?) and is
-		 *	 a 64 bit value, but the original code passed an
-		 *	 int.  Changing it now will break pre-existing
-		 *	 crypt volumes.
-		 */
-		priv->ivgen->gen_iv(priv, crd->crd_iv, sizeof(crd->crd_iv),
-				    isector + i, crp);
+	int error = dmtc_bio_encdec(priv, dump_helper->space, bytes, dump_helper->offset,
+			priv->crypto_cipher->encrypt);
+	if (error != 0) {
+		kprintf("dm_target_crypt: dmtc_crypto_dump = %d\n",
+		error);
 	}
-}
-
-static int
-dmtc_crypto_cb_dump_done(struct cryptop *crp)
-{
-	struct dmtc_dump_helper *dump_helper;
-	int n;
-
-	if (crp->crp_etype == EAGAIN)
-		return crypto_dispatch(crp);
-
-	dump_helper = (struct dmtc_dump_helper *)crp->crp_opaque;
-	KKASSERT(dump_helper != NULL);
-
-	if (crp->crp_etype != 0) {
-		kprintf("dm_target_crypt: dmtc_crypto_cb_dump_done "
-			"crp_etype = %d\n",
-		crp->crp_etype);
-		return crp->crp_etype;
-	}
-
-	/*
-	 * On the last chunk of the encryption we return control
-	 */
-	n = atomic_fetchadd_int(&dump_helper->sectors, -1);
-
-	if (n == 1) {
-		atomic_add_int(dump_helper->ident, 1);
-		wakeup(dump_helper);
-	}
-
-	return 0;
 }
 
 static int
@@ -1498,3 +1272,4 @@ dmtc_mod_handler(module_t mod, int type, void *unused)
 }
 
 DM_TARGET_MODULE(dm_target_crypt, dmtc_mod_handler);
+MODULE_DEPEND(dm_target_crypt, crypto, 2, 2, 2);

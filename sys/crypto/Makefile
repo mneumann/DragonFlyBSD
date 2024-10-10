@@ -2,11 +2,8 @@
 
 KMOD=	crypto
 
-.PATH:	${.CURDIR}/../opencrypto
-# excluded: cryptodev.c
-SRCS=	cast.c criov.c crypto.c cryptosoft.c deflate.c gmac.c rmd160.c \
-	skipjack.c xform.c
-SRCS+=	cryptodev_if.c cryptodev_if.h
+.PATH:	${.CURDIR}
+SRCS+=	crypto_mod.c crypto_cipher.c
 
 SRCS+=	sha1.c
 SRCS+=	chachapoly.c
@@ -14,18 +11,13 @@ SRCS+=	chachapoly.c
 .PATH:	${.CURDIR}/blake2
 SRCS+=	blake2s.c
 
-.PATH:	${.CURDIR}/blowfish
-SRCS+=	bf_enc.c bf_skey.c
-
-.PATH:	${.CURDIR}/camellia
-SRCS+=	camellia.c camellia-api.c
-
 .PATH:	${.CURDIR}/chacha20
 SRCS+=	chacha.c
 
 .PATH:	${.CURDIR}/curve25519
 SRCS+=	curve25519.c
 
+# required by: smb_crypt
 .PATH:	${.CURDIR}/des
 SRCS+=	des_ecb.c des_enc.c des_setkey.c
 
@@ -35,8 +27,8 @@ SRCS+=	poly1305.c
 .PATH:	${.CURDIR}/rijndael
 SRCS+=	rijndael-alg-fst.c rijndael-api.c
 
-.PATH:	${.CURDIR}/serpent
-SRCS+=	serpent.c
+.PATH:	${.CURDIR}/rmd160
+SRCS+=	rmd160.c
 
 .PATH:	${.CURDIR}/sha2
 SRCS+=	sha2.c
@@ -44,11 +36,12 @@ SRCS+=	sha2.c
 .PATH:	${.CURDIR}/siphash
 SRCS+=	siphash.c
 
-.PATH:	${.CURDIR}/twofish
-SRCS+=	twofish.c
+.PATH:	${.CURDIR}/aesni
+SRCS+=	aesni.c
+SRCS+=	aesencdec_${MACHINE_ARCH}.S
+SRCS+=	aeskeys_${MACHINE_ARCH}.S
 
-SRCS+=	bus_if.h device_if.h opt_ddb.h
-
+# required by: netgraph
 SUBDIR=	rc4
 
 .include <bsd.kmod.mk>

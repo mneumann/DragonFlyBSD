@@ -35,6 +35,7 @@
 * $FreeBSD: head/sys/dev/arcmsr/arcmsr.h 259565 2013-12-18 19:25:40Z delphij $
 */
 #include <sys/ioccom.h>
+#include <sys/bus.h>
 #define ARCMSR_SCSI_INITIATOR_ID	255
 #define ARCMSR_DEV_SECTOR_SIZE		512
 #define ARCMSR_MAX_XFER_SECTORS		4096
