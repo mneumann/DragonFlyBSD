@@ -70,7 +70,6 @@ MAN=	aac.4 \
 	corepower.4 \
 	coretemp.4 \
 	cpuctl.4 \
-	crypto.4 \
 	cue.4 \
 	cxm.4 \
 	da.4 \
@@ -108,7 +107,6 @@ MAN=	aac.4 \
 	gpio_acpi.4 \
 	gpio_intel.4 \
 	gre.4 \
-	hifn.4 \
 	hpt27xx.4 \
 	hptiop.4 \
 	hptmv.4 \
@@ -231,7 +229,6 @@ MAN=	aac.4 \
 	oce.4 \
 	ohci.4 \
 	orm.4 \
-	padlock.4 \
 	pass.4 \
 	pccard.4 \
 	pccbb.4 \
@@ -266,7 +263,6 @@ MAN=	aac.4 \
 	run.4 \
 	runfw.4 \
 	sa.4 \
-	safe.4 \
 	sbp.4 \
 	sbsh.4 \
 	screen.4 \
@@ -337,7 +333,6 @@ MAN=	aac.4 \
 	txp.4 \
 	uark.4 \
 	ubsa.4 \
-	ubsec.4 \
 	ubser.4 \
 	ubt.4 \
 	uchcom.4 \
@@ -437,7 +432,6 @@ MLINKS+=bnx.4 if_bnx.4
 MLINKS+=bridge.4 if_bridge.4
 MLINKS+=bwn.4 if_bwn.4
 MLINKS+=cdce.4 if_cdce.4
-MLINKS+=crypto.4 cryptodev.4
 MLINKS+=cue.4 if_cue.4
 MLINKS+=dc.4 if_dc.4
 MLINKS+=disc.4 if_disc.4

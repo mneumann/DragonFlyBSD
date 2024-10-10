@@ -40,8 +40,7 @@ CRUNCH_PROGS_sbin=	\
 	md5		\
 	hammer		\
 	hammer2		\
-	ping6		\
-	tcplay
+	ping6
 
 CRUNCH_ALIAS_md5= rmd160 sha1 sha256 sha512
 
@@ -57,7 +56,7 @@ CRUNCH_SRCDIRS+= gnu/sbin
 CRUNCH_PATH_gnu/sbin= ${.CURDIR}/../..
 CRUNCH_PROGS_gnu/sbin= cryptsetup
 
-CRUNCH_LIBS+= -ldm -lprop  # tcplay, cryptsetup
+CRUNCH_LIBS+= -ldm -lprop  # cryptsetup
 CRUNCH_LIBS+= -lpcap  # wpa_supplicant
 CRUNCH_LIBS+= -lhammer  # hammer
 CRUNCH_LIBS+= -ldmsg  # hammer2

@@ -35,7 +35,6 @@ hptrr_lib.bo			optional	hptrr			\
 	clean 		"hptrr_lib.bo"
 
 # XXX use assembler versions of bf_enc
-crypto/blowfish/bf_enc.c		optional	crypto
 crypto/des/des_enc.c			optional	crypto
 crypto/des/des_ecb.c			optional	crypto
 crypto/des/des_setkey.c			optional	crypto
@@ -62,15 +61,9 @@ ${OSACPI_MD_DIR}/acpi_wakeup.c		optional        acpi
 #	no-obj no-implicit-rule	before-depend				\
 #	clean		"acpi_wakecode.h"
 #
-dev/crypto/aesni/aesencdec_x86_64.S	optional	aesni
-dev/crypto/aesni/aeskeys_x86_64.S	optional	aesni
-dev/crypto/aesni/aesni.c		optional	aesni
-dev/crypto/aesni/aesni_wrap.c		optional	aesni
-dev/crypto/padlock/padlock.c		optional	padlock
-dev/crypto/padlock/padlock_cipher.c	optional	padlock
-dev/crypto/padlock/padlock_hash.c	optional	padlock
-dev/crypto/padlock/padlock_rng.c	optional	padlock
-dev/crypto/padlock/rng_harvest_x86_64.S	optional	padlock
+crypto/aesni/aesencdec_x86_64.S	optional	aesni
+crypto/aesni/aeskeys_x86_64.S	optional	aesni
+crypto/aesni/aesni.c		optional	aesni
 dev/crypto/rdrand/rdrand.c		optional	rdrand
 dev/crypto/rdrand/rdrand_harvest_x86_64.S	optional	rdrand
 dev/video/fb/fb.c			optional	vga

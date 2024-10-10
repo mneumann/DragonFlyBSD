@@ -408,7 +408,7 @@ options                ACCEPT_FILTER_HTTP
 # carried in TCP option 19.
 # This is enabled on a per-socket basis using the TCP_SIGNATURE_ENABLE
 # socket option.
-# This requires the use of 'device crypto' or 'device cryptodev'.
+# This requires the use of 'device crypto'
 #
 # XXX disabled for now until building with it is fixed, which broke
 # after removing IPsec.
@@ -2022,27 +2022,9 @@ options		DCONS_FORCE_GDB=1	# force to be the gdb device
 # been fed back to openbsd (and hopefully will be included).
 
 device		crypto		# core crypto support
-device		cryptodev	# /dev/crypto for access to h/w
 
 device		rndtest		# FIPS 140-2 entropy tester
 
-device		hifn		# Hifn 7951, 7781, etc.
-options		HIFN_DEBUG	# enable debugging support: hw.hifn.debug
-#options	HIFN_NO_RNG	# for devices without RNG
-options		HIFN_RNDTEST	# enable rndtest support
-
-device		safe		# SafeNet 1141
-options 	SAFE_DEBUG	# enable debugging support: hw.safe.debug
-#options	SAFE_NO_RNG	# for devices without RNG
-options 	SAFE_RNDTEST	# enable rndtest support
-
-device		ubsec		# Broadcom 5501, 5601, 58xx
-options		UBSEC_DEBUG	# enable debugging support: hw.ubsec.debug
-#options	UBSEC_NO_RNG	# for devices without RNG
-options		UBSEC_RNDTEST	# enable rndtest support
-
-device		aesni		# hardware crypto/RNG for AES-NI
-device		padlock		# hardware crypto/RNG for VIA C3/C7/Eden
 device		rdrand		# hardware RNG for RdRand
 
 #
