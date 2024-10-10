@@ -327,11 +327,11 @@ cryptof_ioctl(struct file *fp, u_long cmd, caddr_t data,
 bail:
 		if (error) {
 			if (crie.cri_key) {
-				bzero(crie.cri_key, crie.cri_klen / 8);
+				explicit_bzero(crie.cri_key, crie.cri_klen / 8);
 				kfree(crie.cri_key, M_XDATA);
 			}
 			if (cria.cri_key) {
-				bzero(cria.cri_key, cria.cri_klen / 8);
+				explicit_bzero(cria.cri_key, cria.cri_klen / 8);
 				kfree(cria.cri_key, M_XDATA);
 			}
 		}
@@ -676,7 +676,7 @@ fail:
 		kop->crk_status = krp->krp_status;
 		for (i = 0; i < CRK_MAXPARAM; i++) {
 			if (krp->krp_param[i].crp_p) {
-				bzero(krp->krp_param[i].crp_p,
+				explicit_bzero(krp->krp_param[i].crp_p,
 				    (krp->krp_param[i].crp_nbits + 7) / 8);
 				kfree(krp->krp_param[i].crp_p, M_XDATA);
 			}

@@ -154,6 +154,6 @@ AES_GMAC_Final(uint8_t digest[GMAC_DIGEST_LEN], AES_GMAC_CTX *ctx)
 	rijndaelEncrypt(ctx->K, ctx->rounds, ctx->J, keystream);
 	for (i = 0; i < GMAC_DIGEST_LEN; i++)
 		digest[i] = ctx->ghash.S[i] ^ keystream[i];
-	bzero(keystream, sizeof(keystream));
+	explicit_bzero(keystream, sizeof(keystream));
 }
 
