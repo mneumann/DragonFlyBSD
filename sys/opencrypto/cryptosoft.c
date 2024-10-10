@@ -472,7 +472,7 @@ done:
 		}
 		spin_unlock(&swcr_spin);
 		if (okschedule) {
-			bzero(okschedule, exf->ctxsize);
+			explicit_bzero(okschedule, exf->ctxsize);
 			kfree(okschedule, M_CRYPTO_DATA);
 		}
 	} else {
@@ -1148,7 +1148,7 @@ swcr_freesession_slot(struct swcr_data **swdp, u_int32_t sid)
 			txf = swd->sw_exf;
 
 			if (swd->sw_kschedule) {
-				bzero(swd->sw_kschedule, txf->ctxsize);
+				explicit_bzero(swd->sw_kschedule, txf->ctxsize);
 				kfree(swd->sw_kschedule, M_CRYPTO_DATA);
 			}
 			break;
@@ -1163,11 +1163,11 @@ swcr_freesession_slot(struct swcr_data **swdp, u_int32_t sid)
 			axf = swd->sw_axf;
 
 			if (swd->sw_ictx) {
-				bzero(swd->sw_ictx, axf->ctxsize);
+				explicit_bzero(swd->sw_ictx, axf->ctxsize);
 				kfree(swd->sw_ictx, M_CRYPTO_DATA);
 			}
 			if (swd->sw_octx) {
-				bzero(swd->sw_octx, axf->ctxsize);
+				explicit_bzero(swd->sw_octx, axf->ctxsize);
 				kfree(swd->sw_octx, M_CRYPTO_DATA);
 			}
 			break;
@@ -1177,11 +1177,11 @@ swcr_freesession_slot(struct swcr_data **swdp, u_int32_t sid)
 			axf = swd->sw_axf;
 
 			if (swd->sw_ictx) {
-				bzero(swd->sw_ictx, axf->ctxsize);
+				explicit_bzero(swd->sw_ictx, axf->ctxsize);
 				kfree(swd->sw_ictx, M_CRYPTO_DATA);
 			}
 			if (swd->sw_octx) {
-				bzero(swd->sw_octx, swd->sw_klen);
+				explicit_bzero(swd->sw_octx, swd->sw_klen);
 				kfree(swd->sw_octx, M_CRYPTO_DATA);
 			}
 			break;
@@ -1194,7 +1194,7 @@ swcr_freesession_slot(struct swcr_data **swdp, u_int32_t sid)
 			axf = swd->sw_axf;
 
 			if (swd->sw_ictx) {
-				bzero(swd->sw_ictx, axf->ctxsize);
+				explicit_bzero(swd->sw_ictx, axf->ctxsize);
 				kfree(swd->sw_ictx, M_CRYPTO_DATA);
 			}
 			break;

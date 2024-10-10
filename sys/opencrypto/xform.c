@@ -678,7 +678,7 @@ aes_xts_crypt(struct aes_xts_ctx *ctx, u_int8_t *data, u_int8_t *iv,
 	}
 	if (carry_in)
 		iv[0] ^= AES_XTS_ALPHA;
-	bzero(block, sizeof(block));
+	explicit_bzero(block, sizeof(block));
 }
 
 void
@@ -737,7 +737,7 @@ aes_ctr_crypt(caddr_t key, u_int8_t *data, u_int8_t *iv)
 	rijndaelEncrypt(ctx->ac_ek, ctx->ac_nr, iv, keystream);
 	for (i = 0; i < AESCTR_BLOCK_LEN; i++)
 		data[i] ^= keystream[i];
-	bzero(keystream, sizeof(keystream));
+	explicit_bzero(keystream, sizeof(keystream));
 }
 
 int
