@@ -3931,6 +3931,23 @@ TO_REMOVE+=/etc/mail/mailer.conf.postfix
 TO_REMOVE+=/etc/mail/mailer.conf.sendmail
 TO_REMOVE+=/rescue/diff3
 TO_REMOVE+=/usr/include/timers.h
+TO_REMOVE+=/usr/share/man/man4/hifn.4.gz
+TO_REMOVE+=/usr/share/man/man4/padlock.4.gz
+TO_REMOVE+=/usr/share/man/man4/safe.4.gz
+TO_REMOVE+=/usr/share/man/man4/ubsec.4.gz
+TO_REMOVE+=/usr/share/man/man4/crypto.4.gz
+TO_REMOVE+=/usr/share/man/man4/cryptodev.4.gz
+TO_REMOVE+=/usr/share/man/man9/crypto_find_device_byhid.9.gz
+TO_REMOVE+=/usr/share/man/man9/crypto_find_driver.9.gz
+TO_REMOVE+=/usr/share/man/man9/crypto_get_caps.9.gz
+TO_REMOVE+=/usr/share/man/man9/crypto_freereq.9.gz
+TO_REMOVE+=/usr/share/man/man9/crypto_getreq.9.gz
+TO_REMOVE+=/usr/share/man/man9/crypto_unblock.9.gz
+TO_REMOVE+=/usr/lib/libtcplay.so.3
+TO_REMOVE+=/usr/lib/libtcplay.so
+TO_REMOVE+=/usr/lib/libtcplay.a
+TO_REMOVE+=/usr/share/man/man8/tcplay.8.gz
+TO_REMOVE+=/sbin/tcplay
 
 .if !defined(WANT_INSTALLER)
 TO_REMOVE+=/usr/sbin/dfuibe_installer

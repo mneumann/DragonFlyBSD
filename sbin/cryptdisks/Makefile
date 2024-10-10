@@ -4,8 +4,8 @@ NOSHARED=	YES
 
 SRCS+=		cryptdisks.c safe_mem.c
 
-LDADD=		-lcryptsetup -lluks -ldm -ltcplay -lprop -lutil
-DPADD=		${LIBCRYPTSETUP} ${LIBLUKS} ${LIBDM} ${LIBTCPLAY}
+LDADD=		-lcryptsetup -lluks -ldm -lprop -lutil
+DPADD=		${LIBCRYPTSETUP} ${LIBLUKS} ${LIBDM}
 DPADD+=		${LIBPROP} ${LIBUTIL}
 
 DPADD+=		${LIBCRYPTO}
