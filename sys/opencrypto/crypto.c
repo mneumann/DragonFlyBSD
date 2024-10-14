@@ -1292,6 +1292,8 @@ DB_SHOW_COMMAND(crypto, db_show_crypto)
 	}
 }
 
+#endif
+
 int crypto_modevent(module_t mod, int type, void *unused);
 
 /*
