@@ -153,6 +153,27 @@
 #define	CRYPTO_ALG_FLAG_RNG_ENABLE	0x02 /* Has HW RNG for DH/DSA */
 #define	CRYPTO_ALG_FLAG_DSA_SHA		0x04 /* Can do SHA on msg */
 
+/* bignum parameter, in packed bytes, ... */
+struct crparam {
+	caddr_t		crp_p;
+	u_int		crp_nbits;
+};
+
+#define CRK_MAXPARAM	8
+#define	CRK_ALGORITM_MIN	0
+#define CRK_MOD_EXP		0
+#define CRK_MOD_EXP_CRT		1
+#define CRK_DSA_SIGN		2
+#define CRK_DSA_VERIFY		3
+#define CRK_DH_COMPUTE_KEY	4
+#define CRK_ALGORITHM_MAX	4 /* Keep updated - see below */
+
+#define CRF_MOD_EXP		(1 << CRK_MOD_EXP)
+#define CRF_MOD_EXP_CRT		(1 << CRK_MOD_EXP_CRT)
+#define CRF_DSA_SIGN		(1 << CRK_DSA_SIGN)
+#define CRF_DSA_VERIFY		(1 << CRK_DSA_VERIFY)
+#define CRF_DH_COMPUTE_KEY	(1 << CRK_DH_COMPUTE_KEY)
+
 
 #ifdef _KERNEL
 /* Standard initialization structure beginning */
