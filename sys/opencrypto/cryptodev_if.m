@@ -48,8 +48,3 @@ METHOD int process {
 	int		flags;
 };
 
-METHOD int kprocess {
-	device_t	dev;
-	struct cryptkop	*op;
-	int		flags;
-};

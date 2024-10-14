@@ -454,9 +454,6 @@ MLINKS+=crypto.9 crypto_dispatch.9 \
 	crypto.9 crypto_getcaps.9 \
 	crypto.9 crypto_get_driverid.9 \
 	crypto.9 crypto_getreq.9 \
-	crypto.9 crypto_kdispatch.9 \
-	crypto.9 crypto_kdone.9 \
-	crypto.9 crypto_kregister.9 \
 	crypto.9 crypto_newsession.9 \
 	crypto.9 crypto_register.9 \
 	crypto.9 crypto_unblock.9 \
