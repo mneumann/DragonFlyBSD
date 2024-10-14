@@ -56,6 +56,8 @@
 #ifndef _CRYPTO_CRYPTO_H_
 #define _CRYPTO_CRYPTO_H_
 
+#include <sys/bus.h>
+
 /* Some initial values */
 #define CRYPTO_DRIVERS_INITIAL	4
 #define CRYPTO_SW_SESSIONS	32
@@ -153,6 +155,17 @@
 #define	CRYPTO_ALG_FLAG_RNG_ENABLE	0x02 /* Has HW RNG for DH/DSA */
 #define	CRYPTO_ALG_FLAG_DSA_SHA		0x04 /* Can do SHA on msg */
 
+/*
+ * Crypto driver/device flags.  They can set in the crid
+ * parameter when creating a session or submitting a key
+ * op to affect the device/driver assigned.  If neither
+ * of these are specified then the crid is assumed to hold
+ * the driver id of an existing (and suitable) device that
+ * must be used to satisfy the request.
+ */
+#define CRYPTO_FLAG_HARDWARE	0x01000000	/* hardware accelerated */
+#define CRYPTO_FLAG_SOFTWARE	0x02000000	/* software implementation */
+
 /* bignum parameter, in packed bytes, ... */
 struct crparam {
 	caddr_t		crp_p;
@@ -174,6 +187,33 @@ struct crparam {
 #define CRF_DSA_VERIFY		(1 << CRK_DSA_VERIFY)
 #define CRF_DH_COMPUTE_KEY	(1 << CRK_DH_COMPUTE_KEY)
 
+struct cryptotstat {
+	struct timespec	acc;		/* total accumulated time */
+	struct timespec	min;		/* min time */
+	struct timespec max;		/* max time */
+	u_int32_t	count;		/* number of observations */
+};
+
+struct cryptostats {
+	u_int32_t	cs_ops;		/* symmetric crypto ops submitted */
+	u_int32_t	cs_errs;	/* symmetric crypto ops that failed */
+	u_int32_t	cs_kops;	/* asymetric/key ops submitted */
+	u_int32_t	cs_kerrs;	/* asymetric/key ops that failed */
+	u_int32_t	cs_intrs;	/* crypto swi thread activations */
+	u_int32_t	cs_rets;	/* crypto return thread activations */
+	u_int32_t	cs_blocks;	/* symmetric op driver block */
+	u_int32_t	cs_kblocks;	/* symmetric op driver block */
+	/*
+	 * When CRYPTO_TIMING is defined at compile time and the
+	 * sysctl debug.crypto is set to 1, the crypto system will
+	 * accumulate statistics about how long it takes to process
+	 * crypto requests at various points during processing.
+	 */
+	struct cryptotstat cs_invoke;	/* crypto_dipsatch -> crypto_invoke */
+	struct cryptotstat cs_done;	/* crypto_invoke -> crypto_done */
+	struct cryptotstat cs_cb;	/* crypto_done -> callback */
+	struct cryptotstat cs_finis;	/* callback -> callback return */
+};
 
 #ifdef _KERNEL
 /* Standard initialization structure beginning */

@@ -8,6 +8,7 @@
  */
 
 #include <sys/types.h>
+#include <sys/systm.h>
 #include <opencrypto/cast.h>
 #include <opencrypto/castsb.h>
 
