@@ -302,19 +302,6 @@ struct cryptop {
  */
 #define	CRYPTO_HINT_MORE	0x1	/* more ops coming shortly */
 
-struct cryptkop {
-	TAILQ_ENTRY(cryptkop) krp_next;
-
-	u_int		krp_op;		/* ie. CRK_MOD_EXP or other */
-	u_int		krp_status;	/* return status */
-	u_short		krp_iparams;	/* # of input parameters */
-	u_short		krp_oparams;	/* # of output parameters */
-	u_int		krp_crid;	/* desired device, etc. */
-	u_int32_t	krp_hid;
-	struct crparam	krp_param[CRK_MAXPARAM];	/* kvm */
-	int		(*krp_callback)(struct cryptkop *);
-};
-
 /*
  * Session ids are 64 bits.  The lower 32 bits contain a "local id" which
  * is a driver-private session identifier.  The upper 32 bits contain a
@@ -342,16 +329,13 @@ extern	device_t crypto_find_device_byhid(int hid);
 extern	int crypto_getcaps(int hid);
 extern	int crypto_register(u_int32_t driverid, int alg, u_int16_t maxoplen,
 	    u_int32_t flags);
-extern	int crypto_kregister(u_int32_t, int, u_int32_t);
 extern	int crypto_unregister(u_int32_t driverid, int alg);
 extern	int crypto_unregister_all(u_int32_t driverid);
 extern	int crypto_dispatch(struct cryptop *crp);
-extern	int crypto_kdispatch(struct cryptkop *);
 #define	CRYPTO_SYMQ	0x1
 #define	CRYPTO_ASYMQ	0x2
 extern	int crypto_unblock(u_int32_t, int);
 extern	void crypto_done(struct cryptop *crp);
-extern	void crypto_kdone(struct cryptkop *);
 extern	int crypto_getfeat(int *);
 
 extern	void crypto_freereq(struct cryptop *crp);
