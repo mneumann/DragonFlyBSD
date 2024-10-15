@@ -33,7 +33,6 @@
 #include <sys/queue.h>
 
 #include <opencrypto/cryptodev.h>
-#include <crypto/aesni/aesni.h>
 
 #if defined(__x86_64__)
 #include <machine/cpufunc.h>
@@ -66,6 +65,32 @@ struct aesni_session {
 	struct fpu_kern_ctx fpu_ctx;
 #endif
 };
+
+/*
+ * Internal functions, implemented in assembler.
+ */
+void aesni_enc(int rounds, const uint8_t *key_schedule,
+    const uint8_t from[AES_BLOCK_LEN], uint8_t to[AES_BLOCK_LEN],
+    const uint8_t iv[AES_BLOCK_LEN]);
+void aesni_dec(int rounds, const uint8_t *key_schedule,
+    const uint8_t from[AES_BLOCK_LEN], uint8_t to[AES_BLOCK_LEN],
+    const uint8_t iv[AES_BLOCK_LEN]);
+void aesni_set_enckey(const uint8_t *userkey, uint8_t *encrypt_schedule,
+    int number_of_rounds);
+void aesni_set_deckey(const uint8_t *encrypt_schedule,
+    uint8_t *decrypt_schedule, int number_of_rounds);
+
+/*
+ * Slightly more public interfaces.
+ */
+void aesni_encrypt_cbc(int rounds, const void *key_schedule, size_t len,
+    const uint8_t *from, uint8_t *to, const uint8_t iv[AES_BLOCK_LEN]);
+void aesni_decrypt_cbc(int rounds, const void *key_schedule, size_t len,
+    const uint8_t *from, const uint8_t iv[AES_BLOCK_LEN]);
+void aesni_encrypt_ecb(int rounds, const void *key_schedule, size_t len,
+    const uint8_t from[AES_BLOCK_LEN], uint8_t to[AES_BLOCK_LEN]);
+void aesni_decrypt_ecb(int rounds, const void *key_schedule, size_t len,
+    const uint8_t from[AES_BLOCK_LEN], uint8_t to[AES_BLOCK_LEN]);
 
 int aesni_cipher_setup(struct aesni_session *ses,
     struct cryptoini *encini);
