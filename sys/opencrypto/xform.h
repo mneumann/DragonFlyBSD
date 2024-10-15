@@ -81,7 +81,6 @@ union authctx {
 };
 
 extern struct enc_xform enc_xform_null;
-extern struct enc_xform enc_xform_des;
 extern struct enc_xform enc_xform_3des;
 extern struct enc_xform enc_xform_blf;
 extern struct enc_xform enc_xform_cast5;

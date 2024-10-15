@@ -90,7 +90,6 @@
 
 /* Encryption algorithm block sizes */
 #define NULL_BLOCK_LEN		4
-#define DES_BLOCK_LEN		8
 #define DES3_BLOCK_LEN		8
 #define BLOWFISH_BLOCK_LEN	8
 #define SKIPJACK_BLOCK_LEN	8
