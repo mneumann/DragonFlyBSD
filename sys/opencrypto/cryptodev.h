@@ -270,7 +270,6 @@ struct cryptop {
 					 */
 	int		crp_flags;
 
-#define CRYPTO_F_IMBUF	0x0001	/* Input/output are mbuf chains */
 #define CRYPTO_F_IOV	0x0002	/* Input/output are uio */
 #define CRYPTO_F_REL	0x0004	/* Must return data in same place */
 #define	CRYPTO_F_BATCH	0x0008	/* Batch op if possible */

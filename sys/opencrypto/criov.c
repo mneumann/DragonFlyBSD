@@ -161,9 +161,7 @@ void
 crypto_copyback(int flags, caddr_t buf, int off, int size, caddr_t in)
 {
 
-	if ((flags & CRYPTO_F_IMBUF) != 0)
-		m_copyback2((struct mbuf *)buf, off, size, in, M_WAITOK);
-	else if ((flags & CRYPTO_F_IOV) != 0)
+	if ((flags & CRYPTO_F_IOV) != 0)
 		cuio_copyback((struct uio *)buf, off, size, in);
 	else
 		bcopy(in, buf + off, size);
@@ -173,9 +171,7 @@ void
 crypto_copydata(int flags, caddr_t buf, int off, int size, caddr_t out)
 {
 
-	if ((flags & CRYPTO_F_IMBUF) != 0)
-		m_copydata((struct mbuf *)buf, off, size, out);
-	else if ((flags & CRYPTO_F_IOV) != 0)
+	if ((flags & CRYPTO_F_IOV) != 0)
 		cuio_copydata((struct uio *)buf, off, size, out);
 	else
 		bcopy(buf + off, out, size);
@@ -187,9 +183,7 @@ crypto_apply(int flags, caddr_t buf, int off, int len,
 {
 	int error;
 
-	if ((flags & CRYPTO_F_IMBUF) != 0)
-		error = m_apply((struct mbuf *)buf, off, len, f, arg);
-	else if ((flags & CRYPTO_F_IOV) != 0)
+	if ((flags & CRYPTO_F_IOV) != 0)
 		error = cuio_apply((struct uio *)buf, off, len, f, arg);
 	else
 		error = (*f)(arg, buf + off, len);
