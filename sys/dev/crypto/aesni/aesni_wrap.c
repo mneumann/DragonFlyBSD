@@ -36,6 +36,138 @@
 
 MALLOC_DECLARE(M_AESNI);
 
+void
+aesni_encrypt_cbc(int rounds, const void *key_schedule, size_t len,
+    const uint8_t *from, uint8_t *to, const uint8_t iv[AES_BLOCK_LEN])
+{
+	const uint8_t *ivp;
+	size_t i;
+
+	len /= AES_BLOCK_LEN;
+	ivp = iv;
+	for (i = 0; i < len; i++) {
+		aesni_enc(rounds - 1, key_schedule, from, to, ivp);
+		ivp = to;
+		from += AES_BLOCK_LEN;
+		to += AES_BLOCK_LEN;
+	}
+}
+
+void
+aesni_encrypt_ecb(int rounds, const void *key_schedule, size_t len,
+    const uint8_t from[AES_BLOCK_LEN], uint8_t to[AES_BLOCK_LEN])
+{
+	size_t i;
+
+	len /= AES_BLOCK_LEN;
+	for (i = 0; i < len; i++) {
+		aesni_enc(rounds - 1, key_schedule, from, to, NULL);
+		from += AES_BLOCK_LEN;
+		to += AES_BLOCK_LEN;
+	}
+}
+
+void
+aesni_decrypt_ecb(int rounds, const void *key_schedule, size_t len,
+    const uint8_t from[AES_BLOCK_LEN], uint8_t to[AES_BLOCK_LEN])
+{
+	size_t i;
+
+	len /= AES_BLOCK_LEN;
+	for (i = 0; i < len; i++) {
+		aesni_dec(rounds - 1, key_schedule, from, to, NULL);
+		from += AES_BLOCK_LEN;
+		to += AES_BLOCK_LEN;
+	}
+}
+
+#define	AES_XTS_BLOCKSIZE	16
+#define	AES_XTS_IVSIZE		8
+#define	AES_XTS_ALPHA		0x87	/* GF(2^128) generator polynomial */
+
+static void
+aesni_crypt_xts_block(int rounds, const void *key_schedule, uint8_t *tweak,
+    const uint8_t *from, uint8_t *to, int do_encrypt)
+{
+	uint8_t block[AES_XTS_BLOCKSIZE];
+	u_int i, carry_in, carry_out;
+
+	for (i = 0; i < AES_XTS_BLOCKSIZE; i++)
+		block[i] = from[i] ^ tweak[i];
+
+	if (do_encrypt)
+		aesni_enc(rounds - 1, key_schedule, block, to, NULL);
+	else
+		aesni_dec(rounds - 1, key_schedule, block, to, NULL);
+
+	for (i = 0; i < AES_XTS_BLOCKSIZE; i++)
+		to[i] ^= tweak[i];
+
+	/* Exponentiate tweak. */
+	carry_in = 0;
+	for (i = 0; i < AES_XTS_BLOCKSIZE; i++) {
+		carry_out = tweak[i] & 0x80;
+		tweak[i] = (tweak[i] << 1) | (carry_in ? 1 : 0);
+		carry_in = carry_out;
+	}
+	if (carry_in)
+		tweak[0] ^= AES_XTS_ALPHA;
+	bzero(block, sizeof(block));
+}
+
+static void
+aesni_crypt_xts(int rounds, const void *data_schedule,
+    const void *tweak_schedule, size_t len, const uint8_t *from, uint8_t *to,
+    const uint8_t iv[AES_BLOCK_LEN], int do_encrypt)
+{
+	uint8_t tweak[AES_XTS_BLOCKSIZE];
+	uint64_t blocknum;
+	size_t i;
+
+	/*
+	 * Prepare tweak as E_k2(IV). IV is specified as LE representation
+	 * of a 64-bit block number which we allow to be passed in directly.
+	 */
+	bcopy(iv, &blocknum, AES_XTS_IVSIZE);
+	for (i = 0; i < AES_XTS_IVSIZE; i++) {
+		tweak[i] = blocknum & 0xff;
+		blocknum >>= 8;
+	}
+	/* Last 64 bits of IV are always zero. */
+	bzero(tweak + AES_XTS_IVSIZE, AES_XTS_IVSIZE);
+	aesni_enc(rounds - 1, tweak_schedule, tweak, tweak, NULL);
+
+	len /= AES_XTS_BLOCKSIZE;
+	for (i = 0; i < len; i++) {
+		aesni_crypt_xts_block(rounds, data_schedule, tweak, from, to,
+		    do_encrypt);
+		from += AES_XTS_BLOCKSIZE;
+		to += AES_XTS_BLOCKSIZE;
+	}
+
+	bzero(tweak, sizeof(tweak));
+}
+
+static void
+aesni_encrypt_xts(int rounds, const void *data_schedule,
+    const void *tweak_schedule, size_t len, const uint8_t *from, uint8_t *to,
+    const uint8_t iv[AES_BLOCK_LEN])
+{
+
+	aesni_crypt_xts(rounds, data_schedule, tweak_schedule, len, from, to,
+	    iv, 1);
+}
+
+static void
+aesni_decrypt_xts(int rounds, const void *data_schedule,
+    const void *tweak_schedule, size_t len, const uint8_t *from, uint8_t *to,
+    const uint8_t iv[AES_BLOCK_LEN])
+{
+
+	aesni_crypt_xts(rounds, data_schedule, tweak_schedule, len, from, to,
+	    iv, 0);
+}
+
 static int
 aesni_cipher_setup_common(struct aesni_session *ses, const uint8_t *key,
     int keylen)
