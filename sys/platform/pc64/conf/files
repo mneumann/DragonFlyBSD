@@ -62,6 +62,8 @@ ${OSACPI_MD_DIR}/acpi_wakeup.c		optional        acpi
 #	no-obj no-implicit-rule	before-depend				\
 #	clean		"acpi_wakecode.h"
 #
+dev/crypto/aesni/aesencdec_x86_64.S	optional	aesni
+dev/crypto/aesni/aeskeys_x86_64.S	optional	aesni
 dev/crypto/aesni/aesni.c		optional	aesni
 dev/crypto/aesni/aesni_wrap.c		optional	aesni
 dev/crypto/padlock/padlock.c		optional	padlock
