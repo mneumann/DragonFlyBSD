@@ -166,24 +166,11 @@ padlock_cipher_alloc(struct cryptodesc *enccrd, struct cryptop *crp,
 {
 	u_char *addr;
 
-	{
-		if (crp->crp_flags & CRYPTO_F_IOV) {
-			struct uio *uio;
-			struct iovec *iov;
-
-			uio = (struct uio *)crp->crp_buf;
-			if (uio->uio_iovcnt != 1)
-				goto alloc;
-			iov = uio->uio_iov;
-			addr = (u_char *)iov->iov_base + enccrd->crd_skip;
-		} else {
-			addr = (u_char *)crp->crp_buf;
-		}
-		if (((uintptr_t)addr & 0xf) != 0) /* 16 bytes aligned? */
-			goto alloc;
-		*allocated = 0;
-		return (addr);
-	}
+	addr = (u_char *)crp->crp_buf;
+	if (((uintptr_t)addr & 0xf) != 0) /* 16 bytes aligned? */
+		goto alloc;
+	*allocated = 0;
+	return (addr);
 alloc:
 	*allocated = 1;
 	addr = kmalloc(enccrd->crd_len + 16, M_PADLOCK, M_NOWAIT);

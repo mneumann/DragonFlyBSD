@@ -304,14 +304,7 @@ aesni_cipher_alloc(struct cryptodesc *enccrd, struct cryptop *crp,
 	struct iovec *iov;
 	uint8_t *addr;
 
-	if (crp->crp_flags & CRYPTO_F_IOV) {
-		uio = (struct uio *)crp->crp_buf;
-		if (uio->uio_iovcnt != 1)
-			goto alloc;
-		iov = uio->uio_iov;
-		addr = (u_char *)iov->iov_base + enccrd->crd_skip;
-	} else
-		addr = (u_char *)crp->crp_buf;
+	addr = (u_char *)crp->crp_buf;
 	*allocated = 0;
 	return (addr);
 

@@ -270,7 +270,6 @@ struct cryptop {
 					 */
 	int		crp_flags;
 
-#define CRYPTO_F_IOV	0x0002	/* Input/output are uio */
 #define CRYPTO_F_REL	0x0004	/* Must return data in same place */
 #define	CRYPTO_F_BATCH	0x0008	/* Batch op if possible */
 #define	CRYPTO_F_CBIMM	0x0010	/* Do callback immediately */
@@ -349,12 +348,6 @@ extern	int crypto_devallowsoft;	/* only use hardware crypto */
  * XXX these don't really belong here; but for now they're
  *     kept apart from the rest of the system.
  */
-struct uio;
-extern	void cuio_copydata(struct uio* uio, int off, int len, caddr_t cp);
-extern	void cuio_copyback(struct uio* uio, int off, int len, caddr_t cp);
-extern	struct iovec *cuio_getptr(struct uio *uio, int loc, int *off);
-extern	int cuio_apply(struct uio *uio, int off, int len,
-	    int (*f)(void *, void *, u_int), void *arg);
 
 extern	void crypto_copyback(int flags, caddr_t buf, int off, int size,
 	    caddr_t in);
