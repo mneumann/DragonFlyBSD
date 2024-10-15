@@ -2246,7 +2246,7 @@ libprop/prop_string.c			standard
 libprop/prop_rb.c			standard
 crypto/aesni/aesencdec_x86_64.S		optional crypto
 crypto/aesni/aeskeys_x86_64.S		optional crypto
-crypto/aesni/aesni.c			optional crypto
+crypto/aesni/aesni_encdec.c		optional crypto
 crypto/blake2/blake2s.c			optional crypto
 crypto/blowfish/bf_skey.c		optional crypto
 crypto/camellia/camellia.c		optional crypto
