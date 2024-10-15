@@ -554,6 +554,57 @@ hex2key(char *hex, size_t key_len, u_int8_t *key)
 }
 
 static int
+dm_target_crypt_validate_alg(const char *crypto_alg, const char *crypto_mode, int klen)
+{
+	const bool is_cbc = (strcmp(crypto_mode, "cbc") == 0);
+	const bool is_xts = (strcmp(crypto_mode, "xts") == 0);
+	const bool is_aes = (strcmp(crypto_alg, "aes") == 0);
+	const bool is_twofish = (strcmp(crypto_alg, "twofish") == 0);
+	const bool is_serpent = (strcmp(crypto_alg, "serpent") == 0);
+	const bool is_blowfish = (strcmp(crypto_alg, "blowfish") == 0);
+	const bool is_3des = (strcmp(crypto_alg, "3des") == 0);
+	const bool is_des3 = (strncmp(crypto_alg, "des3", 4) == 0);
+	const bool is_camellia = (strcmp(crypto_alg, "camellia") == 0);
+	const bool is_skipjack = (strcmp(crypto_alg, "skipjack") == 0);
+	const bool is_cast5 = (strcmp(crypto_alg, "cast5") == 0);
+	const bool is_null = (strcmp(crypto_alg, "null") == 0);
+
+	if (is_aes && is_xts && (klen == 256 || klen == 512))
+		return CRYPTO_AES_XTS;
+	if (is_aes && is_cbc && (klen == 128 || klen == 192 || klen == 256))
+		return CRYPTO_AES_CBC;
+	if (is_twofish && is_xts && (klen == 256 || klen == 512))
+		return CRYPTO_TWOFISH_XTS;
+	if (is_twofish && is_cbc && (klen == 128 || klen == 192 || klen == 256))
+		return CRYPTO_TWOFISH_CBC;
+	if (is_serpent && is_xts && (klen == 256 || klen == 512))
+		return CRYPTO_SERPENT_XTS;
+	if (is_serpent && is_cbc && (klen == 128 || klen == 192 || klen == 256))
+		return CRYPTO_SERPENT_CBC;
+	if (is_blowfish && klen >= 128 && klen <= 448 && (klen % 8) == 0)
+		return CRYPTO_BLF_CBC;
+	if (is_3des && klen == 168)
+		return CRYPTO_3DES_CBC;
+	if (is_des3 && klen == 168)
+		return CRYPTO_3DES_CBC;
+	if (is_camellia && (klen == 128 || klen == 192 || klen == 256))
+		return CRYPTO_CAMELLIA_CBC;
+	if (is_skipjack && klen == 80)
+		return CRYPTO_SKIPJACK_CBC;
+	if (is_cast5 && klen == 128)
+		return CRYPTO_CAST_CBC;
+	if (is_null && klen == 128)
+		return CRYPTO_NULL_CBC;
+
+	kprintf("dm_target_crypt: only support 'cbc' chaining mode,"
+	    " aes-xts, twofish-xts and serpent-xts, "
+	    "invalid mode '%s-%s'\n",
+	    crypto_alg, crypto_mode);
+
+	return 0;
+}
+
+static int
 dm_target_crypt_init(dm_table_entry_t *table_en, int argc, char **argv)
 {
 	dm_target_crypt_config_t *priv;
@@ -614,94 +665,10 @@ dm_target_crypt_init(dm_table_entry_t *table_en, int argc, char **argv)
 	 * twofish-xts
 	 * serpent-xts
 	 */
-	if ((strcmp(crypto_mode, "cbc") != 0) &&
-	    !((strcmp(crypto_mode, "xts") == 0) &&
-	    ((strcmp(crypto_alg, "aes") == 0) ||
-	    (strcmp(crypto_alg, "twofish") == 0) ||
-	    (strcmp(crypto_alg, "serpent") == 0))))
-	{
-		kprintf("dm_target_crypt: only support 'cbc' chaining mode,"
-		    " aes-xts, twofish-xts and serpent-xts, "
-		    "invalid mode '%s-%s'\n",
-		    crypto_alg, crypto_mode);
+	priv->crypto_alg = dm_target_crypt_validate_alg(crypto_alg, crypto_mode, klen);
+	priv->crypto_klen = klen;
+	if (priv->crypto_alg == 0)
 		goto notsup;
-	}
-
-	if (!strcmp(crypto_alg, "aes")) {
-		if (!strcmp(crypto_mode, "xts")) {
-			priv->crypto_alg = CRYPTO_AES_XTS;
-			if (klen != 256 && klen != 512)
-				goto notsup;
-		} else if (!strcmp(crypto_mode, "cbc")) {
-			priv->crypto_alg = CRYPTO_AES_CBC;
-			if (klen != 128 && klen != 192 && klen != 256)
-				goto notsup;
-		} else {
-			goto notsup;
-		}
-		priv->crypto_klen = klen;
-	} else if (!strcmp(crypto_alg, "twofish")) {
-		if (!strcmp(crypto_mode, "xts")) {
-			priv->crypto_alg = CRYPTO_TWOFISH_XTS;
-			if (klen != 256 && klen != 512)
-				goto notsup;
-		} else if (!strcmp(crypto_mode, "cbc")) {
-			priv->crypto_alg = CRYPTO_TWOFISH_CBC;
-			if (klen != 128 && klen != 192 && klen != 256)
-				goto notsup;
-		} else {
-			goto notsup;
-		}
-		priv->crypto_klen = klen;
-	} else if (!strcmp(crypto_alg, "serpent")) {
-		if (!strcmp(crypto_mode, "xts")) {
-			priv->crypto_alg = CRYPTO_SERPENT_XTS;
-			if (klen != 256 && klen != 512)
-				goto notsup;
-		} else if (!strcmp(crypto_mode, "cbc")) {
-			priv->crypto_alg = CRYPTO_SERPENT_CBC;
-			if (klen != 128 && klen != 192 && klen != 256)
-				goto notsup;
-		} else {
-			goto notsup;
-		}
-		priv->crypto_klen = klen;
-	} else if (!strcmp(crypto_alg, "blowfish")) {
-		priv->crypto_alg = CRYPTO_BLF_CBC;
-		if (klen < 128 || klen > 448 || (klen % 8) != 0)
-			goto notsup;
-		priv->crypto_klen = klen;
-	} else if (!strcmp(crypto_alg, "3des") ||
-		   !strncmp(crypto_alg, "des3", 4)) {
-		priv->crypto_alg = CRYPTO_3DES_CBC;
-		if (klen != 168)
-			goto notsup;
-		priv->crypto_klen = 168;
-	} else if (!strcmp(crypto_alg, "camellia")) {
-		priv->crypto_alg = CRYPTO_CAMELLIA_CBC;
-		if (klen != 128 && klen != 192 && klen != 256)
-			goto notsup;
-		priv->crypto_klen = klen;
-	} else if (!strcmp(crypto_alg, "skipjack")) {
-		priv->crypto_alg = CRYPTO_SKIPJACK_CBC;
-		if (klen != 80)
-			goto notsup;
-		priv->crypto_klen = 80;
-	} else if (!strcmp(crypto_alg, "cast5")) {
-		priv->crypto_alg = CRYPTO_CAST_CBC;
-		if (klen != 128)
-			goto notsup;
-		priv->crypto_klen = 128;
-	} else if (!strcmp(crypto_alg, "null")) {
-		priv->crypto_alg = CRYPTO_NULL_CBC;
-		if (klen != 128)
-			goto notsup;
-		priv->crypto_klen = 128;
-	} else {
-		kprintf("dm_target_crypt: Unsupported crypto algorithm: %s\n",
-			crypto_alg);
-		goto notsup;
-	}
 
 	/* Save length of param string */
 	priv->params_len = len;
