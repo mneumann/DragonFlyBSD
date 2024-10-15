@@ -3,8 +3,7 @@
 KMOD=	crypto
 
 .PATH:	${.CURDIR}/../opencrypto
-SRCS=	cast.c criov.c crypto.c cryptosoft.c deflate.c gmac.c rmd160.c \
-	skipjack.c xform.c
+SRCS=	criov.c crypto.c cryptosoft.c deflate.c gmac.c rmd160.c xform.c
 SRCS+=	cryptodev_if.c cryptodev_if.h
 
 SRCS+=	sha1.c
@@ -18,6 +17,9 @@ SRCS+=	bf_enc.c bf_skey.c
 
 .PATH:	${.CURDIR}/camellia
 SRCS+=	camellia.c camellia-api.c
+
+.PATH:	${.CURDIR}/cast
+SRCS+=	cast.c
 
 .PATH:	${.CURDIR}/chacha20
 SRCS+=	chacha.c
@@ -42,6 +44,9 @@ SRCS+=	sha2.c
 
 .PATH:	${.CURDIR}/siphash
 SRCS+=	siphash.c
+
+.PATH:	${.CURDIR}/skipjack
+SRCS+=	skipjack.c
 
 .PATH:	${.CURDIR}/twofish
 SRCS+=	twofish.c

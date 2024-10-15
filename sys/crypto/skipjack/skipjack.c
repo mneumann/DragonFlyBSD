@@ -15,7 +15,7 @@
 
 #include <sys/param.h>
 
-#include <opencrypto/skipjack.h>
+#include <crypto/skipjack.h>
 
 static const u_int8_t ftable[0x100] =
 { 

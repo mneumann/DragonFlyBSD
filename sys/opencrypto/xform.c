@@ -48,17 +48,17 @@
 
 #include <crypto/blowfish/blowfish.h>
 #include <crypto/camellia/camellia.h>
+#include <crypto/cast/cast.h>
 #include <crypto/des/des.h>
 #include <crypto/rijndael/rijndael.h>
 #include <crypto/serpent/serpent.h>
+#include <crypto/skipjack/skipjack.h>
 #include <crypto/sha1.h>
 #include <crypto/twofish/twofish.h>
 
-#include <opencrypto/cast.h>
 #include <opencrypto/deflate.h>
 #include <opencrypto/gmac.h>
 #include <opencrypto/rmd160.h>
-#include <opencrypto/skipjack.h>
 
 #include <sys/md5.h>
 
