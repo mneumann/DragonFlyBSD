@@ -69,7 +69,6 @@ static	void null_encrypt(caddr_t, u_int8_t *, u_int8_t *);
 static	void null_decrypt(caddr_t, u_int8_t *, u_int8_t *);
 static	int null_setkey(void *, u_int8_t *, int);
 
-static	int des1_setkey(void *, u_int8_t *, int);
 static	int des3_setkey(void *, u_int8_t *, int);
 static	int blf_setkey(void *, u_int8_t *, int);
 static	int cast5_setkey(void *, u_int8_t *, int);
@@ -83,7 +82,6 @@ static	int serpent128_setkey(void *, u_int8_t *, int);
 static	int twofish_xts_setkey(void *, u_int8_t *, int);
 static	int serpent_xts_setkey(void *, u_int8_t *, int);
 
-static	void des1_encrypt(caddr_t, u_int8_t *, u_int8_t *);
 static	void des3_encrypt(caddr_t, u_int8_t *, u_int8_t *);
 static	void blf_encrypt(caddr_t, u_int8_t *, u_int8_t *);
 static	void cast5_encrypt(caddr_t, u_int8_t *, u_int8_t *);
@@ -96,7 +94,6 @@ static	void serpent128_encrypt(caddr_t, u_int8_t *, u_int8_t *);
 static	void twofish_xts_encrypt(caddr_t, u_int8_t *, u_int8_t *);
 static	void serpent_xts_encrypt(caddr_t, u_int8_t *, u_int8_t *);
 
-static	void des1_decrypt(caddr_t, u_int8_t *, u_int8_t *);
 static	void des3_decrypt(caddr_t, u_int8_t *, u_int8_t *);
 static	void blf_decrypt(caddr_t, u_int8_t *, u_int8_t *);
 static	void cast5_decrypt(caddr_t, u_int8_t *, u_int8_t *);
@@ -174,16 +171,6 @@ struct enc_xform enc_xform_null = {
 	null_encrypt,
 	null_decrypt,
 	null_setkey,
-	NULL,
-};
-
-struct enc_xform enc_xform_des = {
-	CRYPTO_DES_CBC, "DES",
-	DES_BLOCK_LEN, DES_BLOCK_LEN, 8, 8,
-	sizeof(des_key_schedule),
-	des1_encrypt,
-	des1_decrypt,
-	des1_setkey,
 	NULL,
 };
 
@@ -463,30 +450,6 @@ static int
 null_setkey(void *sched, u_int8_t *key, int len)
 {
 	return 0;
-}
-
-static void
-des1_encrypt(caddr_t key, u_int8_t *blk, u_int8_t *iv)
-{
-	des_cblock *cb = (des_cblock *) blk;
-	des_key_schedule *p = (des_key_schedule *) key;
-
-	des_ecb_encrypt(cb, cb, p[0], DES_ENCRYPT);
-}
-
-static void
-des1_decrypt(caddr_t key, u_int8_t *blk, u_int8_t *iv)
-{
-	des_cblock *cb = (des_cblock *) blk;
-	des_key_schedule *p = (des_key_schedule *) key;
-
-	des_ecb_encrypt(cb, cb, p[0], DES_DECRYPT);
-}
-
-static int
-des1_setkey(void *sched, u_int8_t *key, int len)
-{
-	return des_set_key((des_cblock *)key, sched);
 }
 
 static void

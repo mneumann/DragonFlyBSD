@@ -849,9 +849,6 @@ swcr_newsession(device_t dev, u_int32_t *sid, struct cryptoini *cri)
 			       M_CRYPTO_DATA, M_WAITOK | M_ZERO);
 
 		switch (cri->cri_alg) {
-		case CRYPTO_DES_CBC:
-			txf = &enc_xform_des;
-			goto enccommon;
 		case CRYPTO_3DES_CBC:
 			txf = &enc_xform_3des;
 			goto enccommon;
