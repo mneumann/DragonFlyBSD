@@ -149,143 +149,7 @@ swcr_encdec(struct cryptodesc *crd, struct swcr_data *sw, caddr_t buf,
 	if (exf->reinit)
 		exf->reinit(kschedule, iv);
 
-	if (flags & CRYPTO_F_IMBUF) {
-		struct mbuf *m = (struct mbuf *) buf;
-
-		/* Find beginning of data */
-		m = m_getptr(m, crd->crd_skip, &k);
-		if (m == NULL) {
-			error = EINVAL;
-			goto done;
-		}
-
-		i = crd->crd_len;
-
-		while (i > 0) {
-			/*
-			 * If there's insufficient data at the end of
-			 * an mbuf, we have to do some copying.
-			 */
-			if (m->m_len < k + blks && m->m_len != k) {
-				m_copydata(m, k, blks, blk);
-
-				/* Actual encryption/decryption */
-				if (exf->reinit) {
-					if (crd->crd_flags & CRD_F_ENCRYPT) {
-						exf->encrypt(kschedule,
-						    blk, iv);
-					} else {
-						exf->decrypt(kschedule,
-						    blk, iv);
-					}
-				} else if (crd->crd_flags & CRD_F_ENCRYPT) {
-					/* XOR with previous block */
-					for (j = 0; j < blks; j++)
-						blk[j] ^= ivp[j];
-
-					exf->encrypt(kschedule, blk, iv);
-
-					/*
-					 * Keep encrypted block for XOR'ing
-					 * with next block
-					 */
-					bcopy(blk, iv, blks);
-					ivp = iv;
-				} else {	/* decrypt */
-					/*
-					 * Keep encrypted block for XOR'ing
-					 * with next block
-					 */
-					nivp = (ivp == iv) ? iv2 : iv;
-					bcopy(blk, nivp, blks);
-
-					exf->decrypt(kschedule, blk, iv);
-
-					/* XOR with previous block */
-					for (j = 0; j < blks; j++)
-						blk[j] ^= ivp[j];
-
-					ivp = nivp;
-				}
-
-				/* Copy back decrypted block */
-				m_copyback(m, k, blks, blk);
-
-				/* Advance pointer */
-				m = m_getptr(m, k + blks, &k);
-				if (m == NULL) {
-					error = EINVAL;
-					goto done;
-				}
-
-				i -= blks;
-
-				/* Could be done... */
-				if (i == 0)
-					break;
-			}
-
-			/* Skip possibly empty mbufs */
-			if (k == m->m_len) {
-				for (m = m->m_next; m && m->m_len == 0;
-				    m = m->m_next)
-					;
-				k = 0;
-			}
-
-			/* Sanity check */
-			if (m == NULL) {
-				error = EINVAL;
-				goto done;
-			}
-
-			/*
-			 * Warning: idat may point to garbage here, but
-			 * we only use it in the while() loop, only if
-			 * there are indeed enough data.
-			 */
-			idat = mtod(m, unsigned char *) + k;
-
-			while (m->m_len >= k + blks && i > 0) {
-				if (exf->reinit) {
-					if (crd->crd_flags & CRD_F_ENCRYPT) {
-						exf->encrypt(kschedule,
-						    idat, iv);
-					} else {
-						exf->decrypt(kschedule,
-						    idat, iv);
-					}
-				} else if (crd->crd_flags & CRD_F_ENCRYPT) {
-					/* XOR with previous block/IV */
-					for (j = 0; j < blks; j++)
-						idat[j] ^= ivp[j];
-
-					exf->encrypt(kschedule, idat, iv);
-					ivp = idat;
-				} else {	/* decrypt */
-					/*
-					 * Keep encrypted block to be used
-					 * in next block's processing.
-					 */
-					nivp = (ivp == iv) ? iv2 : iv;
-					bcopy(idat, nivp, blks);
-
-					exf->decrypt(kschedule, idat, iv);
-
-					/* XOR with previous block/IV */
-					for (j = 0; j < blks; j++)
-						idat[j] ^= ivp[j];
-
-					ivp = nivp;
-				}
-
-				idat += blks;
-				k += blks;
-				i -= blks;
-			}
-		}
-		error = 0;	/* Done with mbuf encryption/decryption */
-	} else if (flags & CRYPTO_F_IOV) {
+	if (flags & CRYPTO_F_IOV) {
 		struct uio *uio = (struct uio *) buf;
 		struct iovec *iov;
 
@@ -790,15 +654,11 @@ swcr_compdec(struct cryptodesc *crd, struct swcr_data *sw,
 
 	/*
 	 * Copy back the (de)compressed data.
-	 * If CRYPTO_F_IMBUF, the mbuf will be extended as necessary.
 	 */
 	crypto_copyback(flags, buf, crd->crd_skip, result, out);
 	if (result < crd->crd_len) {
 		adj = result - crd->crd_len;
-		if (flags & CRYPTO_F_IMBUF) {
-			adj = result - crd->crd_len;
-			m_adj((struct mbuf *)buf, adj);
-		} else if (flags & CRYPTO_F_IOV) {
+		if (flags & CRYPTO_F_IOV) {
 			struct uio *uio = (struct uio *)buf;
 			int ind;
 

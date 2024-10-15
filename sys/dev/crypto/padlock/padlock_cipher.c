@@ -166,9 +166,7 @@ padlock_cipher_alloc(struct cryptodesc *enccrd, struct cryptop *crp,
 {
 	u_char *addr;
 
-	if (crp->crp_flags & CRYPTO_F_IMBUF)
-		goto alloc;
-	else {
+	{
 		if (crp->crp_flags & CRYPTO_F_IOV) {
 			struct uio *uio;
 			struct iovec *iov;

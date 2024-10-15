@@ -304,9 +304,7 @@ aesni_cipher_alloc(struct cryptodesc *enccrd, struct cryptop *crp,
 	struct iovec *iov;
 	uint8_t *addr;
 
-	if (crp->crp_flags & CRYPTO_F_IMBUF)
-		goto alloc;
-	else if (crp->crp_flags & CRYPTO_F_IOV) {
+	if (crp->crp_flags & CRYPTO_F_IOV) {
 		uio = (struct uio *)crp->crp_buf;
 		if (uio->uio_iovcnt != 1)
 			goto alloc;
