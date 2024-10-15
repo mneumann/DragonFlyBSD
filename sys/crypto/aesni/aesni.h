@@ -50,12 +50,6 @@ void aesni_set_deckey(const uint8_t *encrypt_schedule,
  */
 void aesni_encrypt_cbc(int rounds, const void *key_schedule, size_t len,
     const uint8_t *from, uint8_t *to, const uint8_t iv[AES_BLOCK_LEN]);
-void aesni_encrypt_xts(int rounds, const void *data_schedule,
-    const void *tweak_schedule, size_t len, const uint8_t *from, uint8_t *to,
-    const uint8_t iv[AES_BLOCK_LEN]);
-void aesni_decrypt_xts(int rounds, const void *data_schedule,
-    const void *tweak_schedule, size_t len, const uint8_t *from, uint8_t *to,
-    const uint8_t iv[AES_BLOCK_LEN]);
 void aesni_decrypt_cbc(int rounds, const void *key_schedule, size_t len,
     const uint8_t *from, const uint8_t iv[AES_BLOCK_LEN]);
 void aesni_encrypt_ecb(int rounds, const void *key_schedule, size_t len,
