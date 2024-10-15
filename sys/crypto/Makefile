@@ -10,7 +10,7 @@ SRCS+=	sha1.c
 SRCS+=	chachapoly.c
 
 .PATH:	${.CURDIR}/aesni
-SRCS+=	aesencdec_${MACHINE_ARCH}.S aeskeys_${MACHINE_ARCH}.S aesni_encdec.c
+SRCS+=	aesencdec_${MACHINE_ARCH}.S aeskeys_${MACHINE_ARCH}.S aesni.c
 
 .PATH:	${.CURDIR}/blake2
 SRCS+=	blake2s.c
