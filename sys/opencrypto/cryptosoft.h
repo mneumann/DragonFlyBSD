@@ -41,10 +41,6 @@ struct swcr_data {
 			u_int8_t	 *SW_kschedule;
 			struct enc_xform *SW_exf;
 		} SWCR_ENC;
-		struct {
-			u_int32_t	 SW_size;
-			struct comp_algo *SW_cxf;
-		} SWCR_COMP;
 	} SWCR_UN;
 
 #define sw_ictx		SWCR_UN.SWCR_AUTH.SW_ictx
@@ -55,8 +51,6 @@ struct swcr_data {
 #define sw_kschedule	SWCR_UN.SWCR_ENC.SW_kschedule
 #define sw_kschedule_refs SWCR_UN.SWCR_ENC.SW_kschedule_refs
 #define sw_exf		SWCR_UN.SWCR_ENC.SW_exf
-#define sw_size		SWCR_UN.SWCR_COMP.SW_size
-#define sw_cxf		SWCR_UN.SWCR_COMP.SW_cxf
 
 	struct swcr_data *sw_next;
 };
