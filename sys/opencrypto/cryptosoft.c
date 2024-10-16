@@ -241,13 +241,6 @@ swcr_newsession(device_t dev, u_int32_t *sid, struct cryptoini *cri)
 		case CRYPTO_AES_CTR:
 			txf = &enc_xform_aes_ctr;
 			goto enccommon;
-		case CRYPTO_AES_GCM_16:
-			txf = &enc_xform_aes_gcm;
-			goto enccommon;
-		case CRYPTO_AES_GMAC:
-			txf = &enc_xform_aes_gmac;
-			(*swd)->sw_exf = txf;
-			break;
 		case CRYPTO_CAMELLIA_CBC:
 			txf = &enc_xform_camellia;
 			goto enccommon;

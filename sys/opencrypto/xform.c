@@ -222,26 +222,6 @@ struct enc_xform enc_xform_aes_ctr = {
 	aes_ctr_reinit,
 };
 
-struct enc_xform enc_xform_aes_gcm = {
-	CRYPTO_AES_GCM_16, "AES-GCM",
-	AESGCM_BLOCK_LEN, AESGCM_IV_LEN, 16+4, 32+4,
-	sizeof(struct aes_ctr_ctx),
-	aes_ctr_crypt,
-	aes_ctr_crypt,
-	aes_ctr_setkey,
-	aes_gcm_reinit,
-};
-
-struct enc_xform enc_xform_aes_gmac = {
-	CRYPTO_AES_GMAC, "AES-GMAC",
-	AESGMAC_BLOCK_LEN, AESGMAC_IV_LEN, 16+4, 32+4,
-	0, /* NB: no context */
-	NULL,
-	NULL,
-	NULL,
-	NULL,
-};
-
 struct enc_xform enc_xform_arc4 = {
 	CRYPTO_ARC4, "ARC4",
 	1, 1, 1, 32,
