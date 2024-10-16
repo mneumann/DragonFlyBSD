@@ -3940,6 +3940,11 @@ TO_REMOVE+=/usr/share/man/man9/crypto_get_caps.9.gz
 TO_REMOVE+=/usr/share/man/man9/crypto_freereq.9.gz
 TO_REMOVE+=/usr/share/man/man9/crypto_getreq.9.gz
 TO_REMOVE+=/usr/share/man/man9/crypto_unblock.9.gz
+TO_REMOVE+=/usr/lib/libtcplay.so.3
+TO_REMOVE+=/usr/lib/libtcplay.so
+TO_REMOVE+=/usr/lib/libtcplay.a
+TO_REMOVE+=/usr/share/man/man8/tcplay.8.gz
+TO_REMOVE+=/sbin/tcplay
 
 .if !defined(WANT_INSTALLER)
 TO_REMOVE+=/usr/sbin/dfuibe_installer

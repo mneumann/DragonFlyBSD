@@ -47,7 +47,6 @@ scripts, and many other statically linked tools, such as various
 utilities,
 .Xr lvm 8 ,
 .Xr cryptsetup 8 ,
-.Xr tcplay 8 ,
 as well as some networking tools.
 The
 .Nm
@@ -100,9 +99,8 @@ vfs.root.realroot="<type>:[arg1[:arg2[:...]]]"
 .Pp
 Currently, the supported types of real root partition are:
 .Pa local ,
-.Pa crypt ,
 and
-.Pa tcplay .
+.Pa crypt .
 The
 .Pa local
 type allows to mount any local filesystem that does not require any
@@ -116,20 +114,13 @@ vfs.root.realroot="local:<FS-TYPE>:<DEVICE-PATH>[:<OPTIONS>]"
 .Pp
 The
 .Pa crypt
-and
-.Pa tcplay
-types allow to mount volumes supported by
-.Xr cryptsetup 8
-and
-.Xr tcplay 8 ,
-respectively.
+type allows to mount volumes supported by
+.Xr cryptsetup 8 .
 The device will be set up after asking the user for the key,
 and this volume will then be mounted as the root.
 The general formats are as follows:
 .Bd -literal -offset indent
 vfs.root.realroot="crypt:<FS-TYPE>:<DEVICE-PATH>:<MAPPING-NAME>[:<OPTIONS>]"
-
-vfs.root.realroot="tcplay:<FS-TYPE>:<DEVICE-PATH>:<MAPPING-NAME>[:<OPTIONS>]"
 .Ed
 .Sh FILES
 .Bl -tag -width "/boot/kernel/initrd.img.gz"
@@ -152,7 +143,6 @@ vfs.root.realroot="crypt:hammer2:/dev/serno/XXXXXX.s1d:root[:OPTIONS]"
 .Xr build 7 ,
 .Xr cryptsetup 8 ,
 .Xr lvm 8 ,
-.Xr tcplay 8
 .Sh HISTORY
 The
 .Nm
