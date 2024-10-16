@@ -2270,7 +2270,6 @@ opencrypto/crypto.c			optional crypto
 opencrypto/cryptodev_if.m		optional crypto
 opencrypto/cryptosoft.c			optional crypto
 opencrypto/gmac.c			optional crypto
-opencrypto/rmd160.c			optional crypto
 opencrypto/xform.c			optional crypto
 # drm_agpsupport.c must be included if CONFIG_AGP is set
 #dev/drm/drm_agpsupport.c		optional drm compile-with "${NORMAL_C} -include $S/dev/drm/kconfig.h ${WERROR}"

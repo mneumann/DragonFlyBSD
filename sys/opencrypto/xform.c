@@ -57,7 +57,6 @@
 #include <crypto/twofish/twofish.h>
 
 #include <opencrypto/gmac.h>
-#include <opencrypto/rmd160.h>
 
 #include <sys/md5.h>
 
@@ -342,14 +341,6 @@ struct auth_hash auth_hash_hmac_sha1 = {
 	20, SHA1_HASH_LEN, SHA1_HMAC_BLOCK_LEN, sizeof(SHA1_CTX),
 	SHA1Init_int, NULL, NULL,
 	SHA1Update_int, SHA1Final_int
-};
-
-struct auth_hash auth_hash_hmac_ripemd_160 = {
-	CRYPTO_RIPEMD160_HMAC, "HMAC-RIPEMD-160",
-	20, RIPEMD160_HASH_LEN, RIPEMD160_HMAC_BLOCK_LEN, sizeof(RMD160_CTX),
-	(void (*)(void *)) RMD160Init, NULL, NULL,
-	RMD160Update_int,
-	(void (*)(u_int8_t *, void *)) RMD160Final
 };
 
 struct auth_hash auth_hash_key_md5 = {
