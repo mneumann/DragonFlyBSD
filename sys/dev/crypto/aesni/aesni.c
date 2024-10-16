@@ -300,22 +300,10 @@ uint8_t *
 aesni_cipher_alloc(struct cryptodesc *enccrd, struct cryptop *crp,
     int *allocated)
 {
-	struct uio *uio;
-	struct iovec *iov;
 	uint8_t *addr;
 
 	addr = (u_char *)crp->crp_buf;
 	*allocated = 0;
-	return (addr);
-
-alloc:
-	addr = kmalloc(enccrd->crd_len, M_AESNI, M_NOWAIT);
-	if (addr != NULL) {
-		*allocated = 1;
-		crypto_copydata(crp->crp_flags, crp->crp_buf, enccrd->crd_skip,
-		    enccrd->crd_len, addr);
-	} else
-		*allocated = 0;
 	return (addr);
 }
 
