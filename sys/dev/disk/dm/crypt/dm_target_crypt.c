@@ -165,7 +165,7 @@ struct dmtc_dump_helper {
     (sizeof(struct dmtc_helper) + \
      MAXPHYS/DEV_BSIZE*(sizeof(struct cryptop) + sizeof(struct cryptodesc)))
 
-static void dmtc_crypto_dispatch(struct cryptop *crp);
+static int dmtc_crypto_dispatch(struct cryptop *crp);
 static void dmtc_crypto_dump_start(dm_target_crypt_config_t *priv,
 				struct dmtc_dump_helper *dump_helper);
 static void dmtc_crypto_read_start(dm_target_crypt_config_t *priv,
@@ -776,12 +776,12 @@ dm_target_crypt_destroy(dm_table_entry_t *table_en)
 /*
  * Wrapper around crypto_dispatch() to match dispatch_t type
  */
-static void
+static int
 dmtc_crypto_dispatch(struct cryptop *crp)
 {
 	KKASSERT(crp != NULL);
 	KTR_LOG(dmcrypt_crypto_dispatch, crp);
-	crypto_dispatch(crp);
+	return crypto_dispatch(crp);
 }
 
 /*
