@@ -362,9 +362,6 @@ padlock_hash_process(struct padlock_session *ses, struct cryptodesc *maccrd,
 {
 	int error;
 
-	if ((maccrd->crd_flags & CRD_F_KEY_EXPLICIT) != 0)
-		padlock_hash_key_setup(ses, maccrd->crd_key, maccrd->crd_klen);
-
 	error = padlock_authcompute(ses, maccrd, crp->crp_buf, crp->crp_flags);
 	return (error);
 }

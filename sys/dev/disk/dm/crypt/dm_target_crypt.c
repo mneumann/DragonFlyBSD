@@ -475,10 +475,6 @@ essiv_ivgen(dm_target_crypt_config_t *priv, u_int8_t *iv,
 	crp->crp_flags = CRYPTO_F_CBIFSYNC | CRYPTO_F_REL | CRYPTO_F_BATCH;
 
 	crd->crd_alg = priv->crypto_alg;
-#if 0
-	crd->crd_key = (caddr_t)priv->crypto_keyhash;
-	crd->crd_klen = priv->crypto_klen;
-#endif
 
 	bzero(crd->crd_iv, sizeof(crd->crd_iv));
 
@@ -988,10 +984,6 @@ dmtc_crypto_read_start(dm_target_crypt_config_t *priv, struct bio *bio)
 				 CRYPTO_F_BATCH;
 
 		crd->crd_alg = priv->crypto_alg;
-#if 0
-		crd->crd_key = (caddr_t)priv->crypto_key;
-		crd->crd_klen = priv->crypto_klen;
-#endif
 
 		crd->crd_skip = 0;
 		crd->crd_len = DEV_BSIZE /* XXX */;
@@ -1162,10 +1154,6 @@ dmtc_crypto_write_start(dm_target_crypt_config_t *priv, struct bio *bio)
 				 CRYPTO_F_BATCH;
 
 		crd->crd_alg = priv->crypto_alg;
-#if 0
-		crd->crd_key = (caddr_t)priv->crypto_key;
-		crd->crd_klen = priv->crypto_klen;
-#endif
 
 		crd->crd_skip = 0;
 		crd->crd_len = DEV_BSIZE /* XXX */;

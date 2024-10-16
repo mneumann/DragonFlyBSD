@@ -118,29 +118,11 @@ swcr_encdec(struct cryptodesc *crd, struct swcr_data *sw, caddr_t buf,
 
 	ivp = iv;
 
-	/*
-	 * The semantics are seriously broken because the session key
-	 * storage was never designed for concurrent ops.
-	 */
-	if (crd->crd_flags & CRD_F_KEY_EXPLICIT) {
-		kschedule = kmalloc(exf->ctxsize, M_CRYPTO_DATA,
-				    M_NOWAIT | M_ZERO);
-		if (kschedule == NULL) {
-			error = ENOMEM;
-			goto out;
-		}
-		error = exf->setkey(kschedule, crd->crd_key,
-				    crd->crd_klen / 8);
-		if (error)
-			goto out;
-		explicit_kschedule = 1;
-	} else {
-		spin_lock(&swcr_spin);
-		kschedule = sw->sw_kschedule;
-		++sw->sw_kschedule_refs;
-		spin_unlock(&swcr_spin);
-		explicit_kschedule = 0;
-	}
+	spin_lock(&swcr_spin);
+	kschedule = sw->sw_kschedule;
+	++sw->sw_kschedule_refs;
+	spin_unlock(&swcr_spin);
+	explicit_kschedule = 0;
 
 	/*
 	 * xforms that provide a reinit method perform all IV
@@ -269,7 +251,7 @@ swcr_authprepare(struct auth_hash *axf, struct swcr_data *sw, u_char *key,
 		break;
 	}
 	default:
-		kprintf("%s: CRD_F_KEY_EXPLICIT flag given, but algorithm %d "
+		kprintf("%s: algorithm %d "
 		    "doesn't use keys.\n", __func__, axf->type);
 	}
 }
@@ -290,9 +272,6 @@ swcr_authcompute(struct cryptodesc *crd, struct swcr_data *sw, caddr_t buf,
 		return EINVAL;
 
 	axf = sw->sw_axf;
-
-	if (crd->crd_flags & CRD_F_KEY_EXPLICIT)
-		swcr_authprepare(axf, sw, crd->crd_key, crd->crd_klen);
 
 	bcopy(sw->sw_ictx, &ctx, axf->ctxsize);
 
