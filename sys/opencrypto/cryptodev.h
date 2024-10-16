@@ -283,10 +283,6 @@ struct cryptop {
 	caddr_t		crp_mac;
 };
 
-#define CRYPTO_BUF_CONTIG	0x0
-#define CRYPTO_BUF_IOV		0x1
-#define CRYPTO_BUF_MBUF		0x2
-
 #define CRYPTO_OP_DECRYPT	0x0
 #define CRYPTO_OP_ENCRYPT	0x1
 
