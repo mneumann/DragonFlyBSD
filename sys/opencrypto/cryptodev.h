@@ -239,13 +239,10 @@ struct cryptodesc {
 #define	CRD_F_IV_EXPLICIT	0x04	/* IV explicitly provided */
 #define	CRD_F_DSA_SHA_NEEDED	0x08	/* Compute SHA-1 of buffer for DSA */
 #define	CRD_F_COMP		0x0f	/* Set when doing compression */
-#define	CRD_F_KEY_EXPLICIT	0x10	/* Key explicitly provided */
 
 	struct cryptoini	CRD_INI; /* Initialization/context data */
 #define crd_iv		CRD_INI.cri_iv
-#define crd_key		CRD_INI.cri_key
 #define crd_alg		CRD_INI.cri_alg
-#define crd_klen	CRD_INI.cri_klen
 
 	struct cryptodesc *crd_next;
 };

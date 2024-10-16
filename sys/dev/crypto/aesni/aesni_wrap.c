@@ -275,13 +275,6 @@ aesni_cipher_process(struct aesni_session *ses, struct cryptodesc *enccrd,
 	}
 #endif
 
-	if ((enccrd->crd_flags & CRD_F_KEY_EXPLICIT) != 0) {
-		error = aesni_cipher_setup_common(ses, enccrd->crd_key,
-		    enccrd->crd_klen);
-		if (error != 0)
-			goto out;
-	}
-
 	if ((enccrd->crd_flags & CRD_F_ENCRYPT) != 0) {
 		if ((enccrd->crd_flags & CRD_F_IV_EXPLICIT) != 0)
 			bcopy(enccrd->crd_iv, ses->iv, AES_BLOCK_LEN);

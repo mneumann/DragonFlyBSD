@@ -385,17 +385,6 @@ padlock_process(device_t dev, struct cryptop *crp, int hint __unused)
 	}
 
 out:
-#if 0
-	/*
-	 * This code is not necessary, because contexts will be freed on next
-	 * padlock_setup_mackey() call or at padlock_freesession() call.
-	 */
-	if (ses != NULL && maccrd != NULL &&
-	    (maccrd->crd_flags & CRD_F_KEY_EXPLICIT) != 0) {
-		padlock_free_ctx(ses->ses_axf, ses->ses_ictx);
-		padlock_free_ctx(ses->ses_axf, ses->ses_octx);
-	}
-#endif
 	crp->crp_etype = error;
 	crypto_done(crp);
 	return (error);
