@@ -73,11 +73,9 @@ swcr_encdec(struct cryptodesc *crd, struct swcr_data *sw, caddr_t buf,
 	unsigned char iv[EALG_MAX_BLOCK_LEN];
 	unsigned char *ivp;
 	u_int8_t *kschedule;
-	u_int8_t *okschedule;
 	struct enc_xform *exf;
 	int i, k, blks, ivlen;
 	int error;
-	int explicit_kschedule;
 
 	exf = sw->sw_exf;
 	blks = exf->blocksize;
@@ -115,7 +113,6 @@ swcr_encdec(struct cryptodesc *crd, struct swcr_data *sw, caddr_t buf,
 	kschedule = sw->sw_kschedule;
 	++sw->sw_kschedule_refs;
 	spin_unlock(&swcr_spin);
-	explicit_kschedule = 0;
 
 	/*
 	 * xforms that provide a reinit method perform all IV
@@ -174,23 +171,9 @@ swcr_encdec(struct cryptodesc *crd, struct swcr_data *sw, caddr_t buf,
 	 * Cleanup - explicitly replace the session key if requested
 	 *	     (horrible semantics for concurrent operation)
 	 */
-	if (explicit_kschedule) {
-		okschedule = NULL;
-		spin_lock(&swcr_spin);
-		if (sw->sw_kschedule && sw->sw_kschedule_refs == 0) {
-			okschedule = sw->sw_kschedule;
-			sw->sw_kschedule = kschedule;
-		}
-		spin_unlock(&swcr_spin);
-		if (okschedule) {
-			explicit_bzero(okschedule, exf->ctxsize);
-			kfree(okschedule, M_CRYPTO_DATA);
-		}
-	} else {
-		spin_lock(&swcr_spin);
-		--sw->sw_kschedule_refs;
-		spin_unlock(&swcr_spin);
-	}
+	spin_lock(&swcr_spin);
+	--sw->sw_kschedule_refs;
+	spin_unlock(&swcr_spin);
 
 	return error;
 }
