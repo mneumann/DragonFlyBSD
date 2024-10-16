@@ -30,12 +30,6 @@
 .Ft int32_t
 .Fn crypto_get_driverid "device_t dev" "int flags"
 .Ft int
-.Fn crypto_find_driver "const char *match"
-.Ft device_t
-.Fn crypto_find_device_byhid "int hid"
-.Ft int
-.Fn crypto_getcaps "int hid"
-.Ft int
 .Fn crypto_register "u_int32_t driverid" "int alg" "u_int16_t maxoplen" "u_int32_t flags"
 .Ft int
 .Fn crypto_unregister "u_int32_t driverid" "int alg"

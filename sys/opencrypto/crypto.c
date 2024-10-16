@@ -532,52 +532,6 @@ crypto_get_driverid(device_t dev, int flags)
 }
 
 /*
- * Lookup a driver by name.  We match against the full device
- * name and unit, and against just the name.  The latter gives
- * us a simple widlcarding by device name.  On success return the
- * driver/hardware identifier; otherwise return -1.
- */
-int
-crypto_find_driver(const char *match)
-{
-	int i, len = strlen(match);
-
-	CRYPTO_DRIVER_LOCK();
-	for (i = 0; i < crypto_drivers_num; i++) {
-		device_t dev = crypto_drivers[i].cc_dev;
-		if (dev == NULL ||
-		    (crypto_drivers[i].cc_flags & CRYPTOCAP_F_CLEANUP))
-			continue;
-		if (strncmp(match, device_get_nameunit(dev), len) == 0 ||
-		    strncmp(match, device_get_name(dev), len) == 0)
-			break;
-	}
-	CRYPTO_DRIVER_UNLOCK();
-	return i < crypto_drivers_num ? i : -1;
-}
-
-/*
- * Return the device_t for the specified driver or NULL
- * if the driver identifier is invalid.
- */
-device_t
-crypto_find_device_byhid(int hid)
-{
-	struct cryptocap *cap = crypto_checkdriver(hid);
-	return cap != NULL ? cap->cc_dev : NULL;
-}
-
-/*
- * Return the device/driver capabilities.
- */
-int
-crypto_getcaps(int hid)
-{
-	struct cryptocap *cap = crypto_checkdriver(hid);
-	return cap != NULL ? cap->cc_flags : 0;
-}
-
-/*
  * Register support for a non-key-related algorithm.  This routine
  * is called once for each such algorithm supported by a driver.
  */
