@@ -160,8 +160,6 @@ struct cryptostats {
 struct cryptoini {
 	int		cri_alg;	/* Algorithm to use */
 	int		cri_klen;	/* Key length, in bits */
-	int		cri_mlen;	/* Number of bytes we want from the
-					   entire hash. 0 means all. */
 	caddr_t		cri_key;	/* key to use */
 	u_int8_t	cri_iv[EALG_MAX_BLOCK_LEN];	/* IV to use */
 };
