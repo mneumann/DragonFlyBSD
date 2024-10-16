@@ -134,7 +134,7 @@ SYSCTL_INT(_kern, OID_AUTO, cryptodevallowsoft, CTLFLAG_RW,
 MALLOC_DEFINE(M_CRYPTO_DATA, "crypto", "crypto session records");
 
 static	void crypto_destroy(void);
-static	int crypto_invoke(struct cryptocap *cap, struct cryptop *crp, int hint);
+static	int crypto_invoke(struct cryptocap *cap, struct cryptop *crp);
 
 static struct cryptostats cryptostats;
 SYSCTL_STRUCT(_kern, OID_AUTO, crypto_stats, CTLFLAG_RW, &cryptostats,
@@ -580,7 +580,7 @@ crypto_dispatch(struct cryptop *crp)
 	cap = crypto_checkdriver(hid);
 	/* Driver cannot disappeared when there is an active session. */
 	KASSERT(cap != NULL, ("%s: Driver disappeared.", __func__));
-	result = crypto_invoke(cap, crp, 0);
+	result = crypto_invoke(cap, crp);
 	KKASSERT(result != ERESTART);
 	return (result);
 }
@@ -613,7 +613,7 @@ crypto_tstat(struct cryptotstat *ts, struct timespec *tv)
  * Dispatch a crypto request to the appropriate crypto devices.
  */
 static int
-crypto_invoke(struct cryptocap *cap, struct cryptop *crp, int hint)
+crypto_invoke(struct cryptocap *cap, struct cryptop *crp)
 {
 
 	KASSERT(crp != NULL, ("%s: crp == NULL", __func__));
@@ -649,7 +649,7 @@ crypto_invoke(struct cryptocap *cap, struct cryptop *crp, int hint)
 		/*
 		 * Invoke the driver to process the request.
 		 */
-		return CRYPTODEV_PROCESS(cap->cc_dev, crp, hint);
+		return CRYPTODEV_PROCESS(cap->cc_dev, crp);
 	}
 }
 

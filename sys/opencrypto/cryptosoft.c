@@ -398,7 +398,7 @@ swcr_freesession_slot(struct swcr_data **swdp, u_int32_t sid)
  * Process a software request.
  */
 static int
-swcr_process(device_t dev, struct cryptop *crp, int hint)
+swcr_process(device_t dev, struct cryptop *crp)
 {
 	struct cryptodesc *crd;
 	struct swcr_data *sw;
