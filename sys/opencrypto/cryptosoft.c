@@ -77,12 +77,12 @@ static int
 swcr_encdec(struct cryptodesc *crd, struct swcr_data *sw, caddr_t buf,
     int flags)
 {
-	unsigned char iv[EALG_MAX_BLOCK_LEN], blk[EALG_MAX_BLOCK_LEN], *idat;
-	unsigned char *ivp, *nivp, iv2[EALG_MAX_BLOCK_LEN];
+	unsigned char iv[EALG_MAX_BLOCK_LEN];
+	unsigned char *ivp;
 	u_int8_t *kschedule;
 	u_int8_t *okschedule;
 	struct enc_xform *exf;
-	int i, k, j, blks, ivlen;
+	int i, k, blks, ivlen;
 	int error;
 	int explicit_kschedule;
 
@@ -195,7 +195,7 @@ swcr_encdec(struct cryptodesc *crd, struct swcr_data *sw, caddr_t buf,
 		error = 0; /* Done w/contiguous buffer encrypt/decrypt */
 	}
 
-done:
+/*done*/:
 	/*
 	 * Cleanup - explicitly replace the session key if requested
 	 *	     (horrible semantics for concurrent operation)
