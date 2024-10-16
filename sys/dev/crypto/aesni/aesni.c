@@ -235,7 +235,7 @@ aesni_freesession(device_t dev, uint64_t tid)
 }
 
 static int
-aesni_process(device_t dev, struct cryptop *crp, int hint __unused)
+aesni_process(device_t dev, struct cryptop *crp)
 {
 	struct aesni_softc *sc = device_get_softc(dev);
 	struct aesni_session *ses = NULL;

@@ -45,6 +45,5 @@ METHOD int freesession {
 METHOD int process {
 	device_t	dev;
 	struct cryptop	*op;
-	int		flags;
 };
 
