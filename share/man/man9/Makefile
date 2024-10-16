@@ -447,11 +447,8 @@ MLINKS+=crit_enter.9 crit_enter_gd.9 \
 	crit_enter.9 crit_exit_id.9
 MLINKS+=crypto.9 crypto_dispatch.9 \
 	crypto.9 crypto_done.9 \
-	crypto.9 crypto_find_device_byhid.9 \
-	crypto.9 crypto_find_driver.9 \
 	crypto.9 crypto_freereq.9 \
 	crypto.9 crypto_freesession.9 \
-	crypto.9 crypto_getcaps.9 \
 	crypto.9 crypto_get_driverid.9 \
 	crypto.9 crypto_getreq.9 \
 	crypto.9 crypto_newsession.9 \
