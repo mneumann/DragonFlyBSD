@@ -130,14 +130,9 @@ int	crypto_devallowsoft = 0;	/* only use hardware crypto for asym */
 SYSCTL_INT(_kern, OID_AUTO, cryptodevallowsoft, CTLFLAG_RW,
 	   &crypto_devallowsoft, 0,
 	   "Enable/disable use of software asym crypto support");
-int	crypto_altdispatch = 0;		/* dispatch to alternative cpu */
-SYSCTL_INT(_kern, OID_AUTO, cryptoaltdispatch, CTLFLAG_RW,
-	   &crypto_altdispatch, 0,
-	   "Do not queue crypto op on current cpu");
 
 MALLOC_DEFINE(M_CRYPTO_DATA, "crypto", "crypto session records");
 
-static	struct thread *cryptoretthread;
 static	void crypto_destroy(void);
 static	int crypto_invoke(struct cryptocap *cap, struct cryptop *crp, int hint);
 
