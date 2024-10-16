@@ -346,8 +346,6 @@ extern	int crypto_devallowsoft;	/* only use hardware crypto */
  *     kept apart from the rest of the system.
  */
 
-extern	void crypto_copydata(int flags, caddr_t buf, int off, int size,
-	    caddr_t out);
 extern	int crypto_apply(int flags, caddr_t buf, int off, int len,
 	    int (*f)(void *, void *, u_int), void *arg);
 #endif /* _KERNEL */

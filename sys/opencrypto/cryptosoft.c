@@ -112,7 +112,7 @@ swcr_encdec(struct cryptodesc *crd, struct swcr_data *sw, caddr_t buf,
 			bcopy(crd->crd_iv, iv, ivlen);
 		else {
 			/* Get IV off buf */
-			crypto_copydata(flags, buf, crd->crd_inject, ivlen, iv);
+			bcopy(buf + crd->crd_inject, iv, ivlen);
 		}
 	}
 
@@ -390,8 +390,7 @@ swcr_combined(struct cryptop *crp)
 			bcopy(crde->crd_iv, iv, ivlen);
 		else
 			/* Get IV off buf */
-			crypto_copydata(crde->crd_flags, buf, crde->crd_inject,
-			    ivlen, iv);
+			bcopy(buf + crde->crd_inject, iv, ivlen);
 	}
 
 	/* Supply MAC with IV */
@@ -401,8 +400,7 @@ swcr_combined(struct cryptop *crp)
 	/* Supply MAC with AAD */
 	for (i = 0; i < crda->crd_len; i += blksz) {
 		len = MIN(crda->crd_len - i, blksz);
-		crypto_copydata(crde->crd_flags, buf, crda->crd_skip + i, len,
-		    blk);
+		bcopy(buf + (crda->crd_skip + i), blk, len);
 		axf->Update(&ctx, blk, len);
 	}
 
@@ -419,8 +417,7 @@ swcr_combined(struct cryptop *crp)
 		len = MIN(crde->crd_len - i, blksz);
 		if (len < blksz)
 			bzero(blk, blksz);
-		crypto_copydata(crde->crd_flags, buf, crde->crd_skip + i, len,
-		    blk);
+		bcopy(buf + (crde->crd_skip + i), blk, len);
 		if (crde->crd_flags & CRD_F_ENCRYPT) {
 			exf->encrypt(kschedule, blk, iv);
 			axf->Update(&ctx, blk, len);
@@ -479,7 +476,7 @@ swcr_compdec(struct cryptodesc *crd, struct swcr_data *sw,
 	 * copy in a buffer.
 	 */
 	data = kmalloc(crd->crd_len, M_CRYPTO_DATA, M_INTWAIT);
-	crypto_copydata(flags, buf, crd->crd_skip, crd->crd_len, data);
+	bcopy(buf + crd->crd_skip, data, crd->crd_len);
 
 	if (crd->crd_flags & CRD_F_COMP)
 		result = cxf->compress(data, crd->crd_len, &out);

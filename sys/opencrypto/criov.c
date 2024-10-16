@@ -38,12 +38,6 @@
 #include <opencrypto/cryptodev.h>
 
 
-void
-crypto_copydata(int flags, caddr_t buf, int off, int size, caddr_t out)
-{
-	bcopy(buf + off, out, size);
-}
-
 int
 crypto_apply(int flags, caddr_t buf, int off, int len,
     int (*f)(void *, void *, u_int), void *arg)
