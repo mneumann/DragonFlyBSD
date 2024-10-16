@@ -472,7 +472,7 @@ essiv_ivgen(dm_target_crypt_config_t *priv, u_int8_t *iv,
 
 	crp->crp_desc = crd;
 	crp->crp_etype = 0;
-	crp->crp_flags = CRYPTO_F_CBIFSYNC | CRYPTO_F_REL | CRYPTO_F_BATCH;
+	crp->crp_flags = CRYPTO_F_CBIFSYNC | CRYPTO_F_BATCH;
 
 	crd->crd_alg = priv->crypto_alg;
 
@@ -979,8 +979,7 @@ dmtc_crypto_read_start(dm_target_crypt_config_t *priv, struct bio *bio)
 		crp->crp_callback = dmtc_crypto_cb_read_done;
 		crp->crp_desc = crd;
 		crp->crp_etype = 0;
-		crp->crp_flags = CRYPTO_F_CBIFSYNC | CRYPTO_F_REL |
-				 CRYPTO_F_BATCH;
+		crp->crp_flags = CRYPTO_F_CBIFSYNC | CRYPTO_F_BATCH;
 
 		crd->crd_alg = priv->crypto_alg;
 
@@ -1148,8 +1147,7 @@ dmtc_crypto_write_start(dm_target_crypt_config_t *priv, struct bio *bio)
 		crp->crp_callback = dmtc_crypto_cb_write_done;
 		crp->crp_desc = crd;
 		crp->crp_etype = 0;
-		crp->crp_flags = CRYPTO_F_CBIFSYNC | CRYPTO_F_REL |
-				 CRYPTO_F_BATCH;
+		crp->crp_flags = CRYPTO_F_CBIFSYNC | CRYPTO_F_BATCH;
 
 		crd->crd_alg = priv->crypto_alg;
 
@@ -1356,8 +1354,7 @@ dmtc_crypto_dump_start(dm_target_crypt_config_t *priv, struct dmtc_dump_helper *
 		crp->crp_callback = dmtc_crypto_cb_dump_done;
 		crp->crp_desc = crd;
 		crp->crp_etype = 0;
-		crp->crp_flags = CRYPTO_F_CBIFSYNC | CRYPTO_F_REL |
-				 CRYPTO_F_BATCH;
+		crp->crp_flags = CRYPTO_F_CBIFSYNC | CRYPTO_F_BATCH;
 
 		crd->crd_alg = priv->crypto_alg;
 
