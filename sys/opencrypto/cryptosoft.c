@@ -65,7 +65,6 @@ u_int8_t hmac_opad_buffer[HMAC_MAX_BLOCK_LEN];
 static	int swcr_encdec(struct cryptodesc *, struct swcr_data *, caddr_t, int);
 static	int swcr_authcompute(struct cryptodesc *, struct swcr_data *, caddr_t, int);
 static	int swcr_combined(struct cryptop *);
-static	int swcr_compdec(struct cryptodesc *, struct swcr_data *, caddr_t, int);
 static	int swcr_freesession(device_t dev, u_int64_t tid);
 static	int swcr_freesession_slot(struct swcr_data **swdp, u_int32_t sid);
 
@@ -453,58 +452,6 @@ swcr_combined(struct cryptop *crp)
 }
 
 /*
- * Apply a compression/decompression algorithm
- */
-static int
-swcr_compdec(struct cryptodesc *crd, struct swcr_data *sw,
-	     caddr_t buf, int flags)
-{
-	u_int8_t *data, *out;
-	struct comp_algo *cxf;
-	int adj;
-	u_int32_t result;
-
-	cxf = sw->sw_cxf;
-
-	/*
-	 * We must handle the whole buffer of data in one time
-	 * then if there is not all the data in the mbuf, we must
-	 * copy in a buffer.
-	 */
-	data = kmalloc(crd->crd_len, M_CRYPTO_DATA, M_INTWAIT);
-	bcopy(buf + crd->crd_skip, data, crd->crd_len);
-
-	if (crd->crd_flags & CRD_F_COMP)
-		result = cxf->compress(data, crd->crd_len, &out);
-	else
-		result = cxf->decompress(data, crd->crd_len, &out);
-
-	kfree(data, M_CRYPTO_DATA);
-	if (result == 0)
-		return EINVAL;
-
-	sw->sw_size = result;
-	/* Check the compressed size when doing compression */
-	if (crd->crd_flags & CRD_F_COMP) {
-		if (result >= crd->crd_len) {
-			/* Compression was useless, we lost time */
-			kfree(out, M_CRYPTO_DATA);
-			return 0;
-		}
-	}
-
-	/*
-	 * Copy back the (de)compressed data.
-	 */
-	bcopy(out, buf + crd->crd_skip, result);
-	if (result < crd->crd_len) {
-		adj = result - crd->crd_len;
-	}
-	kfree(out, M_CRYPTO_DATA);
-	return 0;
-}
-
-/*
  * Generate a new software session.
  */
 static int
@@ -515,7 +462,6 @@ swcr_newsession(device_t dev, u_int32_t *sid, struct cryptoini *cri)
 	struct swcr_data **oswd;
 	struct auth_hash *axf;
 	struct enc_xform *txf;
-	struct comp_algo *cxf;
 	u_int32_t i;
 	u_int32_t n;
 	int error;
