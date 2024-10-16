@@ -240,9 +240,8 @@ aesni_process(device_t dev, struct cryptop *crp)
 	struct aesni_softc *sc = device_get_softc(dev);
 	struct aesni_session *ses = NULL;
 	struct cryptodesc *crd, *enccrd;
-	int error;
+	int error = 0;
 
-	error = 0;
 	enccrd = NULL;
 
 	/* Sanity check. */
@@ -289,8 +288,7 @@ aesni_process(device_t dev, struct cryptop *crp)
 		goto out;
 
 out:
-	crp->crp_etype = error;
-	crypto_done(crp);
+	crp->crp_flags |= CRYPTO_F_DONE;
 	return (error);
 }
 

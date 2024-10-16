@@ -555,10 +555,9 @@ crypto_dispatch(struct cryptop *crp)
 {
 	struct cryptocap *cap;
 	u_int32_t hid;
+	int error = 0;
 
 	KASSERT(crp != NULL, ("%s: crp == NULL", __func__));
-	KASSERT(crp->crp_callback != NULL,
-	    ("%s: crp->crp_callback == NULL", __func__));
 	KASSERT(crp->crp_desc != NULL, ("%s: crp->crp_desc == NULL", __func__));
 
 	cryptostats.cs_ops++;
@@ -589,32 +588,18 @@ crypto_dispatch(struct cryptop *crp)
 		    CRYPTOCAP_F_HARDWARE | CRYPTOCAP_F_SOFTWARE) == 0)
 			crp->crp_sid = nid;
 
-		crp->crp_etype = EAGAIN;
-		crypto_done(crp);
-		return 0;
+		crp->crp_flags |= CRYPTO_F_DONE;
+		error = EAGAIN;
 	} else {
 		/*
 		 * Invoke the driver to process the request.
 		 */
-		return CRYPTODEV_PROCESS(cap->cc_dev, crp);
+		error = CRYPTODEV_PROCESS(cap->cc_dev, crp);
 	}
-}
 
-/*
- * Invoke the callback on behalf of the driver.
- */
-void
-crypto_done(struct cryptop *crp)
-{
-	KASSERT((crp->crp_flags & CRYPTO_F_DONE) == 0,
-		("crypto_done: op already done, flags 0x%x", crp->crp_flags));
-	crp->crp_flags |= CRYPTO_F_DONE;
-	if (crp->crp_etype != 0)
+	if (error)
 		cryptostats.cs_errs++;
-	/*
-	 * Do the callback directly.
-	 */
-	crp->crp_callback(crp);
+	return (error);
 }
 
 #ifdef DDB

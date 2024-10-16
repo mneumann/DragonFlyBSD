@@ -189,27 +189,13 @@ struct cryptop {
 	int		crp_ilen;	/* Input data total length */
 	int		crp_olen;	/* Result total length */
 
-	int		crp_etype;	/*
-					 * Error type (zero means no error).
-					 * All error codes except EAGAIN
-					 * indicate possible data corruption (as in,
-					 * the data have been touched). On all
-					 * errors, the crp_sid may have changed
-					 * (reset to a new one), so the caller
-					 * should always check and use the new
-					 * value on future requests.
-					 */
 	int		crp_flags;
 
-#define	CRYPTO_F_BATCH	0x0008	/* Batch op if possible */
 #define	CRYPTO_F_DONE	0x0020	/* Operation completed */
-#define	CRYPTO_F_CBIFSYNC	0x0040	/* Do CBIMM if op is synchronous */
 
 	caddr_t		crp_buf;	/* Data to be processed */
 	caddr_t		crp_opaque;	/* Opaque pointer, passed along */
 	struct cryptodesc *crp_desc;	/* Linked list of processing descriptors */
-
-	int (*crp_callback)(struct cryptop *); /* Callback function */
 
 	struct timespec	crp_tstamp;	/* performance time stamp */
 
@@ -253,7 +239,6 @@ extern	int crypto_unregister_all(u_int32_t driverid);
 extern	int crypto_dispatch(struct cryptop *crp);
 #define	CRYPTO_SYMQ	0x1
 #define	CRYPTO_ASYMQ	0x2
-extern	void crypto_done(struct cryptop *crp);
 
 extern	int crypto_usercrypto;		/* userland may do crypto requests */
 extern	int crypto_userasymcrypto;	/* userland may do asym crypto reqs */

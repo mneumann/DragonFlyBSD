@@ -403,19 +403,20 @@ swcr_process(device_t dev, struct cryptop *crp)
 	struct cryptodesc *crd;
 	struct swcr_data *sw;
 	u_int32_t lid;
+	int error = 0;
 
 	/* Sanity check */
 	if (crp == NULL)
 		return EINVAL;
 
 	if (crp->crp_desc == NULL || crp->crp_buf == NULL) {
-		crp->crp_etype = EINVAL;
+		error = EINVAL;
 		goto done;
 	}
 
 	lid = crp->crp_sid & 0xffffffff;
 	if (lid >= swcr_sesnum || lid == 0 || swcr_sessions[lid] == NULL) {
-		crp->crp_etype = ENOENT;
+		error = ENOENT;
 		goto done;
 	}
 
@@ -438,7 +439,7 @@ swcr_process(device_t dev, struct cryptop *crp)
 
 		/* No such context ? */
 		if (sw == NULL) {
-			crp->crp_etype = EINVAL;
+			error = EINVAL;
 			goto done;
 		}
 		switch (sw->sw_alg) {
@@ -455,25 +456,25 @@ swcr_process(device_t dev, struct cryptop *crp)
 		case CRYPTO_SERPENT_CBC:
 		case CRYPTO_TWOFISH_XTS:
 		case CRYPTO_SERPENT_XTS:
-			if ((crp->crp_etype = swcr_encdec(crd, sw,
-			    crp->crp_buf, crp->crp_flags)) != 0)
-				goto done;
-			break;
+			error = swcr_encdec(crd, sw,
+			    crp->crp_buf, crp->crp_flags);
+			goto done;
+
 		case CRYPTO_NULL_CBC:
-			crp->crp_etype = 0;
-			break;
+			error = 0;
+			goto done;
 
 		default:
 			/* Unknown/unsupported algorithm */
-			crp->crp_etype = EINVAL;
+			error = EINVAL;
 			goto done;
 		}
 	}
 
 done:
-	crypto_done(crp);
+	crp->crp_flags |= CRYPTO_F_DONE;
 	lwkt_yield();
-	return 0;
+	return (error);
 }
 
 static void
