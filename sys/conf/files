@@ -2259,6 +2259,7 @@ crypto/rc4/rc4.c			optional crypto
 crypto/rijndael/rijndael-alg-fst.c	optional crypto
 crypto/rijndael/rijndael-api-fst.c	optional crypto
 crypto/rijndael/rijndael-api.c		optional crypto
+crypto/rmd160/rmd160.c			optional crypto
 crypto/sha1.c				optional crypto
 crypto/sha2/sha2.c			standard
 crypto/siphash/siphash.c		optional crypto
