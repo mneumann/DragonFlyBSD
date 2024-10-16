@@ -93,7 +93,6 @@ static	struct lock crypto_drivers_lock;	/* lock on driver table */
  *
  * Synchronization:
  * (d) - protected by CRYPTO_DRIVER_LOCK()
- * (q) - protected by CRYPTO_Q_LOCK()
  * Not tagged fields are read-only.
  */
 struct cryptocap {
@@ -110,42 +109,9 @@ struct cryptocap {
 
 	int		cc_flags;		/* (d) flags */
 #define CRYPTOCAP_F_CLEANUP	0x80000000	/* needs resource cleanup */
-	int		cc_qblocked;		/* (q) symmetric q blocked */
-	int		cc_kqblocked;		/* (q) asymmetric q blocked */
 };
 static	struct cryptocap *crypto_drivers = NULL;
 static	int crypto_drivers_num = 0;
-
-typedef struct crypto_tdinfo {
-	TAILQ_HEAD(,cryptop)	crp_q;		/* request queues */
-	thread_t		crp_td;
-	struct lock		crp_lock;
-	int			crp_sleep;
-} *crypto_tdinfo_t;
-
-/*
- * There are two queues for crypto requests; one for symmetric (e.g.
- * cipher) operations and one for asymmetric (e.g. MOD) operations.
- * See below for how synchronization is handled.
- * A single lock is used to lock access to both queues.  We could
- * have one per-queue but having one simplifies handling of block/unblock
- * operations.
- */
-static  struct crypto_tdinfo tdinfo_array[MAXCPU];
-
-#define	CRYPTO_Q_LOCK(tdinfo)	lockmgr(&tdinfo->crp_lock, LK_EXCLUSIVE)
-#define	CRYPTO_Q_UNLOCK(tdinfo)	lockmgr(&tdinfo->crp_lock, LK_RELEASE)
-
-/*
- * A single lock is used to lock access to the queue processing completed
- * crypto requests. Note that this lock must be separate from the lock on
- * request queues to insure driver callbacks don't generate lock order reversals.
- */
-static	TAILQ_HEAD(,cryptop) crp_ret_q;		/* callback queues */
-static	struct lock crypto_ret_q_lock;
-#define	CRYPTO_RETQ_LOCK()	lockmgr(&crypto_ret_q_lock, LK_EXCLUSIVE)
-#define	CRYPTO_RETQ_UNLOCK()	lockmgr(&crypto_ret_q_lock, LK_RELEASE)
-#define	CRYPTO_RETQ_EMPTY()	(TAILQ_EMPTY(&crp_ret_q))
 
 /*
  * Crypto op and desciptor data structures are allocated
@@ -171,8 +137,6 @@ SYSCTL_INT(_kern, OID_AUTO, cryptoaltdispatch, CTLFLAG_RW,
 
 MALLOC_DEFINE(M_CRYPTO_DATA, "crypto", "crypto session records");
 
-static	void crypto_proc(void *dummy);
-static	void crypto_ret_proc(void *dummy);
 static	struct thread *cryptoretthread;
 static	void crypto_destroy(void);
 static	int crypto_invoke(struct cryptocap *cap, struct cryptop *crp, int hint);
@@ -190,14 +154,9 @@ SYSCTL_INT(_debug, OID_AUTO, crypto_timing, CTLFLAG_RW,
 static int
 crypto_init(void)
 {
-	crypto_tdinfo_t tdinfo;
 	int error;
-	int n;
 
 	lockinit(&crypto_drivers_lock, "crypto driver table", 0, LK_CANRECURSE);
-
-	TAILQ_INIT(&crp_ret_q);
-	lockinit(&crypto_ret_q_lock, "crypto return queues", 0, LK_CANRECURSE);
 
 	cryptop_oc = objcache_create_simple(M_CRYPTO_OP, sizeof(struct cryptop));
 	cryptodesc_oc = objcache_create_simple(M_CRYPTO_DESC,
@@ -212,68 +171,15 @@ crypto_init(void)
 	crypto_drivers = kmalloc(crypto_drivers_num * sizeof(struct cryptocap),
 				 M_CRYPTO_DATA, M_WAITOK | M_ZERO);
 
-	for (n = 0; n < ncpus; ++n) {
-		tdinfo = &tdinfo_array[n];
-		TAILQ_INIT(&tdinfo->crp_q);
-		lockinit(&tdinfo->crp_lock, "crypto op queues",
-			 0, LK_CANRECURSE);
-		kthread_create_cpu(crypto_proc, tdinfo, &tdinfo->crp_td,
-				   n, "crypto %d", n);
-	}
-	kthread_create(crypto_ret_proc, NULL,
-		       &cryptoretthread, "crypto returns");
 	return 0;
 bad:
 	crypto_destroy();
 	return error;
 }
 
-/*
- * Signal a crypto thread to terminate.  We use the driver
- * table lock to synchronize the sleep/wakeups so that we
- * are sure the threads have terminated before we release
- * the data structures they use.  See crypto_finis below
- * for the other half of this song-and-dance.
- */
-static void
-crypto_terminate(struct thread **tp, void *q)
-{
-	struct thread *t;
-
-	KKASSERT(lockstatus(&crypto_drivers_lock, curthread) != 0);
-	t = *tp;
-	*tp = NULL;
-	if (t) {
-		kprintf("crypto_terminate: start\n");
-		wakeup_one(q);
-		crit_enter();
-		tsleep_interlock(t, 0);
-		CRYPTO_DRIVER_UNLOCK();	/* let crypto_finis progress */
-		crit_exit();
-		tsleep(t, PINTERLOCKED, "crypto_destroy", 0);
-		CRYPTO_DRIVER_LOCK();
-		kprintf("crypto_terminate: end\n");
-	}
-}
-
 static void
 crypto_destroy(void)
 {
-	crypto_tdinfo_t tdinfo;
-	int n;
-
-	/*
-	 * Terminate any crypto threads.
-	 */
-	CRYPTO_DRIVER_LOCK();
-	for (n = 0; n < ncpus; ++n) {
-		tdinfo = &tdinfo_array[n];
-		crypto_terminate(&tdinfo->crp_td, &tdinfo->crp_q);
-		lockuninit(&tdinfo->crp_lock);
-	}
-	crypto_terminate(&cryptoretthread, &crp_ret_q);
-	CRYPTO_DRIVER_UNLOCK();
-
 	/* XXX flush queues??? */
 
 	/*
@@ -286,7 +192,6 @@ crypto_destroy(void)
 		objcache_destroy(cryptodesc_oc);
 	if (cryptop_oc != NULL)
 		objcache_destroy(cryptop_oc);
-	lockuninit(&crypto_ret_q_lock);
 	lockuninit(&crypto_drivers_lock);
 }
 
@@ -656,41 +561,6 @@ crypto_unregister_all(u_int32_t driverid)
 	return err;
 }
 
-/*
- * Clear blockage on a driver.  The what parameter indicates whether
- * the driver is now ready for cryptop's.
- */
-int
-crypto_unblock(u_int32_t driverid, int what)
-{
-	crypto_tdinfo_t tdinfo;
-	struct cryptocap *cap;
-	int err;
-	int n;
-
-	CRYPTO_DRIVER_LOCK();
-	cap = crypto_checkdriver(driverid);
-	if (cap != NULL) {
-		if (what & CRYPTO_SYMQ)
-			cap->cc_qblocked = 0;
-		if (what & CRYPTO_ASYMQ)
-			cap->cc_kqblocked = 0;
-		for (n = 0; n < ncpus; ++n) {
-			tdinfo = &tdinfo_array[n];
-			CRYPTO_Q_LOCK(tdinfo);
-			if (tdinfo->crp_sleep)
-				wakeup_one(&tdinfo->crp_q);
-			CRYPTO_Q_UNLOCK(tdinfo);
-		}
-		err = 0;
-	} else {
-		err = EINVAL;
-	}
-	CRYPTO_DRIVER_UNLOCK();
-
-	return err;
-}
-
 static volatile int dispatch_rover;
 
 /*
@@ -699,7 +569,6 @@ static volatile int dispatch_rover;
 int
 crypto_dispatch(struct cryptop *crp)
 {
-	crypto_tdinfo_t tdinfo;
 	struct cryptocap *cap;
 	u_int32_t hid;
 	int result;
@@ -715,45 +584,14 @@ crypto_dispatch(struct cryptop *crp)
 	hid = CRYPTO_SESID2HID(crp->crp_sid);
 
 	/*
-	 * Dispatch the crypto op directly to the driver if the caller
-	 * marked the request to be processed immediately or this is
-	 * a synchronous callback chain occuring from within a crypto
-	 * processing thread.
-	 *
-	 * Fall through to queueing the driver is blocked.
+	 * Dispatch the crypto op directly to the driver.
 	 */
-	if ((crp->crp_flags & CRYPTO_F_BATCH) == 0 ||
-	    curthread->td_type == TD_TYPE_CRYPTO) {
-		cap = crypto_checkdriver(hid);
-		/* Driver cannot disappeared when there is an active session. */
-		KASSERT(cap != NULL, ("%s: Driver disappeared.", __func__));
-		if (!cap->cc_qblocked) {
-			result = crypto_invoke(cap, crp, 0);
-			KKASSERT(result != ERESTART);
-			return (result);
-		}
-	}
-
-	/*
-	 * Dispatch to a cpu for action if possible.  Dispatch to a different
-	 * cpu than the current cpu.
-	 */
-	if (CRYPTO_SESID2CAPS(crp->crp_sid) & CRYPTOCAP_F_SMP) {
-		n = atomic_fetchadd_int(&dispatch_rover, 1) & 255;
-		if (crypto_altdispatch && mycpu->gd_cpuid == n)
-			++n;
-		n = n % ncpus;
-	} else {
-		n = 0;
-	}
-	tdinfo = &tdinfo_array[n];
-
-	CRYPTO_Q_LOCK(tdinfo);
-	TAILQ_INSERT_TAIL(&tdinfo->crp_q, crp, crp_next);
-	if (tdinfo->crp_sleep)
-		wakeup_one(&tdinfo->crp_q);
-	CRYPTO_Q_UNLOCK(tdinfo);
-	return 0;
+	cap = crypto_checkdriver(hid);
+	/* Driver cannot disappeared when there is an active session. */
+	KASSERT(cap != NULL, ("%s: Driver disappeared.", __func__));
+	result = crypto_invoke(cap, crp, 0);
+	KKASSERT(result != ERESTART);
+	return (result);
 }
 
 #ifdef CRYPTO_TIMING
@@ -835,35 +673,9 @@ void
 crypto_freereq(struct cryptop *crp)
 {
 	struct cryptodesc *crd;
-#ifdef DIAGNOSTIC
-	crypto_tdinfo_t tdinfo;
-	struct cryptop *crp2;
-	int n;
-#endif
 
 	if (crp == NULL)
 		return;
-
-#ifdef DIAGNOSTIC
-	for (n = 0; n < ncpus; ++n) {
-		tdinfo = &tdinfo_array[n];
-
-		CRYPTO_Q_LOCK(tdinfo);
-		TAILQ_FOREACH(crp2, &tdinfo->crp_q, crp_next) {
-			KASSERT(crp2 != crp,
-			    ("Freeing cryptop from the crypto queue (%p).",
-			    crp));
-		}
-		CRYPTO_Q_UNLOCK(tdinfo);
-	}
-	CRYPTO_RETQ_LOCK();
-	TAILQ_FOREACH(crp2, &crp_ret_q, crp_next) {
-		KASSERT(crp2 != crp,
-		    ("Freeing cryptop from the return queue (%p).",
-		    crp));
-	}
-	CRYPTO_RETQ_UNLOCK();
-#endif
 
 	while ((crd = crp->crp_desc) != NULL) {
 		crp->crp_desc = crd->crd_next;
@@ -914,43 +726,23 @@ crypto_done(struct cryptop *crp)
 	if (crypto_timing)
 		crypto_tstat(&cryptostats.cs_done, &crp->crp_tstamp);
 #endif
-	/*
-	 * CBIFSYNC means do the callback immediately only if the
-	 * operation was done synchronously.  Both are used to avoid
-	 * doing extraneous context switches; the latter is mostly
-	 * used with the software crypto driver.
-	 */
-	if (((crp->crp_flags & CRYPTO_F_CBIFSYNC) &&
-	     (CRYPTO_SESID2CAPS(crp->crp_sid) & CRYPTOCAP_F_SYNC))) {
 		/*
-		 * Do the callback directly.  This is ok when the
-		 * callback routine does very little (e.g. the
-		 * /dev/crypto callback method just does a wakeup).
+		 * Do the callback directly.
 		 */
 #ifdef CRYPTO_TIMING
-		if (crypto_timing) {
-			/*
-			 * NB: We must copy the timestamp before
-			 * doing the callback as the cryptop is
-			 * likely to be reclaimed.
-			 */
-			struct timespec t = crp->crp_tstamp;
-			crypto_tstat(&cryptostats.cs_cb, &t);
-			crp->crp_callback(crp);
-			crypto_tstat(&cryptostats.cs_finis, &t);
-		} else
-#endif
-			crp->crp_callback(crp);
-	} else {
+	if (crypto_timing) {
 		/*
-		 * Normal case; queue the callback for the thread.
+		 * NB: We must copy the timestamp before
+		 * doing the callback as the cryptop is
+		 * likely to be reclaimed.
 		 */
-		CRYPTO_RETQ_LOCK();
-		if (CRYPTO_RETQ_EMPTY())
-			wakeup_one(&crp_ret_q);	/* shared wait channel */
-		TAILQ_INSERT_TAIL(&crp_ret_q, crp, crp_next);
-		CRYPTO_RETQ_UNLOCK();
-	}
+		struct timespec t = crp->crp_tstamp;
+		crypto_tstat(&cryptostats.cs_cb, &t);
+		crp->crp_callback(crp);
+		crypto_tstat(&cryptostats.cs_finis, &t);
+	} else
+#endif
+		crp->crp_callback(crp);
 }
 
 int
@@ -993,166 +785,6 @@ crypto_finis(void *chan)
 	kthread_exit();
 }
 
-/*
- * Crypto thread, dispatches crypto requests.
- *
- * MPSAFE
- */
-static void
-crypto_proc(void *arg)
-{
-	crypto_tdinfo_t tdinfo = arg;
-	struct cryptop *crp, *submit;
-	struct cryptocap *cap;
-	u_int32_t hid;
-	int result, hint;
-
-	CRYPTO_Q_LOCK(tdinfo);
-
-	curthread->td_type = TD_TYPE_CRYPTO;
-
-	for (;;) {
-		/*
-		 * Find the first element in the queue that can be
-		 * processed and look-ahead to see if multiple ops
-		 * are ready for the same driver.
-		 */
-		submit = NULL;
-		hint = 0;
-		TAILQ_FOREACH(crp, &tdinfo->crp_q, crp_next) {
-			hid = CRYPTO_SESID2HID(crp->crp_sid);
-			cap = crypto_checkdriver(hid);
-			/*
-			 * Driver cannot disappeared when there is an active
-			 * session.
-			 */
-			KASSERT(cap != NULL, ("%s:%u Driver disappeared.",
-			    __func__, __LINE__));
-			if (cap == NULL || cap->cc_dev == NULL) {
-				/* Op needs to be migrated, process it. */
-				if (submit == NULL)
-					submit = crp;
-				break;
-			}
-			if (!cap->cc_qblocked) {
-				if (submit != NULL) {
-					/*
-					 * We stop on finding another op,
-					 * regardless whether its for the same
-					 * driver or not.  We could keep
-					 * searching the queue but it might be
-					 * better to just use a per-driver
-					 * queue instead.
-					 */
-					if (CRYPTO_SESID2HID(submit->crp_sid) == hid)
-						hint = CRYPTO_HINT_MORE;
-					break;
-				} else {
-					submit = crp;
-					if ((submit->crp_flags & CRYPTO_F_BATCH) == 0)
-						break;
-					/* keep scanning for more are q'd */
-				}
-			}
-		}
-		if (submit != NULL) {
-			TAILQ_REMOVE(&tdinfo->crp_q, submit, crp_next);
-			hid = CRYPTO_SESID2HID(submit->crp_sid);
-			cap = crypto_checkdriver(hid);
-			KASSERT(cap != NULL, ("%s:%u Driver disappeared.",
-			    __func__, __LINE__));
-
-			CRYPTO_Q_UNLOCK(tdinfo);
-			result = crypto_invoke(cap, submit, hint);
-			KKASSERT(result != ERESTART);
-			CRYPTO_Q_LOCK(tdinfo);
-		}
-
-		if (submit == NULL) {
-			/*
-			 * Nothing more to be processed.  Sleep until we're
-			 * woken because there are more ops to process.
-			 * This happens either by submission or by a driver
-			 * becoming unblocked and notifying us through
-			 * crypto_unblock.  Note that when we wakeup we
-			 * start processing each queue again from the
-			 * front. It's not clear that it's important to
-			 * preserve this ordering since ops may finish
-			 * out of order if dispatched to different devices
-			 * and some become blocked while others do not.
-			 */
-			tdinfo->crp_sleep = 1;
-			lksleep (&tdinfo->crp_q, &tdinfo->crp_lock,
-				 0, "crypto_wait", 0);
-			tdinfo->crp_sleep = 0;
-			if (tdinfo->crp_td == NULL)
-				break;
-			cryptostats.cs_intrs++;
-		}
-	}
-	CRYPTO_Q_UNLOCK(tdinfo);
-
-	crypto_finis(&tdinfo->crp_q);
-}
-
-/*
- * Crypto returns thread, does callbacks for processed crypto requests.
- * Callbacks are done here, rather than in the crypto drivers, because
- * callbacks typically are expensive and would slow interrupt handling.
- *
- * MPSAFE
- */
-static void
-crypto_ret_proc(void *dummy __unused)
-{
-	struct cryptop *crpt;
-
-	CRYPTO_RETQ_LOCK();
-	for (;;) {
-		/* Harvest return q's for completed ops */
-		crpt = TAILQ_FIRST(&crp_ret_q);
-		if (crpt != NULL)
-			TAILQ_REMOVE(&crp_ret_q, crpt, crp_next);
-
-		if (crpt != NULL) {
-			CRYPTO_RETQ_UNLOCK();
-			/*
-			 * Run callbacks unlocked.
-			 */
-			if (crpt != NULL) {
-#ifdef CRYPTO_TIMING
-				if (crypto_timing) {
-					/*
-					 * NB: We must copy the timestamp before
-					 * doing the callback as the cryptop is
-					 * likely to be reclaimed.
-					 */
-					struct timespec t = crpt->crp_tstamp;
-					crypto_tstat(&cryptostats.cs_cb, &t);
-					crpt->crp_callback(crpt);
-					crypto_tstat(&cryptostats.cs_finis, &t);
-				} else
-#endif
-					crpt->crp_callback(crpt);
-			}
-			CRYPTO_RETQ_LOCK();
-		} else {
-			/*
-			 * Nothing more to be processed.  Sleep until we're
-			 * woken because there are more returns to process.
-			 */
-			lksleep(&crp_ret_q, &crypto_ret_q_lock,
-				0, "crypto_ret_wait", 0);
-			if (cryptoretthread == NULL)
-				break;
-			cryptostats.cs_rets++;
-		}
-	}
-	CRYPTO_RETQ_UNLOCK();
-
-	crypto_finis(&crp_ret_q);
-}
-
 #ifdef DDB
 static void
 db_show_drivers(void)
@@ -1171,57 +803,19 @@ db_show_drivers(void)
 		const struct cryptocap *cap = &crypto_drivers[hid];
 		if (cap->cc_dev == NULL)
 			continue;
-		db_printf("%-12s %4u %4u %08x %2u %2u\n"
+		db_printf("%-12s %4u %4u %08x\n"
 		    , device_get_nameunit(cap->cc_dev)
 		    , cap->cc_sessions
 		    , cap->cc_koperations
 		    , cap->cc_flags
-		    , cap->cc_qblocked
-		    , cap->cc_kqblocked
 		);
 	}
 }
 
 DB_SHOW_COMMAND(crypto, db_show_crypto)
 {
-	crypto_tdinfo_t tdinfo;
-	struct cryptop *crp;
-	int n;
-
 	db_show_drivers();
 	db_printf("\n");
-
-	db_printf("%4s %8s %4s %4s %4s %4s %8s %8s\n",
-	    "HID", "Caps", "Ilen", "Olen", "Etype", "Flags",
-	    "Desc", "Callback");
-
-	for (n = 0; n < ncpus; ++n) {
-		tdinfo = &tdinfo_array[n];
-
-		TAILQ_FOREACH(crp, &tdinfo->crp_q, crp_next) {
-			db_printf("%4u %08x %4u %4u %4u %04x %8p %8p\n"
-			    , (int) CRYPTO_SESID2HID(crp->crp_sid)
-			    , (int) CRYPTO_SESID2CAPS(crp->crp_sid)
-			    , crp->crp_ilen, crp->crp_olen
-			    , crp->crp_etype
-			    , crp->crp_flags
-			    , crp->crp_desc
-			    , crp->crp_callback
-			);
-		}
-	}
-	if (!TAILQ_EMPTY(&crp_ret_q)) {
-		db_printf("\n%4s %4s %4s %8s\n",
-		    "HID", "Etype", "Flags", "Callback");
-		TAILQ_FOREACH(crp, &crp_ret_q, crp_next) {
-			db_printf("%4u %4u %04x %8p\n"
-			    , (int) CRYPTO_SESID2HID(crp->crp_sid)
-			    , crp->crp_etype
-			    , crp->crp_flags
-			    , crp->crp_callback
-			);
-		}
-	}
 }
 
 #endif
