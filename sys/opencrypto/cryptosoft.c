@@ -177,7 +177,6 @@ swcr_encdec(struct cryptodesc *crd, struct swcr_data *sw, caddr_t buf,
 		error = 0; /* Done w/contiguous buffer encrypt/decrypt */
 	}
 
-/*done:*/
 	/*
 	 * Cleanup - explicitly replace the session key if requested
 	 *	     (horrible semantics for concurrent operation)
@@ -200,7 +199,6 @@ swcr_encdec(struct cryptodesc *crd, struct swcr_data *sw, caddr_t buf,
 		spin_unlock(&swcr_spin);
 	}
 
-out:
 	return error;
 }
 
