@@ -3934,6 +3934,7 @@ TO_REMOVE+=/usr/share/man/man4/padlock.4.gz
 TO_REMOVE+=/usr/share/man/man4/safe.4.gz
 TO_REMOVE+=/usr/share/man/man4/ubsec.4.gz
 TO_REMOVE+=/usr/share/man/man4/crypto.4.gz
+TO_REMOVE+=/usr/share/man/man4/cryptodev.4.gz
 TO_REMOVE+=/usr/share/man/man9/crypto_find_device_byhid.9.gz
 TO_REMOVE+=/usr/share/man/man9/crypto_find_driver.9.gz
 TO_REMOVE+=/usr/share/man/man9/crypto_get_caps.9.gz
