@@ -88,8 +88,7 @@ KTR_INFO(KTR_DMCRYPT, dmcrypt, crypto_cb_read_done, 2,
 struct target_crypt_config;
 
 typedef void dispatch_t(void *);
-typedef void ivgen_t(struct target_crypt_config *, u_int8_t *, size_t, off_t,
-    void *);
+typedef void ivgen_t(struct target_crypt_config *, u_int8_t *, size_t, off_t);
 
 typedef int ivgen_ctor_t(struct target_crypt_config *, char *, void **);
 typedef int ivgen_dtor_t(struct target_crypt_config *, void *);
@@ -103,8 +102,6 @@ struct iv_generator {
 
 struct essiv_ivgen_data {
 	struct essiv_ivgen_data *next;
-	void		*ivpriv;
-	void		*opaque;
 	struct cryptop	crp;
 	struct cryptodesc crd;
 };
@@ -168,7 +165,7 @@ struct dmtc_dump_helper {
     (sizeof(struct dmtc_helper) + \
      MAXPHYS/DEV_BSIZE*(sizeof(struct cryptop) + sizeof(struct cryptodesc)))
 
-static void dmtc_crypto_dispatch(void *arg);
+static void dmtc_crypto_dispatch(struct cryptop *crp);
 static void dmtc_crypto_dump_start(dm_target_crypt_config_t *priv,
 				struct dmtc_dump_helper *dump_helper);
 static void dmtc_crypto_read_start(dm_target_crypt_config_t *priv,
@@ -177,9 +174,6 @@ static void dmtc_crypto_write_start(dm_target_crypt_config_t *priv,
 				struct bio *bio);
 static void dmtc_bio_read_done(struct bio *bio);
 static void dmtc_bio_write_done(struct bio *bio);
-static int dmtc_crypto_cb_dump_done(struct cryptop *crp);
-static int dmtc_crypto_cb_read_done(struct cryptop *crp);
-static int dmtc_crypto_cb_write_done(struct cryptop *crp);
 
 static ivgen_ctor_t	essiv_ivgen_ctor;
 static ivgen_dtor_t	essiv_ivgen_dtor;
@@ -412,43 +406,9 @@ free_ivdata_elm(struct essiv_ivgen_priv *ivpriv, struct essiv_ivgen_data *ivdata
 	spin_unlock(&ivpriv->ivdata_spin);
 }
 
-static int
-essiv_ivgen_done(struct cryptop *crp)
-{
-	struct essiv_ivgen_priv *ivpriv;
-	struct essiv_ivgen_data *ivdata;
-	void *opaque;
-
-
-	if (crp->crp_etype == EAGAIN)
-		return crypto_dispatch(crp);
-
-	if (crp->crp_etype != 0) {
-		kprintf("dm_target_crypt: essiv_ivgen_done, "
-			"crp->crp_etype = %d\n", crp->crp_etype);
-	}
-
-	ivdata = (void *)crp->crp_opaque;
-
-	/*
-	 * In-memory structure is:
-	 * |  ivpriv  |  opaque  |     crp     |      crd      |
-	 * | (void *) | (void *) |   (cryptop) |  (cryptodesc) |
-	 */
-	ivpriv = ivdata->ivpriv;
-	opaque = ivdata->opaque;
-
-	free_ivdata_elm(ivpriv, ivdata);
-
-	dmtc_crypto_dispatch(opaque);
-
-	return 0;
-}
-
-
 static void
 essiv_ivgen(dm_target_crypt_config_t *priv, u_int8_t *iv,
-	    size_t iv_len, off_t sector, void *opaque)
+	    size_t iv_len, off_t sector)
 {
 	struct essiv_ivgen_priv *ivpriv;
 	struct essiv_ivgen_data *ivdata;
@@ -463,11 +423,10 @@ essiv_ivgen(dm_target_crypt_config_t *priv, u_int8_t *iv,
 	 * We preallocated all necessary ivdata's, so pull one off and use
 	 * it.
 	 */
+	// TODO: stack allocate
 	ivdata = alloc_ivdata_elm(ivpriv);
 	KKASSERT(ivdata != NULL);
 
-	ivdata->ivpriv = ivpriv;
-	ivdata->opaque = opaque;
 	crp = &ivdata->crp;
 	crd = &ivdata->crd;
 
@@ -480,14 +439,8 @@ essiv_ivgen(dm_target_crypt_config_t *priv, u_int8_t *iv,
 	crp->crp_sid = ivpriv->crypto_sid;
 	crp->crp_ilen = crp->crp_olen = iv_len;
 
-	crp->crp_opaque =  (caddr_t)ivdata;
-
-	crp->crp_callback = essiv_ivgen_done;
-
 	crp->crp_desc = crd;
-	crp->crp_etype = 0;
-	crp->crp_flags = CRYPTO_F_CBIFSYNC | CRYPTO_F_BATCH;
-
+	crp->crp_flags = 0;
 	crd->crd_alg = priv->crypto_alg;
 
 	bzero(crd->crd_iv, sizeof(crd->crd_iv));
@@ -499,31 +452,31 @@ essiv_ivgen(dm_target_crypt_config_t *priv, u_int8_t *iv,
 	error = crypto_dispatch(crp);
 	if (error)
 		kprintf("dm_target_crypt: essiv_ivgen, error = %d\n", error);
+
+	free_ivdata_elm(ivpriv, ivdata);
 }
 
 
 static void
 plain_ivgen(dm_target_crypt_config_t *priv, u_int8_t *iv,
-	    size_t iv_len, off_t sector, void *opaque)
+	    size_t iv_len, off_t sector)
 {
 	bzero(iv, iv_len);
 	*((uint32_t *)iv) = htole32((uint32_t)(sector + priv->iv_offset));
-	dmtc_crypto_dispatch(opaque);
 }
 
 static void
 plain64_ivgen(dm_target_crypt_config_t *priv, u_int8_t *iv,
-    size_t iv_len, off_t sector, void *opaque)
+    size_t iv_len, off_t sector)
 {
 	bzero(iv, iv_len);
 	*((uint64_t *)iv) = htole64((uint64_t)(sector + priv->iv_offset));
-	dmtc_crypto_dispatch(opaque);
 }
 
 #if 0
 static void
 geli_ivgen(dm_target_crypt_config_t *priv, u_int8_t *iv,
-	   size_t iv_len, off_t sector, void *opaque)
+	   size_t iv_len, off_t sector)
 {
 
 	SHA512_CTX	ctx512;
@@ -534,7 +487,6 @@ geli_ivgen(dm_target_crypt_config_t *priv, u_int8_t *iv,
 	SHA512_Final(md, &ctx512);
 
 	memcpy(iv, md, iv_len);
-	dmtc_crypto_dispatch(opaque);
 }
 #endif
 
@@ -825,11 +777,8 @@ dm_target_crypt_destroy(dm_table_entry_t *table_en)
  * Wrapper around crypto_dispatch() to match dispatch_t type
  */
 static void
-dmtc_crypto_dispatch(void *arg)
+dmtc_crypto_dispatch(struct cryptop *crp)
 {
-	struct cryptop *crp;
-
-	crp = (struct cryptop *)arg;
 	KKASSERT(crp != NULL);
 	KTR_LOG(dmcrypt_crypto_dispatch, crp);
 	crypto_dispatch(crp);
@@ -985,11 +934,7 @@ dmtc_crypto_read_start(dm_target_crypt_config_t *priv, struct bio *bio)
 		crp->crp_sid = priv->crypto_sid;
 		crp->crp_ilen = crp->crp_olen = DEV_BSIZE;
 
-		crp->crp_opaque = (void *)bio;
-
-		crp->crp_callback = dmtc_crypto_cb_read_done;
 		crp->crp_desc = crd;
-		crp->crp_etype = 0;
 		crp->crp_flags = CRYPTO_F_CBIFSYNC | CRYPTO_F_BATCH;
 
 		crd->crd_alg = priv->crypto_alg;
@@ -1008,70 +953,53 @@ dmtc_crypto_read_start(dm_target_crypt_config_t *priv, struct bio *bio)
 		 *	 crypt volumes.
 		 */
 		priv->ivgen->gen_iv(priv, crd->crd_iv, sizeof(crd->crd_iv),
-				    isector + i, crp);
-	}
-}
+				    isector + i);
+		int error = dmtc_crypto_dispatch(crp);
 
-/*
- * STRATEGY READ PATH PART 3/3
- */
-static int
-dmtc_crypto_cb_read_done(struct cryptop *crp)
-{
-	struct dmtc_helper *dmtc;
-	struct bio *bio, *obio;
-	int n;
-
-	if (crp->crp_etype == EAGAIN)
-		return crypto_dispatch(crp);
-
-	bio = (struct bio *)crp->crp_opaque;
-	KKASSERT(bio != NULL);
-
-	/*
-	 * Cumulative error
-	 */
-	if (crp->crp_etype) {
-		kprintf("dm_target_crypt: dmtc_crypto_cb_read_done "
-			"crp_etype = %d\n",
-			crp->crp_etype);
-		bio->bio_buf->b_error = crp->crp_etype;
-	}
-
-	/*
-	 * On the last chunk of the decryption we do any required copybacks
-	 * and complete the I/O.
-	 */
-	n = atomic_fetchadd_int(&bio->bio_caller_info3.value, -1);
-#if 0
-	kprintf("dmtc_crypto_cb_read_done %p, n = %d\n", bio, n);
-#endif
-
-	KTR_LOG(dmcrypt_crypto_cb_read_done, crp, bio->bio_buf, n);
-
-	if (n == 1) {
 		/*
-		 * For the B_HASBOGUS case we didn't decrypt in place,
-		 * so we need to copy stuff back into the buf.
-		 *
-		 * (disabled for now).
+		 * Cumulative error
 		 */
-		dmtc = bio->bio_caller_info2.ptr;
-		if (bio->bio_buf->b_error) {
-			bio->bio_buf->b_flags |= B_ERROR;
+		if (error) {
+			kprintf("dm_target_crypt: dmtc_crypto_cb_read_done "
+				"crp_etype = %d\n",
+				error);
+			bio->bio_buf->b_error = error;
 		}
+
+		/*
+		 * On the last chunk of the decryption we do any required copybacks
+		 * and complete the I/O.
+		 */
+		int n = atomic_fetchadd_int(&bio->bio_caller_info3.value, -1);
 #if 0
-		else if (bio->bio_buf->b_flags & B_HASBOGUS) {
-			memcpy(bio->bio_buf->b_data, dmtc->data_buf,
-			       bio->bio_buf->b_bcount);
-		}
+		kprintf("dmtc_crypto_cb_read_done %p, n = %d\n", bio, n);
 #endif
-		mpipe_free(&dmtc->priv->read_mpipe, dmtc->free_addr);
-		obio = pop_bio(bio);
-		biodone(obio);
+
+		KTR_LOG(dmcrypt_crypto_cb_read_done, crp, bio->bio_buf, n);
+
+		if (n == 1) {
+			/*
+			 * For the B_HASBOGUS case we didn't decrypt in place,
+			 * so we need to copy stuff back into the buf.
+			 *
+			 * (disabled for now).
+			 */
+			if (bio->bio_buf->b_error) {
+				bio->bio_buf->b_flags |= B_ERROR;
+			}
+#if 0
+			else if (bio->bio_buf->b_flags & B_HASBOGUS) {
+				memcpy(bio->bio_buf->b_data, dmtc->data_buf,
+				       bio->bio_buf->b_bcount);
+			}
+#endif
+			mpipe_free(&dmtc->priv->read_mpipe, dmtc->free_addr);
+			struct bio *obio = pop_bio(bio);
+			biodone(obio);
+		}
 	}
-	return 0;
 }
+
 /* END OF STRATEGY READ SECTION */
 
 /*
@@ -1153,10 +1081,8 @@ dmtc_crypto_write_start(dm_target_crypt_config_t *priv, struct bio *bio)
 
 		crp->crp_opaque = (void *)bio;
 
-		crp->crp_callback = dmtc_crypto_cb_write_done;
 		crp->crp_desc = crd;
-		crp->crp_etype = 0;
-		crp->crp_flags = CRYPTO_F_CBIFSYNC | CRYPTO_F_BATCH;
+		crp->crp_flags = 0;
 
 		crd->crd_alg = priv->crypto_alg;
 
@@ -1175,64 +1101,45 @@ dmtc_crypto_write_start(dm_target_crypt_config_t *priv, struct bio *bio)
 		    i, sectors);
 
 		priv->ivgen->gen_iv(priv, crd->crd_iv, sizeof(crd->crd_iv),
-				    isector + i, crp);
-	}
-}
+				    isector + i);
 
-/*
- * STRATEGY WRITE PATH PART 2/3
- */
-static int
-dmtc_crypto_cb_write_done(struct cryptop *crp)
-{
-	struct dmtc_helper *dmtc;
-	dm_target_crypt_config_t *priv;
-	struct bio *bio, *obio;
-	int n;
+		int error = dmtc_crypto_dispatch(crp);
 
-	if (crp->crp_etype == EAGAIN)
-		return crypto_dispatch(crp);
+		/*
+		 * Cumulative error
+		 */
+		if (error != 0) {
+			kprintf("dm_target_crypt: dmtc_crypto_cb_write_done "
+				"crp_etype = %d\n",
+			error);
+			bio->bio_buf->b_error = error;
+		}
 
-	bio = (struct bio *)crp->crp_opaque;
-	KKASSERT(bio != NULL);
-
-	/*
-	 * Cumulative error
-	 */
-	if (crp->crp_etype != 0) {
-		kprintf("dm_target_crypt: dmtc_crypto_cb_write_done "
-			"crp_etype = %d\n",
-		crp->crp_etype);
-		bio->bio_buf->b_error = crp->crp_etype;
-	}
-
-	/*
-	 * On the last chunk of the encryption we issue the write
-	 */
-	n = atomic_fetchadd_int(&bio->bio_caller_info3.value, -1);
+		/*
+		 * On the last chunk of the encryption we issue the write
+		 */
+		int n = atomic_fetchadd_int(&bio->bio_caller_info3.value, -1);
 #if 0
-	kprintf("dmtc_crypto_cb_write_done %p, n = %d\n", bio, n);
+		kprintf("dmtc_crypto_cb_write_done %p, n = %d\n", bio, n);
 #endif
 
-	KTR_LOG(dmcrypt_crypto_cb_write_done, crp, bio->bio_buf, n);
+		KTR_LOG(dmcrypt_crypto_cb_write_done, crp, bio->bio_buf, n);
 
-	if (n == 1) {
-		dmtc = bio->bio_caller_info2.ptr;
-		priv = (dm_target_crypt_config_t *)bio->bio_caller_info1.ptr;
-
-		if (bio->bio_buf->b_error) {
-			bio->bio_buf->b_flags |= B_ERROR;
-			mpipe_free(&dmtc->priv->write_mpipe, dmtc->free_addr);
-			obio = pop_bio(bio);
-			biodone(obio);
-		} else {
-			dmtc->orig_buf = bio->bio_buf->b_data;
-			bio->bio_buf->b_data = dmtc->data_buf;
-			bio->bio_done = dmtc_bio_write_done;
-			vn_strategy(priv->pdev->pdev_vnode, bio);
+		if (n == 1) {
+			if (bio->bio_buf->b_error) {
+				bio->bio_buf->b_flags |= B_ERROR;
+				mpipe_free(&dmtc->priv->write_mpipe, dmtc->free_addr);
+				struct bio *obio = pop_bio(bio);
+				biodone(obio);
+			} else {
+				dmtc->orig_buf = bio->bio_buf->b_data;
+				bio->bio_buf->b_data = dmtc->data_buf;
+				bio->bio_done = dmtc_bio_write_done;
+				vn_strategy(priv->pdev->pdev_vnode, bio);
+			}
 		}
+
 	}
-	return 0;
 }
 
 /*
@@ -1356,12 +1263,8 @@ dmtc_crypto_dump_start(dm_target_crypt_config_t *priv, struct dmtc_dump_helper *
 		crp->crp_sid = priv->crypto_sid;
 		crp->crp_ilen = crp->crp_olen = DEV_BSIZE;
 
-		crp->crp_opaque = (void *)dump_helper;
-
-		crp->crp_callback = dmtc_crypto_cb_dump_done;
 		crp->crp_desc = crd;
-		crp->crp_etype = 0;
-		crp->crp_flags = CRYPTO_F_CBIFSYNC | CRYPTO_F_BATCH;
+		crp->crp_flags = 0;
 
 		crd->crd_alg = priv->crypto_alg;
 
@@ -1376,40 +1279,25 @@ dmtc_crypto_dump_start(dm_target_crypt_config_t *priv, struct dmtc_dump_helper *
 		 *	 crypt volumes.
 		 */
 		priv->ivgen->gen_iv(priv, crd->crd_iv, sizeof(crd->crd_iv),
-				    isector + i, crp);
+				    isector + i);
+		int error = dmtc_crypto_dispatch(crp);
+
+		if (error != 0) {
+			kprintf("dm_target_crypt: dmtc_crypto_cb_dump_done "
+				"crp_etype = %d\n",
+			error);
+		}
+
+		/*
+		 * On the last chunk of the encryption we return control
+		 */
+		int n = atomic_fetchadd_int(&dump_helper->sectors, -1);
+
+		if (n == 1) {
+			atomic_add_int(dump_helper->ident, 1);
+			wakeup(dump_helper);
+		}
 	}
-}
-
-static int
-dmtc_crypto_cb_dump_done(struct cryptop *crp)
-{
-	struct dmtc_dump_helper *dump_helper;
-	int n;
-
-	if (crp->crp_etype == EAGAIN)
-		return crypto_dispatch(crp);
-
-	dump_helper = (struct dmtc_dump_helper *)crp->crp_opaque;
-	KKASSERT(dump_helper != NULL);
-
-	if (crp->crp_etype != 0) {
-		kprintf("dm_target_crypt: dmtc_crypto_cb_dump_done "
-			"crp_etype = %d\n",
-		crp->crp_etype);
-		return crp->crp_etype;
-	}
-
-	/*
-	 * On the last chunk of the encryption we return control
-	 */
-	n = atomic_fetchadd_int(&dump_helper->sectors, -1);
-
-	if (n == 1) {
-		atomic_add_int(dump_helper->ident, 1);
-		wakeup(dump_helper);
-	}
-
-	return 0;
 }
 
 static int
