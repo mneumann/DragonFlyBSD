@@ -667,51 +667,6 @@ crypto_invoke(struct cryptocap *cap, struct cryptop *crp, int hint)
 }
 
 /*
- * Release a set of crypto descriptors.
- */
-void
-crypto_freereq(struct cryptop *crp)
-{
-	struct cryptodesc *crd;
-
-	if (crp == NULL)
-		return;
-
-	while ((crd = crp->crp_desc) != NULL) {
-		crp->crp_desc = crd->crd_next;
-		objcache_put(cryptodesc_oc, crd);
-	}
-	objcache_put(cryptop_oc, crp);
-}
-
-/*
- * Acquire a set of crypto descriptors.
- */
-struct cryptop *
-crypto_getreq(int num)
-{
-	struct cryptodesc *crd;
-	struct cryptop *crp;
-
-	crp = objcache_get(cryptop_oc, M_WAITOK);
-	if (crp != NULL) {
-		bzero(crp, sizeof (*crp));
-		while (num--) {
-			crd = objcache_get(cryptodesc_oc, M_WAITOK);
-			if (crd == NULL) {
-				crypto_freereq(crp);
-				return NULL;
-			}
-			bzero(crd, sizeof (*crd));
-
-			crd->crd_next = crp->crp_desc;
-			crp->crp_desc = crd;
-		}
-	}
-	return crp;
-}
-
-/*
  * Invoke the callback on behalf of the driver.
  */
 void
@@ -743,28 +698,6 @@ crypto_done(struct cryptop *crp)
 	} else
 #endif
 		crp->crp_callback(crp);
-}
-
-int
-crypto_getfeat(int *featp)
-{
-	int hid, kalg, feat = 0;
-
-	CRYPTO_DRIVER_LOCK();
-	for (hid = 0; hid < crypto_drivers_num; hid++) {
-		const struct cryptocap *cap = &crypto_drivers[hid];
-
-		if ((cap->cc_flags & CRYPTOCAP_F_SOFTWARE) &&
-		    !crypto_devallowsoft) {
-			continue;
-		}
-		for (kalg = 0; kalg <= CRK_ALGORITHM_MAX; kalg++)
-			if (cap->cc_kalg[kalg] & CRYPTO_ALG_FLAG_SUPPORTED)
-				feat |=  1 << kalg;
-	}
-	CRYPTO_DRIVER_UNLOCK();
-	*featp = feat;
-	return (0);
 }
 
 /*

@@ -3937,6 +3937,9 @@ TO_REMOVE+=/usr/share/man/man4/crypto.4.gz
 TO_REMOVE+=/usr/share/man/man9/crypto_find_device_byhid.9.gz
 TO_REMOVE+=/usr/share/man/man9/crypto_find_driver.9.gz
 TO_REMOVE+=/usr/share/man/man9/crypto_get_caps.9.gz
+TO_REMOVE+=/usr/share/man/man9/crypto_freereq.9.gz
+TO_REMOVE+=/usr/share/man/man9/crypto_getreq.9.gz
+TO_REMOVE+=/usr/share/man/man9/crypto_unblock.9.gz
 
 .if !defined(WANT_INSTALLER)
 TO_REMOVE+=/usr/sbin/dfuibe_installer
