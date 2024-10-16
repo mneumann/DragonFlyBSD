@@ -185,7 +185,6 @@ struct cryptoini {
 
 /* Describe boundaries of a single crypto operation */
 struct cryptodesc {
-	int		crd_skip;	/* How many bytes to ignore from start */
 	int		crd_len;	/* How many bytes to process */
 	int		crd_inject;	/* Where to inject results, if applicable */
 	int		crd_flags;

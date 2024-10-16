@@ -126,8 +126,7 @@ swcr_encdec(struct cryptodesc *crd, struct swcr_data *sw, caddr_t buf,
 		 * contiguous buffer
 		 */
 		if (exf->reinit) {
-			for(i = crd->crd_skip;
-			    i < crd->crd_skip + crd->crd_len; i += blks) {
+			for(i = 0; i < crd->crd_len; i += blks) {
 				if (crd->crd_flags & CRD_F_ENCRYPT) {
 					exf->encrypt(kschedule, buf + i, iv);
 				} else {
@@ -135,10 +134,9 @@ swcr_encdec(struct cryptodesc *crd, struct swcr_data *sw, caddr_t buf,
 				}
 			}
 		} else if (crd->crd_flags & CRD_F_ENCRYPT) {
-			for (i = crd->crd_skip;
-			    i < crd->crd_skip + crd->crd_len; i += blks) {
+			for (i = 0; i < crd->crd_len; i += blks) {
 				/* XOR with the IV/previous block, as appropriate. */
-				if (i == crd->crd_skip)
+				if (i == 0)
 					for (k = 0; k < blks; k++)
 						buf[i + k] ^= ivp[k];
 				else
@@ -151,12 +149,11 @@ swcr_encdec(struct cryptodesc *crd, struct swcr_data *sw, caddr_t buf,
 			 * Start at the end, so we don't need to keep the
 			 * encrypted block as the IV for the next block.
 			 */
-			for (i = crd->crd_skip + crd->crd_len - blks;
-			    i >= crd->crd_skip; i -= blks) {
+			for (i = crd->crd_len - blks; i >= 0; i -= blks) {
 				exf->decrypt(kschedule, buf + i, iv);
 
 				/* XOR with the IV/previous block, as appropriate */
-				if (i == crd->crd_skip)
+				if (i == 0)
 					for (k = 0; k < blks; k++)
 						buf[i + k] ^= ivp[k];
 				else
