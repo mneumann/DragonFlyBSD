@@ -256,7 +256,7 @@ aesni_process(device_t dev, struct cryptop *crp, int hint __unused)
 		goto out;
 	}
 
-	for (crd = crp->crp_desc; crd != NULL; crd = crd->crd_next) {
+	if ((crd = crp->crp_desc) != NULL) {
 		switch (crd->crd_alg) {
 		case CRYPTO_AES_CBC:
 		case CRYPTO_AES_XTS:
