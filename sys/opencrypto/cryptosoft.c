@@ -40,7 +40,6 @@
 
 #include <crypto/blowfish/blowfish.h>
 #include <crypto/sha1.h>
-#include <opencrypto/rmd160.h>
 #include <crypto/cast/cast.h>
 #include <crypto/skipjack/skipjack.h>
 #include <sys/md5.h>
@@ -217,7 +216,6 @@ swcr_authprepare(struct auth_hash *axf, struct swcr_data *sw, u_char *key,
 	case CRYPTO_SHA2_384_HMAC:
 	case CRYPTO_SHA2_512_HMAC:
 	case CRYPTO_NULL_HMAC:
-	case CRYPTO_RIPEMD160_HMAC:
 		for (k = 0; k < klen; k++)
 			key[k] ^= HMAC_IPAD_VAL;
 
@@ -283,7 +281,6 @@ swcr_authcompute(struct cryptodesc *crd, struct swcr_data *sw, caddr_t buf,
 	case CRYPTO_SHA2_256_HMAC:
 	case CRYPTO_SHA2_384_HMAC:
 	case CRYPTO_SHA2_512_HMAC:
-	case CRYPTO_RIPEMD160_HMAC:
 		if (sw->sw_octx == NULL)
 			return EINVAL;
 
@@ -615,8 +612,6 @@ swcr_newsession(device_t dev, u_int32_t *sid, struct cryptoini *cri)
 		case CRYPTO_NULL_HMAC:
 			axf = &auth_hash_null;
 			goto authcommon;
-		case CRYPTO_RIPEMD160_HMAC:
-			axf = &auth_hash_hmac_ripemd_160;
 		authcommon:
 			(*swd)->sw_ictx = kmalloc(axf->ctxsize, M_CRYPTO_DATA,
 						  M_WAITOK);
@@ -836,7 +831,6 @@ swcr_freesession_slot(struct swcr_data **swdp, u_int32_t sid)
 		case CRYPTO_SHA2_256_HMAC:
 		case CRYPTO_SHA2_384_HMAC:
 		case CRYPTO_SHA2_512_HMAC:
-		case CRYPTO_RIPEMD160_HMAC:
 		case CRYPTO_NULL_HMAC:
 			axf = swd->sw_axf;
 
@@ -957,7 +951,6 @@ swcr_process(device_t dev, struct cryptop *crp, int hint)
 		case CRYPTO_SHA2_256_HMAC:
 		case CRYPTO_SHA2_384_HMAC:
 		case CRYPTO_SHA2_512_HMAC:
-		case CRYPTO_RIPEMD160_HMAC:
 		case CRYPTO_NULL_HMAC:
 		case CRYPTO_MD5_KPDK:
 		case CRYPTO_SHA1_KPDK:
@@ -1032,7 +1025,6 @@ swcr_attach(device_t dev)
 	REGISTER(CRYPTO_SHA2_256_HMAC);
 	REGISTER(CRYPTO_SHA2_384_HMAC);
 	REGISTER(CRYPTO_SHA2_512_HMAC);
-	REGISTER(CRYPTO_RIPEMD160_HMAC);
 	REGISTER(CRYPTO_NULL_HMAC);
 	REGISTER(CRYPTO_MD5_KPDK);
 	REGISTER(CRYPTO_SHA1_KPDK);

@@ -28,7 +28,6 @@
 #include <sys/md5.h>
 #include <crypto/sha1.h>
 #include <crypto/sha2/sha2.h>
-#include <opencrypto/rmd160.h>
 #include <opencrypto/gmac.h>
 
 /* Declarations */
@@ -73,7 +72,6 @@ struct comp_algo {
 union authctx {
 	MD5_CTX md5ctx;
 	SHA1_CTX sha1ctx;
-	RMD160_CTX rmd160ctx;
 	SHA256_CTX sha256ctx;
 	SHA384_CTX sha384ctx;
 	SHA512_CTX sha512ctx;
