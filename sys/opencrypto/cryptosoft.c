@@ -59,9 +59,6 @@ static	u_int32_t swcr_minsesnum = 1;
 
 static struct spinlock swcr_spin = SPINLOCK_INITIALIZER(swcr_spin, "swcr_spin");
 
-u_int8_t hmac_ipad_buffer[HMAC_MAX_BLOCK_LEN];
-u_int8_t hmac_opad_buffer[HMAC_MAX_BLOCK_LEN];
-
 static	int swcr_encdec(struct cryptodesc *, struct swcr_data *, caddr_t, int);
 static	int swcr_freesession(device_t dev, u_int64_t tid);
 static	int swcr_freesession_slot(struct swcr_data **swdp, u_int32_t sid);
@@ -527,9 +524,6 @@ swcr_probe(device_t dev)
 static int
 swcr_attach(device_t dev)
 {
-	memset(hmac_ipad_buffer, HMAC_IPAD_VAL, HMAC_MAX_BLOCK_LEN);
-	memset(hmac_opad_buffer, HMAC_OPAD_VAL, HMAC_MAX_BLOCK_LEN);
-
 	swcr_id = crypto_get_driverid(dev, CRYPTOCAP_F_SOFTWARE |
 					   CRYPTOCAP_F_SYNC |
 					   CRYPTOCAP_F_SMP);
