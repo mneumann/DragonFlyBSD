@@ -65,7 +65,6 @@ struct cryptodesc {
 	struct cryptoini   CRD_INI;
 #define crd_iv          CRD_INI.cri_iv
 #define crd_alg         CRD_INI.cri_alg
-	struct cryptodesc *crd_next;
 };
 
 struct cryptop {
@@ -337,12 +336,6 @@ operation request, drivers may re-initialize state on-demand
 Furthermore, the cryptographic
 framework may re-route requests as a result of full queues or hardware
 failure, as described above.
-.It Va crd_next
-Point to the next descriptor.
-Linked operations are useful in protocols
-where multiple cryptographic transforms may be applied on the same
-block of data.
-.El
 .El
 .Pp
 Note that it is the responsibility of the

@@ -420,7 +420,7 @@ swcr_process(device_t dev, struct cryptop *crp, int hint)
 	}
 
 	/* Go through crypto descriptors, processing as we go */
-	for (crd = crp->crp_desc; crd; crd = crd->crd_next) {
+	if ((crd = crp->crp_desc) != NULL) {
 		/*
 		 * Find the crypto context.
 		 *

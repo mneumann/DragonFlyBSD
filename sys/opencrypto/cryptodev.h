@@ -192,8 +192,6 @@ struct cryptodesc {
 	struct cryptoini	CRD_INI; /* Initialization/context data */
 #define crd_iv		CRD_INI.cri_iv
 #define crd_alg		CRD_INI.cri_alg
-
-	struct cryptodesc *crd_next;
 };
 
 /* Structure describing complete operation */

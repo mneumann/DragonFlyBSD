@@ -641,9 +641,6 @@ crypto_invoke(struct cryptocap *cap, struct cryptop *crp, int hint)
 		 */
 		crypto_freesession(crp->crp_sid);
 
-		for (crd = crp->crp_desc; crd->crd_next; crd = crd->crd_next)
-			crd->CRD_INI.cri_next = &(crd->crd_next->CRD_INI);
-
 		/* XXX propagate flags from initial session? */
 		if (crypto_newsession(&nid, &(crp->crp_desc->CRD_INI),
 		    CRYPTOCAP_F_HARDWARE | CRYPTOCAP_F_SOFTWARE) == 0)
