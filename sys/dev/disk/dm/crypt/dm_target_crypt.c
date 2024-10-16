@@ -391,6 +391,28 @@ essiv_ivgen_dtor(struct target_crypt_config *priv, void *arg)
 	return 0;
 }
 
+static __inline struct essiv_ivgen_data *
+alloc_ivdata_elm(struct essiv_ivgen_priv *ivpriv)
+{
+	struct essiv_ivgen_data *ivdata;
+
+	spin_lock(&ivpriv->ivdata_spin);
+	ivdata = ivpriv->ivdata_base;
+	ivpriv->ivdata_base = ivdata->next;
+	spin_unlock(&ivpriv->ivdata_spin);
+
+	return ivdata;
+}
+
+static __inline void
+free_ivdata_elm(struct essiv_ivgen_priv *ivpriv, struct essiv_ivgen_data *ivdata)
+{
+	spin_lock(&ivpriv->ivdata_spin);
+	ivdata->next = ivpriv->ivdata_base;
+	ivpriv->ivdata_base = ivdata;
+	spin_unlock(&ivpriv->ivdata_spin);
+}
+
 static int
 essiv_ivgen_done(struct cryptop *crp)
 {
@@ -417,15 +439,13 @@ essiv_ivgen_done(struct cryptop *crp)
 	ivpriv = ivdata->ivpriv;
 	opaque = ivdata->opaque;
 
-	spin_lock(&ivpriv->ivdata_spin);
-	ivdata->next = ivpriv->ivdata_base;
-	ivpriv->ivdata_base = ivdata;
-	spin_unlock(&ivpriv->ivdata_spin);
+	free_ivdata_elm(ivpriv, ivdata);
 
 	dmtc_crypto_dispatch(opaque);
 
 	return 0;
 }
+
 
 static void
 essiv_ivgen(dm_target_crypt_config_t *priv, u_int8_t *iv,
@@ -444,11 +464,7 @@ essiv_ivgen(dm_target_crypt_config_t *priv, u_int8_t *iv,
 	 * We preallocated all necessary ivdata's, so pull one off and use
 	 * it.
 	 */
-	spin_lock(&ivpriv->ivdata_spin);
-	ivdata = ivpriv->ivdata_base;
-	ivpriv->ivdata_base = ivdata->next;
-	spin_unlock(&ivpriv->ivdata_spin);
-
+	ivdata = alloc_ivdata_elm(ivpriv);
 	KKASSERT(ivdata != NULL);
 
 	ivdata->ivpriv = ivpriv;
