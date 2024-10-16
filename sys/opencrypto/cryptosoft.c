@@ -389,6 +389,7 @@ swcr_freesession_slot(struct swcr_data **swdp, u_int32_t sid)
 				kfree(swd->sw_kschedule, M_CRYPTO_DATA);
 			}
 			break;
+		}
 
 		//FREE(swd, M_CRYPTO_DATA);
 		kfree(swd, M_CRYPTO_DATA);
