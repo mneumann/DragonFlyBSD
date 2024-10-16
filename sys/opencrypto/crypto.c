@@ -626,7 +626,6 @@ crypto_invoke(struct cryptocap *cap, struct cryptop *crp, int hint)
 		crypto_tstat(&cryptostats.cs_invoke, &crp->crp_tstamp);
 #endif
 	if (cap->cc_flags & CRYPTOCAP_F_CLEANUP) {
-		struct cryptodesc *crd;
 		u_int64_t nid;
 
 		/*
