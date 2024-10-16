@@ -3,7 +3,7 @@
 KMOD=	crypto
 
 .PATH:	${.CURDIR}/../opencrypto
-SRCS=	crypto.c cryptosoft.c deflate.c gmac.c rmd160.c xform.c
+SRCS=	crypto.c cryptosoft.c gmac.c rmd160.c xform.c
 SRCS+=	cryptodev_if.c cryptodev_if.h
 
 SRCS+=	sha1.c

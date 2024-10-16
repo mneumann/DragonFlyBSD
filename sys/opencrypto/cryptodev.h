@@ -131,7 +131,6 @@
 #define	CRYPTO_SHA1		14
 #define	CRYPTO_NULL_HMAC	15
 #define	CRYPTO_NULL_CBC		16
-#define	CRYPTO_DEFLATE_COMP	17 /* Deflate compression algorithm */
 #define	CRYPTO_SHA2_256_HMAC	18
 #define	CRYPTO_SHA2_384_HMAC	19
 #define	CRYPTO_SHA2_512_HMAC	20
