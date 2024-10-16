@@ -71,7 +71,6 @@ struct cryptoini {
 };
 
 struct cryptodesc {
-	int                crd_skip;
 	int                crd_len;
 	int                crd_inject;
 	int                crd_flags;
@@ -300,12 +299,8 @@ flag is given.
 .It Va crd_alg
 An algorithm to use.
 Must be the same as the one given at newsession time.
-.It Va crd_skip
-The offset in the input buffer where processing should start.
 .It Va crd_len
-How many bytes, after
-.Va crd_skip ,
-should be processed.
+How many bytes should be processed.
 .It Va crd_inject
 Offset from the beginning of the buffer to insert any results.
 For encryption algorithms, this is where the initialization vector

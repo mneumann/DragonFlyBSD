@@ -303,7 +303,7 @@ aesni_cipher_process(struct aesni_session *ses, struct cryptodesc *enccrd,
 		fpu_kern_leave(td, &ses->fpu_ctx);
 #endif
 	if ((enccrd->crd_flags & CRD_F_ENCRYPT) != 0)
-		bcopy(crp->crp_buf + (enccrd->crd_skip + enccrd->crd_len - AES_BLOCK_LEN),
+		bcopy(crp->crp_buf + (enccrd->crd_len - AES_BLOCK_LEN),
 		    ses->iv, AES_BLOCK_LEN);
 
 	return (error);
