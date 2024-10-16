@@ -132,7 +132,6 @@ SYSCTL_INT(_kern, OID_AUTO, cryptodevallowsoft, CTLFLAG_RW,
 MALLOC_DEFINE(M_CRYPTO_DATA, "crypto", "crypto session records");
 
 static	void crypto_destroy(void);
-static	int crypto_invoke(struct cryptocap *cap, struct cryptop *crp);
 
 static struct cryptostats cryptostats;
 SYSCTL_STRUCT(_kern, OID_AUTO, crypto_stats, CTLFLAG_RW, &cryptostats,
