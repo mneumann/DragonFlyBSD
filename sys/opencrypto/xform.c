@@ -58,8 +58,6 @@
 
 #include <opencrypto/gmac.h>
 
-#include <sys/md5.h>
-
 #include <opencrypto/cryptodev.h>
 #include <opencrypto/xform.h>
 
@@ -111,17 +109,6 @@ static	void aes_xts_reinit(caddr_t, u_int8_t *);
 static	void aes_gcm_reinit(caddr_t, u_int8_t *);
 static	void twofish_xts_reinit(caddr_t, u_int8_t *);
 static	void serpent_xts_reinit(caddr_t, u_int8_t *);
-
-static	void null_init(void *);
-static	int null_update(void *, u_int8_t *, u_int16_t);
-static	void null_final(u_int8_t *, void *);
-static	int MD5Update_int(void *, u_int8_t *, u_int16_t);
-static	void SHA1Init_int(void *);
-static	int SHA1Update_int(void *, u_int8_t *, u_int16_t);
-static	void SHA1Final_int(u_int8_t *, void *);
-static	int SHA256Update_int(void *, u_int8_t *, u_int16_t);
-static	int SHA384Update_int(void *, u_int8_t *, u_int16_t);
-static	int SHA512Update_int(void *, u_int8_t *, u_int16_t);
 
 #define AES_XTS_ALPHA		0x87	/* GF(2^128) generator polynomial */
 #define AESCTR_NONCESIZE	4
@@ -318,98 +305,6 @@ struct enc_xform enc_xform_serpent_xts = {
 	serpent_xts_reinit,
 };
 
-
-/* Authentication instances */
-struct auth_hash auth_hash_null = {
-	CRYPTO_NULL_HMAC, "NULL-HMAC",
-	0, NULL_HASH_LEN, NULL_HMAC_BLOCK_LEN,
-	sizeof(int),	/* NB: context isn't used */
-	null_init, NULL, NULL, null_update, null_final
-};
-
-struct auth_hash auth_hash_hmac_md5 = {
-	CRYPTO_MD5_HMAC, "HMAC-MD5",
-	16, MD5_HASH_LEN, MD5_HMAC_BLOCK_LEN, sizeof(MD5_CTX),
-	(void (*) (void *)) MD5Init, NULL, NULL,
-	MD5Update_int,
-	(void (*) (u_int8_t *, void *)) MD5Final
-};
-
-struct auth_hash auth_hash_hmac_sha1 = {
-	CRYPTO_SHA1_HMAC, "HMAC-SHA1",
-	20, SHA1_HASH_LEN, SHA1_HMAC_BLOCK_LEN, sizeof(SHA1_CTX),
-	SHA1Init_int, NULL, NULL,
-	SHA1Update_int, SHA1Final_int
-};
-
-struct auth_hash auth_hash_key_md5 = {
-	CRYPTO_MD5_KPDK, "Keyed MD5",
-	0, MD5_KPDK_HASH_LEN, 0, sizeof(MD5_CTX),
-	(void (*)(void *)) MD5Init, NULL, NULL,
-	MD5Update_int,
-	(void (*)(u_int8_t *, void *)) MD5Final
-};
-
-struct auth_hash auth_hash_key_sha1 = {
-	CRYPTO_SHA1_KPDK, "Keyed SHA1",
-	0, SHA1_KPDK_HASH_LEN, 0, sizeof(SHA1_CTX),
-	SHA1Init_int, NULL, NULL,
-	SHA1Update_int, SHA1Final_int
-};
-
-struct auth_hash auth_hash_hmac_sha2_256 = {
-	CRYPTO_SHA2_256_HMAC, "HMAC-SHA2-256",
-	32, SHA2_256_HASH_LEN, SHA2_256_HMAC_BLOCK_LEN, sizeof(SHA256_CTX),
-	(void (*)(void *)) SHA256_Init, NULL, NULL,
-	SHA256Update_int,
-	(void (*)(u_int8_t *, void *)) SHA256_Final
-};
-
-struct auth_hash auth_hash_hmac_sha2_384 = {
-	CRYPTO_SHA2_384_HMAC, "HMAC-SHA2-384",
-	48, SHA2_384_HASH_LEN, SHA2_384_HMAC_BLOCK_LEN, sizeof(SHA384_CTX),
-	(void (*)(void *)) SHA384_Init, NULL, NULL,
-	SHA384Update_int,
-	(void (*)(u_int8_t *, void *)) SHA384_Final
-};
-
-struct auth_hash auth_hash_hmac_sha2_512 = {
-	CRYPTO_SHA2_512_HMAC, "HMAC-SHA2-512",
-	64, SHA2_512_HASH_LEN, SHA2_512_HMAC_BLOCK_LEN, sizeof(SHA512_CTX),
-	(void (*)(void *)) SHA512_Init, NULL, NULL,
-	SHA512Update_int,
-	(void (*)(u_int8_t *, void *)) SHA512_Final
-};
-
-struct auth_hash auth_hash_gmac_aes_128 = {
-	CRYPTO_AES_128_GMAC, "GMAC-AES-128",
-	16+4, 16, 16, sizeof(AES_GMAC_CTX),
-	(void (*)(void *)) AES_GMAC_Init,
-	(int  (*)(void *, const u_int8_t *, u_int16_t)) AES_GMAC_Setkey,
-	(void (*)(void *, const u_int8_t *, u_int16_t)) AES_GMAC_Reinit,
-	(int  (*)(void *, u_int8_t *, u_int16_t)) AES_GMAC_Update,
-	(void (*)(u_int8_t *, void *)) AES_GMAC_Final
-};
-
-struct auth_hash auth_hash_gmac_aes_192 = {
-	CRYPTO_AES_192_GMAC, "GMAC-AES-192",
-	24+4, 16, 16, sizeof(AES_GMAC_CTX),
-	(void (*)(void *)) AES_GMAC_Init,
-	(int  (*)(void *, const u_int8_t *, u_int16_t)) AES_GMAC_Setkey,
-	(void (*)(void *, const u_int8_t *, u_int16_t)) AES_GMAC_Reinit,
-	(int  (*)(void *, u_int8_t *, u_int16_t)) AES_GMAC_Update,
-	(void (*)(u_int8_t *, void *)) AES_GMAC_Final
-};
-
-struct auth_hash auth_hash_gmac_aes_256 = {
-	CRYPTO_AES_256_GMAC, "GMAC-AES-256",
-	32+4, 16, 16, sizeof(AES_GMAC_CTX),
-	(void (*)(void *)) AES_GMAC_Init,
-	(int  (*)(void *, const u_int8_t *, u_int16_t)) AES_GMAC_Setkey,
-	(void (*)(void *, const u_int8_t *, u_int16_t)) AES_GMAC_Reinit,
-	(int  (*)(void *, u_int8_t *, u_int16_t)) AES_GMAC_Update,
-	(void (*)(u_int8_t *, void *)) AES_GMAC_Final
-};
 
 /*
  * Encryption wrapper routines.
@@ -944,75 +839,5 @@ serpent_xts_setkey(void *sched, u_int8_t *key, int len)
 	serpent_set_key(&ctx->key1, key, len * 4);
 	serpent_set_key(&ctx->key2, key + (len / 2), len * 4);
 
-	return 0;
-}
-
-
-/*
- * And now for auth.
- */
-
-static void
-null_init(void *ctx)
-{
-}
-
-static int
-null_update(void *ctx, u_int8_t *buf, u_int16_t len)
-{
-	return 0;
-}
-
-static void
-null_final(u_int8_t *buf, void *ctx)
-{
-	if (buf != NULL)
-		bzero(buf, 12);
-}
-
-static int
-MD5Update_int(void *ctx, u_int8_t *buf, u_int16_t len)
-{
-	MD5Update(ctx, buf, len);
-	return 0;
-}
-
-static void
-SHA1Init_int(void *ctx)
-{
-	SHA1Init(ctx);
-}
-
-static int
-SHA1Update_int(void *ctx, u_int8_t *buf, u_int16_t len)
-{
-	SHA1Update(ctx, buf, len);
-	return 0;
-}
-
-static void
-SHA1Final_int(u_int8_t *blk, void *ctx)
-{
-	SHA1Final(blk, ctx);
-}
-
-static int
-SHA256Update_int(void *ctx, u_int8_t *buf, u_int16_t len)
-{
-	SHA256_Update(ctx, buf, len);
-	return 0;
-}
-
-static int
-SHA384Update_int(void *ctx, u_int8_t *buf, u_int16_t len)
-{
-	SHA384_Update(ctx, buf, len);
-	return 0;
-}
-
-static int
-SHA512Update_int(void *ctx, u_int8_t *buf, u_int16_t len)
-{
-	SHA512_Update(ctx, buf, len);
 	return 0;
 }
