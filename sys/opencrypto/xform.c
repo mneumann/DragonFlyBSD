@@ -53,10 +53,7 @@
 #include <crypto/rijndael/rijndael.h>
 #include <crypto/serpent/serpent.h>
 #include <crypto/skipjack/skipjack.h>
-#include <crypto/sha1.h>
 #include <crypto/twofish/twofish.h>
-
-#include <opencrypto/gmac.h>
 
 #include <opencrypto/cryptodev.h>
 #include <opencrypto/xform.h>
