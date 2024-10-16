@@ -122,12 +122,6 @@
 #define CRYPTO_FLAG_HARDWARE	0x01000000	/* hardware accelerated */
 #define CRYPTO_FLAG_SOFTWARE	0x02000000	/* software implementation */
 
-/* bignum parameter, in packed bytes, ... */
-struct crparam {
-	caddr_t		crp_p;
-	u_int		crp_nbits;
-};
-
 #define CRK_MAXPARAM	8
 #define	CRK_ALGORITM_MIN	0
 #define CRK_MOD_EXP		0
