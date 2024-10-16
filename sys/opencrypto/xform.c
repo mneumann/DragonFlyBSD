@@ -119,7 +119,6 @@ static	int MD5Update_int(void *, u_int8_t *, u_int16_t);
 static	void SHA1Init_int(void *);
 static	int SHA1Update_int(void *, u_int8_t *, u_int16_t);
 static	void SHA1Final_int(u_int8_t *, void *);
-static	int RMD160Update_int(void *, u_int8_t *, u_int16_t);
 static	int SHA256Update_int(void *, u_int8_t *, u_int16_t);
 static	int SHA384Update_int(void *, u_int8_t *, u_int16_t);
 static	int SHA512Update_int(void *, u_int8_t *, u_int16_t);
@@ -969,13 +968,6 @@ null_final(u_int8_t *buf, void *ctx)
 {
 	if (buf != NULL)
 		bzero(buf, 12);
-}
-
-static int
-RMD160Update_int(void *ctx, u_int8_t *buf, u_int16_t len)
-{
-	RMD160Update(ctx, buf, len);
-	return 0;
 }
 
 static int
