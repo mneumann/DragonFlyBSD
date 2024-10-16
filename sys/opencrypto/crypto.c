@@ -567,7 +567,6 @@ crypto_dispatch(struct cryptop *crp)
 	struct cryptocap *cap;
 	u_int32_t hid;
 	int result;
-	int n;
 
 	cryptostats.cs_ops++;
 
