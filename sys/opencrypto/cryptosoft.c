@@ -273,8 +273,7 @@ swcr_authcompute(struct cryptodesc *crd, struct swcr_data *sw, caddr_t buf,
 
 	bcopy(sw->sw_ictx, &ctx, axf->ctxsize);
 
-	err = crypto_apply(flags, buf, crd->crd_skip, crd->crd_len,
-	    (int (*)(void *, void *, unsigned int))axf->Update, (caddr_t)&ctx);
+	err = axf->Update((caddr_t)&ctx, buf + crd->crd_skip, crd->crd_len);
 	if (err)
 		return err;
 

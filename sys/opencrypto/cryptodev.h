@@ -339,14 +339,5 @@ extern	int crypto_usercrypto;		/* userland may do crypto requests */
 extern	int crypto_userasymcrypto;	/* userland may do asym crypto reqs */
 extern	int crypto_devallowsoft;	/* only use hardware crypto */
 
-/*
- * Crypto-related utility routines used mainly by drivers.
- *
- * XXX these don't really belong here; but for now they're
- *     kept apart from the rest of the system.
- */
-
-extern	int crypto_apply(int flags, caddr_t buf, int off, int len,
-	    int (*f)(void *, void *, u_int), void *arg);
 #endif /* _KERNEL */
 #endif /* _CRYPTO_CRYPTO_H_ */
