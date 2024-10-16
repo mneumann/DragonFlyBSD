@@ -376,8 +376,6 @@ swcr_freesession_slot(struct swcr_data **swdp, u_int32_t sid)
 		case CRYPTO_RIJNDAEL128_CBC:
 		case CRYPTO_AES_XTS:
 		case CRYPTO_AES_CTR:
-		case CRYPTO_AES_GCM_16:
-		case CRYPTO_AES_GMAC:
 		case CRYPTO_CAMELLIA_CBC:
 		case CRYPTO_TWOFISH_CBC:
 		case CRYPTO_SERPENT_CBC:
