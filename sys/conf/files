@@ -2266,7 +2266,6 @@ crypto/skipjack/skipjack.c		optional crypto
 crypto/twofish/twofish.c		optional crypto
 crypto/serpent/serpent.c		optional crypto
 net/zlib.c				optional crypto
-opencrypto/criov.c			optional crypto
 opencrypto/crypto.c			optional crypto
 opencrypto/cryptodev_if.m		optional crypto
 opencrypto/cryptosoft.c			optional crypto
