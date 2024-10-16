@@ -97,7 +97,4 @@ int aesni_cipher_setup(struct aesni_session *ses,
 int aesni_cipher_process(struct aesni_session *ses,
     struct cryptodesc *enccrd, struct cryptop *crp);
 
-uint8_t *aesni_cipher_alloc(struct cryptodesc *enccrd, struct cryptop *crp,
-    int *allocated);
-
 #endif
