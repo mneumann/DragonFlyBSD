@@ -315,7 +315,7 @@ aesni_cipher_process(struct aesni_session *ses, struct cryptodesc *enccrd,
 		crypto_copydata(crp->crp_flags, crp->crp_buf,
 		    enccrd->crd_skip + enccrd->crd_len - AES_BLOCK_LEN,
 		    AES_BLOCK_LEN, ses->iv);
- out:
+
 	if (allocated) {
 		bzero(buf, enccrd->crd_len);
 		kfree(buf, M_AESNI);
