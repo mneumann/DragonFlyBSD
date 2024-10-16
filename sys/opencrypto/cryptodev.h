@@ -268,12 +268,7 @@ extern	int crypto_unregister_all(u_int32_t driverid);
 extern	int crypto_dispatch(struct cryptop *crp);
 #define	CRYPTO_SYMQ	0x1
 #define	CRYPTO_ASYMQ	0x2
-extern	int crypto_unblock(u_int32_t, int);
 extern	void crypto_done(struct cryptop *crp);
-extern	int crypto_getfeat(int *);
-
-extern	void crypto_freereq(struct cryptop *crp);
-extern	struct cryptop *crypto_getreq(int num);
 
 extern	int crypto_usercrypto;		/* userland may do crypto requests */
 extern	int crypto_userasymcrypto;	/* userland may do asym crypto reqs */

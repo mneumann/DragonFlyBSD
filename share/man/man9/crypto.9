@@ -43,12 +43,6 @@
 .Fn crypto_freesession "u_int64_t sid"
 .Ft int
 .Fn crypto_dispatch "struct cryptop *crp"
-.Ft int
-.Fn crypto_unblock "u_int32_t driverid" "int what"
-.Ft "struct cryptop *"
-.Fn crypto_getreq "int num"
-.Ft void
-.Fn crypto_freereq "struct cryptop *crp"
 .Bd -literal
 #define	CRYPTO_SYMQ	0x1
 #define	CRYPTO_ASYMQ	0x2
@@ -351,19 +345,6 @@ block of data.
 .El
 .El
 .Pp
-.Fn crypto_getreq
-allocates a
-.Vt cryptop
-structure with a linked list of as many
-.Vt cryptodesc
-structures as were specified in the argument passed to it.
-.Pp
-.Fn crypto_freereq
-deallocates a structure
-.Vt cryptop
-and any
-.Vt cryptodesc
-structures linked to it.
 Note that it is the responsibility of the
 callback routine to do the necessary cleanups associated with the
 opaque field in the
@@ -374,7 +355,6 @@ The
 .Fn crypto_get_driverid ,
 .Fn crypto_register ,
 .Fn crypto_unregister ,
-.Fn crypto_unblock ,
 and
 .Fn crypto_done
 routines are used by drivers that provide support for cryptographic
@@ -466,41 +446,15 @@ routine should invoke
 .Fn crypto_done .
 Session migration may be performed, as mentioned previously.
 .Pp
-In case of a temporary resource exhaustion, the
-.Fn process
-routine may return
-.Er ERESTART
-in which case the crypto services will requeue the request, mark the driver
-as
-.Dq blocked ,
-and stop submitting requests for processing.
-The driver is then responsible for notifying the crypto services
-when it is again able to process requests through the
-.Fn crypto_unblock
-routine.
-This simple flow control mechanism should only be used for short-lived
-resource exhaustion as it causes operations to be queued in the crypto
-layer.
-Doing so is preferable to returning an error in such cases as
-it can cause network protocols to degrade performance by treating the
-failure much like a lost packet.
-.Pp
 .Sh RETURN VALUES
 .Fn crypto_register ,
 .Fn crypto_unregister ,
 .Fn crypto_newsession ,
-.Fn crypto_freesession ,
 and
-.Fn crypto_unblock
+.Fn crypto_freesession
 return 0 on success, or an error code on failure.
 .Fn crypto_get_driverid
 returns a non-negative value on error, and \-1 on failure.
-.Fn crypto_getreq
-returns a pointer to a
-.Vt cryptop
-structure and
-.Dv NULL
-on failure.
 .Fn crypto_dispatch
 returns
 .Er EINVAL
