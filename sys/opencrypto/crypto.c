@@ -563,7 +563,11 @@ crypto_dispatch(struct cryptop *crp)
 {
 	struct cryptocap *cap;
 	u_int32_t hid;
-	int result;
+
+	KASSERT(crp != NULL, ("%s: crp == NULL", __func__));
+	KASSERT(crp->crp_callback != NULL,
+	    ("%s: crp->crp_callback == NULL", __func__));
+	KASSERT(crp->crp_desc != NULL, ("%s: crp->crp_desc == NULL", __func__));
 
 	cryptostats.cs_ops++;
 
@@ -580,46 +584,6 @@ crypto_dispatch(struct cryptop *crp)
 	cap = crypto_checkdriver(hid);
 	/* Driver cannot disappeared when there is an active session. */
 	KASSERT(cap != NULL, ("%s: Driver disappeared.", __func__));
-	result = crypto_invoke(cap, crp);
-	KKASSERT(result != ERESTART);
-	return (result);
-}
-
-#ifdef CRYPTO_TIMING
-static void
-crypto_tstat(struct cryptotstat *ts, struct timespec *tv)
-{
-	struct timespec now, t;
-
-	nanouptime(&now);
-	t.tv_sec = now.tv_sec - tv->tv_sec;
-	t.tv_nsec = now.tv_nsec - tv->tv_nsec;
-	if (t.tv_nsec < 0) {
-		t.tv_sec--;
-		t.tv_nsec += 1000000000;
-	}
-	timespecadd(&ts->acc, &t, &ts->acc);
-	if (timespeccmp(&t, &ts->min, <))
-		ts->min = t;
-	if (timespeccmp(&t, &ts->max, >))
-		ts->max = t;
-	ts->count++;
-
-	*tv = now;
-}
-#endif
-
-/*
- * Dispatch a crypto request to the appropriate crypto devices.
- */
-static int
-crypto_invoke(struct cryptocap *cap, struct cryptop *crp)
-{
-
-	KASSERT(crp != NULL, ("%s: crp == NULL", __func__));
-	KASSERT(crp->crp_callback != NULL,
-	    ("%s: crp->crp_callback == NULL", __func__));
-	KASSERT(crp->crp_desc != NULL, ("%s: crp->crp_desc == NULL", __func__));
 
 #ifdef CRYPTO_TIMING
 	if (crypto_timing)
@@ -652,6 +616,30 @@ crypto_invoke(struct cryptocap *cap, struct cryptop *crp)
 		return CRYPTODEV_PROCESS(cap->cc_dev, crp);
 	}
 }
+
+#ifdef CRYPTO_TIMING
+static void
+crypto_tstat(struct cryptotstat *ts, struct timespec *tv)
+{
+	struct timespec now, t;
+
+	nanouptime(&now);
+	t.tv_sec = now.tv_sec - tv->tv_sec;
+	t.tv_nsec = now.tv_nsec - tv->tv_nsec;
+	if (t.tv_nsec < 0) {
+		t.tv_sec--;
+		t.tv_nsec += 1000000000;
+	}
+	timespecadd(&ts->acc, &t, &ts->acc);
+	if (timespeccmp(&t, &ts->min, <))
+		ts->min = t;
+	if (timespeccmp(&t, &ts->max, >))
+		ts->max = t;
+	ts->count++;
+
+	*tv = now;
+}
+#endif
 
 /*
  * Invoke the callback on behalf of the driver.
