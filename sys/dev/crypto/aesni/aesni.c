@@ -296,17 +296,6 @@ out:
 	return (error);
 }
 
-uint8_t *
-aesni_cipher_alloc(struct cryptodesc *enccrd, struct cryptop *crp,
-    int *allocated)
-{
-	uint8_t *addr;
-
-	addr = (u_char *)crp->crp_buf;
-	*allocated = 0;
-	return (addr);
-}
-
 static device_method_t aesni_methods[] = {
 	DEVMETHOD(device_identify, aesni_identify),
 	DEVMETHOD(device_probe, aesni_probe),
