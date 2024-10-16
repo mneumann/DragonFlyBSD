@@ -138,17 +138,15 @@ aesni_newsession(device_t dev, uint32_t *sidp, struct cryptoini *cri)
 	sc = device_get_softc(dev);
 	ses = NULL;
 	encini = NULL;
-	for (; cri != NULL; cri = cri->cri_next) {
-		switch (cri->cri_alg) {
-		case CRYPTO_AES_CBC:
-		case CRYPTO_AES_XTS:
-			if (encini != NULL)
-				return (EINVAL);
-			encini = cri;
-			break;
-		default:
+	switch (cri->cri_alg) {
+	case CRYPTO_AES_CBC:
+	case CRYPTO_AES_XTS:
+		if (encini != NULL)
 			return (EINVAL);
-		}
+		encini = cri;
+		break;
+	default:
+		return (EINVAL);
 	}
 	if (encini == NULL)
 		return (EINVAL);

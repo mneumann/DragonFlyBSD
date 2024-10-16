@@ -55,7 +55,6 @@ struct cryptoini {
 	int                cri_mlen;
 	caddr_t            cri_key;
 	u_int8_t           cri_iv[EALG_MAX_BLOCK_LEN];
-	struct cryptoini  *cri_next;
 };
 
 struct cryptodesc {
@@ -138,7 +137,7 @@ hardware driver (1) should be used or not (0).
 The various fields in the
 .Vt cryptoini
 structure are:
-.Bl -tag -width ".Va cri_next"
+.Bl -tag -width ".Va cri_alg"
 .It Va cri_alg
 Contains an algorithm identifier.
 Currently supported algorithms are:
@@ -174,11 +173,6 @@ the data.
 This field is ignored during initialization.
 If no IV is explicitly passed (see below on details), a random IV is used
 by the device driver processing the request.
-.It Va cri_next
-Contains a pointer to another
-.Vt cryptoini
-structure.
-Multiple such structures may be linked to establish multi-algorithm sessions.
 .El
 .Pp
 The

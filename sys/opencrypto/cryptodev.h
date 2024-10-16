@@ -174,7 +174,6 @@ struct cryptoini {
 					   entire hash. 0 means all. */
 	caddr_t		cri_key;	/* key to use */
 	u_int8_t	cri_iv[EALG_MAX_BLOCK_LEN];	/* IV to use */
-	struct cryptoini *cri_next;
 };
 
 /* Describe boundaries of a single crypto operation */
