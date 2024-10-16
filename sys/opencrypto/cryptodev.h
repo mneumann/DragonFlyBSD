@@ -153,16 +153,6 @@ struct cryptostats {
 	u_int32_t	cs_rets;	/* crypto return thread activations */
 	u_int32_t	cs_blocks;	/* symmetric op driver block */
 	u_int32_t	cs_kblocks;	/* symmetric op driver block */
-	/*
-	 * When CRYPTO_TIMING is defined at compile time and the
-	 * sysctl debug.crypto is set to 1, the crypto system will
-	 * accumulate statistics about how long it takes to process
-	 * crypto requests at various points during processing.
-	 */
-	struct cryptotstat cs_invoke;	/* crypto_dipsatch -> crypto_invoke */
-	struct cryptotstat cs_done;	/* crypto_invoke -> crypto_done */
-	struct cryptotstat cs_cb;	/* crypto_done -> callback */
-	struct cryptotstat cs_finis;	/* callback -> callback return */
 };
 
 #ifdef _KERNEL
