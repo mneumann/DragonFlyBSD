@@ -695,24 +695,6 @@ crypto_done(struct cryptop *crp)
 		crp->crp_callback(crp);
 }
 
-/*
- * Terminate a thread at module unload.  The process that
- * initiated this is waiting for us to signal that we're gone;
- * wake it up and exit.  We use the driver table lock to insure
- * we don't do the wakeup before they're waiting.  There is no
- * race here because the waiter sleeps on the proc lock for the
- * thread so it gets notified at the right time because of an
- * extra wakeup that's done in exit1().
- */
-static void
-crypto_finis(void *chan)
-{
-	CRYPTO_DRIVER_LOCK();
-	wakeup_one(chan);
-	CRYPTO_DRIVER_UNLOCK();
-	kthread_exit();
-}
-
 #ifdef DDB
 static void
 db_show_drivers(void)
