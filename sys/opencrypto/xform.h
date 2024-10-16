@@ -47,7 +47,6 @@ extern struct enc_xform enc_xform_skipjack;
 extern struct enc_xform enc_xform_rijndael128;
 extern struct enc_xform enc_xform_aes_xts;
 extern struct enc_xform enc_xform_aes_ctr;
-extern struct enc_xform enc_xform_aes_gcm;
 extern struct enc_xform enc_xform_aes_gmac;
 extern struct enc_xform enc_xform_arc4;
 extern struct enc_xform enc_xform_camellia;
