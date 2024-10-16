@@ -328,7 +328,6 @@ essiv_ivgen_ctor(struct target_crypt_config *priv, char *iv_hash, void **p_ivpri
 	ivpriv->crypto_session.cri_alg = priv->crypto_alg;
 	ivpriv->crypto_session.cri_key = (u_int8_t *)ivpriv->crypto_keyhash;
 	ivpriv->crypto_session.cri_klen = hashlen;
-	ivpriv->crypto_session.cri_mlen = 0;
 
 	/*
 	 * XXX: in principle we also need to check if the block size of the
@@ -725,7 +724,6 @@ dm_target_crypt_init(dm_table_entry_t *table_en, int argc, char **argv)
 	priv->crypto_session.cri_alg = priv->crypto_alg;
 	priv->crypto_session.cri_key = (u_int8_t *)priv->crypto_key;
 	priv->crypto_session.cri_klen = priv->crypto_klen;
-	priv->crypto_session.cri_mlen = 0;
 
 	error = crypto_newsession(&priv->crypto_sid,
 				  &priv->crypto_session,
