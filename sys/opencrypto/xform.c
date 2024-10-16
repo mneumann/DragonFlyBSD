@@ -103,7 +103,6 @@ static	void aes_ctr_crypt(caddr_t, u_int8_t *, u_int8_t *);
 
 static	void aes_ctr_reinit(caddr_t, u_int8_t *);
 static	void aes_xts_reinit(caddr_t, u_int8_t *);
-static	void aes_gcm_reinit(caddr_t, u_int8_t *);
 static	void twofish_xts_reinit(caddr_t, u_int8_t *);
 static	void serpent_xts_reinit(caddr_t, u_int8_t *);
 
@@ -575,19 +574,6 @@ aes_ctr_setkey(void *sched, u_int8_t *key, int len)
 	bcopy(key + len, ctx->ac_block, AESCTR_NONCESIZE);
 
 	return 0;
-}
-
-static void
-aes_gcm_reinit(caddr_t key, u_int8_t *iv)
-{
-	struct aes_ctr_ctx *ctx;
-
-	ctx = (struct aes_ctr_ctx *)key;
-	bcopy(iv, ctx->ac_block + AESCTR_NONCESIZE, AESCTR_IV_LEN);
-
-	/* reset counter */
-	bzero(ctx->ac_block + AESCTR_NONCESIZE + AESCTR_IV_LEN, 4);
-	ctx->ac_block[AESCTR_BLOCK_LEN - 1] = 1; /* GCM starts with 1 */
 }
 
 static void
