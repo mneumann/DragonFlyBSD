@@ -62,32 +62,6 @@
 #define CRYPTO_DRIVERS_INITIAL	4
 #define CRYPTO_SW_SESSIONS	32
 
-/* Hash values */
-#define	NULL_HASH_LEN		16
-#define	MD5_HASH_LEN		16
-#define	SHA1_HASH_LEN		20
-#define	RIPEMD160_HASH_LEN	20
-#define	SHA2_256_HASH_LEN	32
-#define	SHA2_384_HASH_LEN	48
-#define	SHA2_512_HASH_LEN	64
-#define	MD5_KPDK_HASH_LEN	16
-#define	SHA1_KPDK_HASH_LEN	20
-/* Maximum hash algorithm result length */
-#define	HASH_MAX_LEN		SHA2_512_HASH_LEN /* Keep this updated */
-
-/* HMAC values */
-#define	NULL_HMAC_BLOCK_LEN		64
-#define	MD5_HMAC_BLOCK_LEN		64
-#define	SHA1_HMAC_BLOCK_LEN		64
-#define	RIPEMD160_HMAC_BLOCK_LEN	64
-#define	SHA2_256_HMAC_BLOCK_LEN		64
-#define	SHA2_384_HMAC_BLOCK_LEN		128
-#define	SHA2_512_HMAC_BLOCK_LEN		128
-/* Maximum HMAC block length */
-#define	HMAC_MAX_BLOCK_LEN		SHA2_512_HMAC_BLOCK_LEN /* Keep this updated */
-#define HMAC_IPAD_VAL		0x36
-#define HMAC_OPAD_VAL		0x5C
-
 /* Encryption algorithm block sizes */
 #define NULL_BLOCK_LEN		4
 #define DES3_BLOCK_LEN		8
@@ -119,28 +93,13 @@
 #define CRYPTO_BLF_CBC		3
 #define CRYPTO_CAST_CBC		4
 #define CRYPTO_SKIPJACK_CBC	5
-#define CRYPTO_MD5_HMAC		6
-#define CRYPTO_SHA1_HMAC	7
-#define CRYPTO_MD5_KPDK		9
-#define CRYPTO_SHA1_KPDK	10
 #define CRYPTO_RIJNDAEL128_CBC	11 /* 128 bit blocksize */
 #define CRYPTO_AES_CBC		11 /* 128 bit blocksize -- the same as above */
 #define CRYPTO_ARC4		12
-#define	CRYPTO_MD5		13
-#define	CRYPTO_SHA1		14
-#define	CRYPTO_NULL_HMAC	15
 #define	CRYPTO_NULL_CBC		16
-#define	CRYPTO_SHA2_256_HMAC	18
-#define	CRYPTO_SHA2_384_HMAC	19
-#define	CRYPTO_SHA2_512_HMAC	20
 #define CRYPTO_CAMELLIA_CBC	21
 #define CRYPTO_AES_XTS		22
 #define CRYPTO_AES_CTR          23
-#define CRYPTO_AES_GCM_16	24
-#define CRYPTO_AES_128_GMAC	25
-#define CRYPTO_AES_192_GMAC	26
-#define CRYPTO_AES_256_GMAC	27
-#define CRYPTO_AES_GMAC		28
 #define CRYPTO_TWOFISH_CBC	29
 #define CRYPTO_SERPENT_CBC	30
 #define CRYPTO_TWOFISH_XTS	31
