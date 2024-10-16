@@ -205,12 +205,9 @@ crypto_checkdriver(u_int32_t hid)
 static int
 driver_suitable(const struct cryptocap *cap, const struct cryptoini *cri)
 {
-	const struct cryptoini *cr;
-
 	/* See if all the algorithms are supported. */
-	for (cr = cri; cr; cr = cr->cri_next)
-		if (cap->cc_alg[cr->cri_alg] == 0)
-			return 0;
+	if (cri && cap->cc_alg[cri->cri_alg] == 0)
+		return 0;
 	return 1;
 }
 

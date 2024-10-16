@@ -262,7 +262,7 @@ swcr_newsession(device_t dev, u_int32_t *sid, struct cryptoini *cri)
 		}
 
 		(*swd)->sw_alg = cri->cri_alg;
-		cri = cri->cri_next;
+		cri = NULL;
 		swd = &((*swd)->sw_next);
 	}
 
