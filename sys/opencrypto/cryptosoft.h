@@ -30,34 +30,17 @@ struct swcr_data {
 	int		sw_alg;		/* Algorithm */
 	union {
 		struct {
-			u_int8_t	 *SW_ictx;
-			u_int8_t	 *SW_octx;
-			u_int16_t	 SW_klen;
-			u_int16_t	 SW_mlen;
-			struct auth_hash *SW_axf;
-		} SWCR_AUTH;
-		struct {
 			int		 SW_kschedule_refs;
 			u_int8_t	 *SW_kschedule;
 			struct enc_xform *SW_exf;
 		} SWCR_ENC;
 	} SWCR_UN;
 
-#define sw_ictx		SWCR_UN.SWCR_AUTH.SW_ictx
-#define sw_octx		SWCR_UN.SWCR_AUTH.SW_octx
-#define sw_klen		SWCR_UN.SWCR_AUTH.SW_klen
-#define sw_mlen		SWCR_UN.SWCR_AUTH.SW_mlen
-#define sw_axf		SWCR_UN.SWCR_AUTH.SW_axf
 #define sw_kschedule	SWCR_UN.SWCR_ENC.SW_kschedule
 #define sw_kschedule_refs SWCR_UN.SWCR_ENC.SW_kschedule_refs
 #define sw_exf		SWCR_UN.SWCR_ENC.SW_exf
 
 	struct swcr_data *sw_next;
 };
-
-#ifdef _KERNEL
-extern u_int8_t hmac_ipad_buffer[];
-extern u_int8_t hmac_opad_buffer[];
-#endif /* _KERNEL */
 
 #endif /* _CRYPTO_CRYPTO_H_ */
