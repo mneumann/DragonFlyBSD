@@ -56,7 +56,6 @@
 #include <crypto/sha1.h>
 #include <crypto/twofish/twofish.h>
 
-#include <opencrypto/deflate.h>
 #include <opencrypto/gmac.h>
 #include <opencrypto/rmd160.h>
 
@@ -125,9 +124,6 @@ static	int RMD160Update_int(void *, u_int8_t *, u_int16_t);
 static	int SHA256Update_int(void *, u_int8_t *, u_int16_t);
 static	int SHA384Update_int(void *, u_int8_t *, u_int16_t);
 static	int SHA512Update_int(void *, u_int8_t *, u_int16_t);
-
-static	u_int32_t deflate_compress(u_int8_t *, u_int32_t, u_int8_t **);
-static	u_int32_t deflate_decompress(u_int8_t *, u_int32_t, u_int8_t **);
 
 #define AES_XTS_ALPHA		0x87	/* GF(2^128) generator polynomial */
 #define AESCTR_NONCESIZE	4
@@ -423,13 +419,6 @@ struct auth_hash auth_hash_gmac_aes_256 = {
 	(void (*)(void *, const u_int8_t *, u_int16_t)) AES_GMAC_Reinit,
 	(int  (*)(void *, u_int8_t *, u_int16_t)) AES_GMAC_Update,
 	(void (*)(u_int8_t *, void *)) AES_GMAC_Final
-};
-
-/* Compression instance */
-struct comp_algo comp_algo_deflate = {
-	CRYPTO_DEFLATE_COMP, "Deflate",
-	90, deflate_compress,
-	deflate_decompress
 };
 
 /*
@@ -1043,20 +1032,4 @@ SHA512Update_int(void *ctx, u_int8_t *buf, u_int16_t len)
 {
 	SHA512_Update(ctx, buf, len);
 	return 0;
-}
-
-/*
- * And compression
- */
-
-static u_int32_t
-deflate_compress(u_int8_t *data, u_int32_t size, u_int8_t **out)
-{
-	return deflate_global(data, size, 0, out);
-}
-
-static u_int32_t
-deflate_decompress(u_int8_t *data, u_int32_t size, u_int8_t **out)
-{
-	return deflate_global(data, size, 1, out);
 }

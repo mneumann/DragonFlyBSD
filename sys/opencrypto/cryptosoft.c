@@ -697,10 +697,6 @@ swcr_newsession(device_t dev, u_int32_t *sid, struct cryptoini *cri)
 			(*swd)->sw_axf = axf;
 			break;
 
-		case CRYPTO_DEFLATE_COMP:
-			cxf = &comp_algo_deflate;
-			(*swd)->sw_cxf = cxf;
-			break;
 		default:
 			swcr_freesession_slot(&swd_base, 0);
 			return EINVAL;
@@ -880,9 +876,6 @@ swcr_freesession_slot(struct swcr_data **swdp, u_int32_t sid)
 				kfree(swd->sw_ictx, M_CRYPTO_DATA);
 			}
 			break;
-
-		case CRYPTO_DEFLATE_COMP:
-			break;
 		}
 
 		//FREE(swd, M_CRYPTO_DATA);
@@ -983,14 +976,6 @@ swcr_process(device_t dev, struct cryptop *crp, int hint)
 			crp->crp_etype = swcr_combined(crp);
 			goto done;
 
-		case CRYPTO_DEFLATE_COMP:
-			if ((crp->crp_etype = swcr_compdec(crd, sw,
-			    crp->crp_buf, crp->crp_flags)) != 0)
-				goto done;
-			else
-				crp->crp_olen = (int)sw->sw_size;
-			break;
-
 		default:
 			/* Unknown/unsupported algorithm */
 			crp->crp_etype = EINVAL;
@@ -1066,7 +1051,6 @@ swcr_attach(device_t dev)
 	REGISTER(CRYPTO_SERPENT_CBC);
 	REGISTER(CRYPTO_TWOFISH_XTS);
 	REGISTER(CRYPTO_SERPENT_XTS);
-	REGISTER(CRYPTO_DEFLATE_COMP);
 #undef REGISTER
 
 	return 0;
