@@ -104,7 +104,7 @@ swcr_encdec(struct cryptodesc *crd, struct swcr_data *sw, caddr_t buf,
 
 		/* Do we need to write the IV */
 		if (!(crd->crd_flags & CRD_F_IV_PRESENT))
-			crypto_copyback(flags, buf, crd->crd_inject, ivlen, iv);
+			bcopy(iv, buf + crd->crd_inject, ivlen);
 
 	} else {	/* Decryption */
 			/* IV explicitly provided ? */
@@ -309,8 +309,9 @@ swcr_authcompute(struct cryptodesc *crd, struct swcr_data *sw, caddr_t buf,
 	}
 
 	/* Inject the authentication data */
-	crypto_copyback(flags, buf, crd->crd_inject,
-	    sw->sw_mlen == 0 ? axf->hashsize : sw->sw_mlen, aalg);
+	bcopy(aalg, buf + crd->crd_inject,
+	    sw->sw_mlen == 0 ? axf->hashsize : sw->sw_mlen);
+
 	return 0;
 }
 
@@ -381,8 +382,7 @@ swcr_combined(struct cryptop *crp)
 
 		/* Do we need to write the IV */
 		if (!(crde->crd_flags & CRD_F_IV_PRESENT))
-			crypto_copyback(crde->crd_flags, buf, crde->crd_inject,
-			    ivlen, iv);
+			bcopy(iv, buf + crde->crd_inject, ivlen);
 
 	} else {	/* Decryption */
 			/* IV explicitly provided ? */
@@ -428,8 +428,7 @@ swcr_combined(struct cryptop *crp)
 			axf->Update(&ctx, blk, len);
 			exf->decrypt(kschedule, blk, iv);
 		}
-		crypto_copyback(crde->crd_flags, buf, crde->crd_skip + i, len,
-		    blk);
+		bcopy(blk, buf + (crde->crd_skip + i), len);
 	}
 
 	/* Do any required special finalization */
@@ -451,8 +450,7 @@ swcr_combined(struct cryptop *crp)
 	axf->Final(aalg, &ctx);
 
 	/* Inject the authentication data */
-	crypto_copyback(crda->crd_flags, crp->crp_buf, crda->crd_inject,
-	    axf->blocksize, aalg);
+	bcopy(aalg, crp->crp_buf + crda->crd_inject, axf->blocksize);
 
 	spin_lock(&swcr_spin);
 	--sw->sw_kschedule_refs;
@@ -505,7 +503,7 @@ swcr_compdec(struct cryptodesc *crd, struct swcr_data *sw,
 	/*
 	 * Copy back the (de)compressed data.
 	 */
-	crypto_copyback(flags, buf, crd->crd_skip, result, out);
+	bcopy(out, buf + crd->crd_skip, result);
 	if (result < crd->crd_len) {
 		adj = result - crd->crd_len;
 	}

@@ -39,12 +39,6 @@
 
 
 void
-crypto_copyback(int flags, caddr_t buf, int off, int size, caddr_t in)
-{
-	bcopy(in, buf + off, size);
-}
-
-void
 crypto_copydata(int flags, caddr_t buf, int off, int size, caddr_t out)
 {
 	bcopy(buf + off, out, size);
