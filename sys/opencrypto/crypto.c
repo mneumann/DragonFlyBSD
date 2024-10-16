@@ -52,8 +52,6 @@
  * PURPOSE.
  */
 
-#define	CRYPTO_TIMING				/* enable timing support */
-
 #include "opt_ddb.h"
 
 #include <sys/param.h>
@@ -139,12 +137,6 @@ static	int crypto_invoke(struct cryptocap *cap, struct cryptop *crp);
 static struct cryptostats cryptostats;
 SYSCTL_STRUCT(_kern, OID_AUTO, crypto_stats, CTLFLAG_RW, &cryptostats,
 	    cryptostats, "Crypto system statistics");
-
-#ifdef CRYPTO_TIMING
-static	int crypto_timing = 0;
-SYSCTL_INT(_debug, OID_AUTO, crypto_timing, CTLFLAG_RW,
-	   &crypto_timing, 0, "Enable/disable crypto timing support");
-#endif
 
 static int
 crypto_init(void)
@@ -571,11 +563,6 @@ crypto_dispatch(struct cryptop *crp)
 
 	cryptostats.cs_ops++;
 
-#ifdef CRYPTO_TIMING
-	if (crypto_timing)
-		nanouptime(&crp->crp_tstamp);
-#endif
-
 	hid = CRYPTO_SESID2HID(crp->crp_sid);
 
 	/*
@@ -585,10 +572,6 @@ crypto_dispatch(struct cryptop *crp)
 	/* Driver cannot disappeared when there is an active session. */
 	KASSERT(cap != NULL, ("%s: Driver disappeared.", __func__));
 
-#ifdef CRYPTO_TIMING
-	if (crypto_timing)
-		crypto_tstat(&cryptostats.cs_invoke, &crp->crp_tstamp);
-#endif
 	if (cap->cc_flags & CRYPTOCAP_F_CLEANUP) {
 		u_int64_t nid;
 
@@ -617,30 +600,6 @@ crypto_dispatch(struct cryptop *crp)
 	}
 }
 
-#ifdef CRYPTO_TIMING
-static void
-crypto_tstat(struct cryptotstat *ts, struct timespec *tv)
-{
-	struct timespec now, t;
-
-	nanouptime(&now);
-	t.tv_sec = now.tv_sec - tv->tv_sec;
-	t.tv_nsec = now.tv_nsec - tv->tv_nsec;
-	if (t.tv_nsec < 0) {
-		t.tv_sec--;
-		t.tv_nsec += 1000000000;
-	}
-	timespecadd(&ts->acc, &t, &ts->acc);
-	if (timespeccmp(&t, &ts->min, <))
-		ts->min = t;
-	if (timespeccmp(&t, &ts->max, >))
-		ts->max = t;
-	ts->count++;
-
-	*tv = now;
-}
-#endif
-
 /*
  * Invoke the callback on behalf of the driver.
  */
@@ -652,27 +611,10 @@ crypto_done(struct cryptop *crp)
 	crp->crp_flags |= CRYPTO_F_DONE;
 	if (crp->crp_etype != 0)
 		cryptostats.cs_errs++;
-#ifdef CRYPTO_TIMING
-	if (crypto_timing)
-		crypto_tstat(&cryptostats.cs_done, &crp->crp_tstamp);
-#endif
-		/*
-		 * Do the callback directly.
-		 */
-#ifdef CRYPTO_TIMING
-	if (crypto_timing) {
-		/*
-		 * NB: We must copy the timestamp before
-		 * doing the callback as the cryptop is
-		 * likely to be reclaimed.
-		 */
-		struct timespec t = crp->crp_tstamp;
-		crypto_tstat(&cryptostats.cs_cb, &t);
-		crp->crp_callback(crp);
-		crypto_tstat(&cryptostats.cs_finis, &t);
-	} else
-#endif
-		crp->crp_callback(crp);
+	/*
+	 * Do the callback directly.
+	 */
+	crp->crp_callback(crp);
 }
 
 #ifdef DDB
