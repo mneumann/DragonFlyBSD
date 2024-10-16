@@ -729,12 +729,8 @@ crypto_dispatch(struct cryptop *crp)
 		KASSERT(cap != NULL, ("%s: Driver disappeared.", __func__));
 		if (!cap->cc_qblocked) {
 			result = crypto_invoke(cap, crp, 0);
-			if (result != ERESTART)
-				return (result);
-			/*
-			 * The driver ran out of resources, put the request on
-			 * the queue.
-			 */
+			KKASSERT(result != ERESTART);
+			return (result);
 		}
 	}
 
@@ -1068,24 +1064,8 @@ crypto_proc(void *arg)
 
 			CRYPTO_Q_UNLOCK(tdinfo);
 			result = crypto_invoke(cap, submit, hint);
+			KKASSERT(result != ERESTART);
 			CRYPTO_Q_LOCK(tdinfo);
-
-			if (result == ERESTART) {
-				/*
-				 * The driver ran out of resources, mark the
-				 * driver ``blocked'' for cryptop's and put
-				 * the request back in the queue.  It would
-				 * best to put the request back where we got
-				 * it but that's hard so for now we put it
-				 * at the front.  This should be ok; putting
-				 * it at the end does not work.
-				 */
-				/* XXX validate sid again? */
-				crypto_drivers[CRYPTO_SESID2HID(submit->crp_sid)].cc_qblocked = 1;
-				TAILQ_INSERT_HEAD(&tdinfo->crp_q,
-						  submit, crp_next);
-				cryptostats.cs_blocks++;
-			}
 		}
 
 		if (submit == NULL) {
