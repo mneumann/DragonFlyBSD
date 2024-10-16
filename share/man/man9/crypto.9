@@ -70,12 +70,10 @@ struct cryptop {
 	u_int64_t          crp_sid;
 	int                crp_ilen;
 	int                crp_olen;
-	int                crp_etype;
 	int                crp_flags;
 	caddr_t            crp_buf;
 	caddr_t            crp_opaque;
 	struct cryptodesc *crp_desc;
-	int              (*crp_callback) (struct cryptop *);
 	caddr_t            crp_mac;
 };
 
@@ -109,20 +107,10 @@ Since the consumers may not be associated with a process, drivers may
 not
 .Xr sleep 9 .
 The same holds for the framework.
-Thus, a callback mechanism is used
-to notify a consumer that a request has been completed (the
-callback is specified by the consumer on an per-request basis).
-The callback is invoked by the framework whether the request was
-successfully completed or not.
-An error indication is provided in the latter case.
 A specific error code,
 .Er EAGAIN ,
 is used to indicate that a session number has changed and that the
 request may be re-submitted immediately with the new session number.
-Errors are only returned to the invoking function if not
-enough information to call the callback is available (meaning, there
-was a fatal error in verifying the arguments).
-For session initialization and teardown there is no callback mechanism used.
 .Pp
 The
 .Fn crypto_newsession
@@ -189,7 +177,7 @@ is called to process a request.
 The various fields in the
 .Vt cryptop
 structure are:
-.Bl -tag -width ".Va crp_callback"
+.Bl -tag -width ".Va crp_ilen"
 .It Va crp_sid
 Contains the SID.
 .It Va crp_ilen
@@ -199,55 +187,19 @@ On return, contains the total length of the result.
 For symmetric crypto operations, this will be the same as the input length.
 This will be used if the framework needs to allocate a new
 buffer for the result (or for re-formatting the input).
-.It Va crp_callback
-This routine is invoked upon completion of the request, whether
-successful or not.
-It is invoked through the
-.Fn crypto_done
-routine.
-If the request was not successful, an error code is set in the
-.Va crp_etype
-field.
-It is the responsibility of the callback routine to enter a critical
-section.
-.It Va crp_etype
-Contains the error type, if any errors were encountered, or zero if
-the request was successfully processed.
-If the
-.Er EAGAIN
-error code is returned, the SID has changed (and has been recorded in the
-.Va crp_sid
-field).
-The consumer should record the new SID and use it in all subsequent requests.
-In this case, the request may be re-submitted immediately.
-This mechanism is used by the framework to perform
-session migration (move a session from one driver to another, because
-of availability, performance, or other considerations).
+.Fn crypto_dispatch
+returns the error code. 
 .Pp
-Note that this field only makes sense when examined by
-the callback routine specified in
-.Va crp_callback .
-Errors are returned to the invoker of
-.Fn crypto_process
-only when enough information is not present to call the callback
-routine (i.e., if the pointer passed is
-.Dv NULL
-or if no callback routine was specified).
 .It Va crp_flags
 Is a bitmask of flags associated with this request.
 Currently defined flags are:
-.Bl -tag -width ".Dv CRYPTO_F_CBIFSYNC"
-.It Dv CRYPTO_F_BATCH
-Batch operation if possible.
+.Bl -tag -width ".Dv CRYPTO_F_DONE"
 .It Dv CRYPTO_F_DONE
 Operation completed.
-.It Dv CRYPTO_F_CBIFSYNC
-Do callback immediately if operation is synchronous.
 .El
 .It Va crp_buf
 Points to the input buffer.
-On return (when the callback is invoked),
-it contains the result of the request.
+On return it contains the result of the request.
 The input buffer may be an mbuf
 chain or a contiguous buffer,
 depending on
@@ -327,12 +279,6 @@ Furthermore, the cryptographic
 framework may re-route requests as a result of full queues or hardware
 failure, as described above.
 .El
-.Pp
-Note that it is the responsibility of the
-callback routine to do the necessary cleanups associated with the
-opaque field in the
-.Vt cryptop
-structure.
 .Sh DRIVER-SIDE API
 The
 .Fn crypto_get_driverid ,
@@ -417,16 +363,6 @@ The
 routine is invoked with a request to perform crypto processing.
 This routine must not block, but should queue the request and return
 immediately.
-Upon processing the request, the callback routine should be invoked.
-In case of an unrecoverable error, the error indication must be placed in the
-.Va crp_etype
-field of the
-.Vt cryptop
-structure.
-When the request is completed, or an error is detected, the
-.Fn process
-routine should invoke
-.Fn crypto_done .
 Session migration may be performed, as mentioned previously.
 .Pp
 .Sh RETURN VALUES
@@ -441,12 +377,9 @@ returns a non-negative value on error, and \-1 on failure.
 .Fn crypto_dispatch
 returns
 .Er EINVAL
-if its argument or the callback function was
+if its argument was
 .Dv NULL ,
-and 0 otherwise.
-The callback is provided with an error code in case of failure, in the
-.Va crp_etype
-field.
+any other error code or 0 in case of success.
 .Sh FILES
 .Bl -tag -width ".Pa sys/opencrypto/crypto.c"
 .It Pa sys/opencrypto/crypto.c
