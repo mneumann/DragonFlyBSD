@@ -230,7 +230,6 @@ MAN=	aac.4 \
 	oce.4 \
 	ohci.4 \
 	orm.4 \
-	padlock.4 \
 	pass.4 \
 	pccard.4 \
 	pccbb.4 \

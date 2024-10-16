@@ -3930,6 +3930,7 @@ TO_REMOVE+=/etc/mail/mailer.conf.opensmtpd
 TO_REMOVE+=/etc/mail/mailer.conf.postfix
 TO_REMOVE+=/etc/mail/mailer.conf.sendmail
 TO_REMOVE+=/usr/share/man/man4/hifn.4.gz
+TO_REMOVE+=/usr/share/man/man4/padlock.4.gz
 TO_REMOVE+=/usr/share/man/man4/safe.4.gz
 TO_REMOVE+=/usr/share/man/man4/ubsec.4.gz
 

@@ -12,6 +12,11 @@
 +         UPGRADING DRAGONFLY FROM 6.4 TO LATER VERSIONS                +
 +-----------------------------------------------------------------------+
 
+PADLOCK CRYPTO DRIVER REMOVED
+-----------------------------
+
+Likely no VIA cpus in use on DragonFly.
+
 HIFN, SAFE AND UBSEC CRYPTO DRIVERS REMOVED
 -------------------------------------------
 

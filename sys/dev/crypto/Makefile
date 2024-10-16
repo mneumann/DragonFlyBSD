@@ -1,4 +1,4 @@
-SUBDIR=	aesni padlock rdrand rndtest tpm
+SUBDIR=	aesni rdrand rndtest tpm
 
 # Empty for concurrent build
 #
