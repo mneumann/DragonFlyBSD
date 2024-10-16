@@ -935,7 +935,7 @@ dmtc_crypto_read_start(dm_target_crypt_config_t *priv, struct bio *bio)
 		crp->crp_ilen = crp->crp_olen = DEV_BSIZE;
 
 		crp->crp_desc = crd;
-		crp->crp_flags = CRYPTO_F_CBIFSYNC | CRYPTO_F_BATCH;
+		crp->crp_flags = 0;
 
 		crd->crd_alg = priv->crypto_alg;
 
