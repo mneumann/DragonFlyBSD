@@ -7,6 +7,7 @@ struct krypt_cipher {
 	const char *name;
 	uint16_t blocksize;
 	uint16_t ctxsize;
+	uint16_t ivsize;
 
 	int (*probe)(const char *name, int keysize_in_bits);
 
