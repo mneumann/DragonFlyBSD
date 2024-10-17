@@ -58,7 +58,6 @@ struct cryptoini {
 
 struct cryptodesc {
 	int                crd_len;
-	int                crd_inject;
 	int                crd_flags;
 	struct cryptoini   CRD_INI;
 #define crd_iv          CRD_INI.cri_iv
@@ -213,60 +212,21 @@ Each descriptor provides
 information about what type of cryptographic operation should be done
 on the input buffer.
 The various fields are:
-.Bl -tag -width ".Va crd_inject"
 .It Va crd_iv
-The field where IV should be provided when the
-.Dv CRD_F_IV_EXPLICIT
-flag is given.
+The field where IV should be provided.
 .It Va crd_alg
 An algorithm to use.
 Must be the same as the one given at newsession time.
 .It Va crd_len
 How many bytes should be processed.
-.It Va crd_inject
-Offset from the beginning of the buffer to insert any results.
-For encryption algorithms, this is where the initialization vector
-(IV) will be inserted when encrypting or where it can be found when
-decrypting (subject to
-.Va crd_flags ) .
-For MAC algorithms, this is where the result of the keyed hash will be
-inserted.
 .It Va crd_flags
 The following flags are defined:
 .Bl -tag -width 3n
 .It Dv CRD_F_ENCRYPT
 For encryption algorithms, this bit is set when encryption is required
 (when not set, decryption is performed).
-.It Dv CRD_F_IV_PRESENT
-For encryption algorithms, this bit is set when the IV already
-precedes the data, so the
-.Va crd_inject
-value will be ignored and no IV will be written in the buffer.
-Otherwise, the IV used to encrypt the packet will be written
-at the location pointed to by
-.Va crd_inject .
 The IV length is assumed to be equal to the blocksize of the
 encryption algorithm.
-Some applications that do special
-.Dq "IV cooking"
-can use this flag to indicate that the IV should not be written on the packet.
-This flag is typically used in conjunction with the
-.Dv CRD_F_IV_EXPLICIT
-flag.
-.It Dv CRD_F_IV_EXPLICIT
-For encryption algorithms, this bit is set when the IV is explicitly
-provided by the consumer in the
-.Va crd_iv
-field.
-Otherwise, for encryption operations the IV is provided for by
-the driver used to perform the operation, whereas for decryption
-operations it is pointed to by the
-.Va crd_inject
-field.
-This flag is typically used when the IV is calculated
-.Dq "on the fly"
-by the consumer, and does not precede the data
-(encrypted swap being an example).
 .El
 .It Va CRD_INI
 This

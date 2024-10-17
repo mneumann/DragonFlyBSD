@@ -86,26 +86,7 @@ swcr_encdec(struct cryptodesc *crd, struct swcr_data *sw, caddr_t buf,
 		return EINVAL;
 
 	/* Initialize the IV */
-	if (crd->crd_flags & CRD_F_ENCRYPT) {
-		/* IV explicitly provided ? */
-		if (crd->crd_flags & CRD_F_IV_EXPLICIT)
-			bcopy(crd->crd_iv, iv, ivlen);
-		else
-			karc4random_buf(iv, ivlen);
-
-		/* Do we need to write the IV */
-		if (!(crd->crd_flags & CRD_F_IV_PRESENT))
-			bcopy(iv, buf + crd->crd_inject, ivlen);
-
-	} else {	/* Decryption */
-			/* IV explicitly provided ? */
-		if (crd->crd_flags & CRD_F_IV_EXPLICIT)
-			bcopy(crd->crd_iv, iv, ivlen);
-		else {
-			/* Get IV off buf */
-			bcopy(buf + crd->crd_inject, iv, ivlen);
-		}
-	}
+	bcopy(crd->crd_iv, iv, ivlen);
 
 	ivp = iv;
 

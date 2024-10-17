@@ -272,10 +272,7 @@ aesni_cipher_process(struct aesni_session *ses, struct cryptodesc *enccrd,
 #endif
 
 	if ((enccrd->crd_flags & CRD_F_ENCRYPT) != 0) {
-		if ((enccrd->crd_flags & CRD_F_IV_EXPLICIT) != 0)
-			bcopy(enccrd->crd_iv, ses->iv, AES_BLOCK_LEN);
-		if ((enccrd->crd_flags & CRD_F_IV_PRESENT) == 0)
-			bcopy(ses->iv, crp->crp_buf + enccrd->crd_inject, AES_BLOCK_LEN);
+		bcopy(enccrd->crd_iv, ses->iv, AES_BLOCK_LEN);
 		if (ses->algo == CRYPTO_AES_CBC) {
 			aesni_encrypt_cbc(ses->rounds, ses->enc_schedule,
 			    enccrd->crd_len, buf, buf, ses->iv);
@@ -285,10 +282,7 @@ aesni_cipher_process(struct aesni_session *ses, struct cryptodesc *enccrd,
 			    ses->iv);
 		}
 	} else {
-		if ((enccrd->crd_flags & CRD_F_IV_EXPLICIT) != 0)
-			bcopy(enccrd->crd_iv, ses->iv, AES_BLOCK_LEN);
-		else
-			bcopy(crp->crp_buf + enccrd->crd_inject, ses->iv, AES_BLOCK_LEN);
+		bcopy(enccrd->crd_iv, ses->iv, AES_BLOCK_LEN);
 		if (ses->algo == CRYPTO_AES_CBC) {
 			aesni_decrypt_cbc(ses->rounds, ses->dec_schedule,
 			    enccrd->crd_len, buf, ses->iv);

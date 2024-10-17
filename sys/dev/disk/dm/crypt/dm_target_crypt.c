@@ -446,7 +446,7 @@ essiv_ivgen(dm_target_crypt_config_t *priv, u_int8_t *iv,
 	bzero(crd->crd_iv, sizeof(crd->crd_iv));
 
 	crd->crd_len = iv_len;
-	crd->crd_flags = CRD_F_IV_EXPLICIT | CRD_F_IV_PRESENT;
+	crd->crd_flags = 0;
 	crd->crd_flags |= CRD_F_ENCRYPT;
 
 	error = crypto_dispatch(crp);
@@ -940,7 +940,7 @@ dmtc_crypto_read_start(dm_target_crypt_config_t *priv, struct bio *bio)
 		crd->crd_alg = priv->crypto_alg;
 
 		crd->crd_len = DEV_BSIZE /* XXX */;
-		crd->crd_flags = CRD_F_IV_EXPLICIT | CRD_F_IV_PRESENT;
+		crd->crd_flags = 0;
 		crd->crd_flags &= ~CRD_F_ENCRYPT;
 
 		KTR_LOG(dmcrypt_crypto_read_start, crp, bio->bio_buf, i,
@@ -1087,7 +1087,7 @@ dmtc_crypto_write_start(dm_target_crypt_config_t *priv, struct bio *bio)
 		crd->crd_alg = priv->crypto_alg;
 
 		crd->crd_len = DEV_BSIZE /* XXX */;
-		crd->crd_flags = CRD_F_IV_EXPLICIT | CRD_F_IV_PRESENT;
+		crd->crd_flags = 0
 		crd->crd_flags |= CRD_F_ENCRYPT;
 
 		/*
@@ -1269,7 +1269,7 @@ dmtc_crypto_dump_start(dm_target_crypt_config_t *priv, struct dmtc_dump_helper *
 		crd->crd_alg = priv->crypto_alg;
 
 		crd->crd_len = DEV_BSIZE /* XXX */;
-		crd->crd_flags = CRD_F_IV_EXPLICIT | CRD_F_IV_PRESENT;
+		crd->crd_flags = 0;
 		crd->crd_flags |= CRD_F_ENCRYPT;
 
 		/*

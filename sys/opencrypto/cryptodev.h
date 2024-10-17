@@ -167,13 +167,9 @@ struct cryptoini {
 /* Describe boundaries of a single crypto operation */
 struct cryptodesc {
 	int		crd_len;	/* How many bytes to process */
-	int		crd_inject;	/* Where to inject results, if applicable */
 	int		crd_flags;
 
 #define	CRD_F_ENCRYPT		0x01	/* Set when doing encryption */
-#define	CRD_F_IV_PRESENT	0x02	/* When encrypting, IV is already in
-					   place, so don't copy. */
-#define	CRD_F_IV_EXPLICIT	0x04	/* IV explicitly provided */
 #define	CRD_F_DSA_SHA_NEEDED	0x08	/* Compute SHA-1 of buffer for DSA */
 
 	struct cryptoini	CRD_INI; /* Initialization/context data */
