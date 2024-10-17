@@ -54,6 +54,9 @@ SRCS+=	skipjack.c
 .PATH:	${.CURDIR}/twofish
 SRCS+=	twofish.c
 
+.PATH:	${.CURDIR}
+SRCS+=	krypt.c krypt_ciphers.c
+
 SRCS+=	bus_if.h device_if.h opt_ddb.h
 
 SUBDIR=	rc4

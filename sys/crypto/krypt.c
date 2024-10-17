@@ -1,10 +1,10 @@
+#include <sys/types.h>
 #include <sys/param.h>
+#include <sys/errno.h>
+#include <sys/kernel.h>
+#include <sys/malloc.h>
 
-#include <errno.h> // sys/errno.h
 #include <stdbool.h>
-#include <stddef.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 
 #include "krypt.h"
@@ -12,6 +12,10 @@
 #define KRYPT_FLAGS_INITIALIZED 1
 #define KRYPT_FLAGS_KEY_OK	2
 #define KRYPT_FLAGS_IV_OK	4
+
+MALLOC_DEFINE(M_KRYPT_CTX, "krypt data", "crypto session records");
+#define KRYPT_MALLOC(sz) kmalloc(sz, M_KRYPT_CTX, M_WAITOK)
+#define KRYPT_FREE(ptr)	 kfree(ptr, M_KRYPT_CTX)
 
 extern const struct krypt_cipher krypt_ciphers[];
 
@@ -36,14 +40,14 @@ krypt_init(krypt_session_t session, const struct krypt_cipher *cipher)
 	if (session->krypt_flags != 0)
 		return EINVAL;
 
-	session->krypt_ctx = malloc(cipher->ctxsize);
-	session->krypt_iv = malloc(cipher->blocksize);
+	session->krypt_ctx = KRYPT_MALLOC(cipher->ctxsize);
+	session->krypt_iv = KRYPT_MALLOC(cipher->blocksize);
 
 	if (!session->krypt_ctx || !session->krypt_iv) {
 		if (session->krypt_ctx)
-			free(session->krypt_ctx);
+			KRYPT_FREE(session->krypt_ctx);
 		if (session->krypt_iv)
-			free(session->krypt_iv);
+			KRYPT_FREE(session->krypt_iv);
 		return ENOMEM;
 	}
 
@@ -69,7 +73,7 @@ krypt_setkey(krypt_session_t session, const uint8_t *keydata, int keylen)
 
 	if (!error)
 		session->krypt_flags |= KRYPT_FLAGS_KEY_OK;
-	// else unset FLAGS_KEY_OK
+	// TODO: else unset FLAGS_KEY_OK
 
 	return error;
 }
@@ -182,6 +186,7 @@ krypt_free(krypt_session_t session)
 	return EINVAL;
 }
 
+#if 0
 int
 main(int argn, const char **argv)
 {
@@ -198,3 +203,4 @@ main(int argn, const char **argv)
 
 	return 0;
 }
+#endif
