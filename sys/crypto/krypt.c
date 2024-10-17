@@ -36,18 +36,18 @@ krypt_init(krypt_ctx_t ctx, const struct krypt_cipher *cipher)
 	if (ctx->krypt_flags != 0)
 		return EINVAL;
 
-	ctx->krypt_ctx = malloc(cipher->ctxsize);
+	ctx->krypt_keyctx = malloc(cipher->keyctxsize);
 	ctx->krypt_iv = malloc(cipher->blocksize);
 
-	if (!ctx->krypt_ctx || !ctx->krypt_iv) {
-		if (ctx->krypt_ctx)
-			free(ctx->krypt_ctx);
+	if (!ctx->krypt_keyctx || !ctx->krypt_iv) {
+		if (ctx->krypt_keyctx)
+			free(ctx->krypt_keyctx);
 		if (ctx->krypt_iv)
 			free(ctx->krypt_iv);
 		return ENOMEM;
 	}
 
-	bzero(ctx->krypt_ctx, cipher->ctxsize);
+	bzero(ctx->krypt_keyctx, cipher->keyctxsize);
 	bzero(ctx->krypt_iv, cipher->blocksize);
 
 	ctx->krypt_cipher = cipher;
@@ -64,7 +64,7 @@ krypt_setkey(krypt_ctx_t ctx, const uint8_t *keydata, int keylen)
 	if (!keydata)
 		return EINVAL;
 
-	int error = (*ctx->krypt_cipher->setkey)(ctx->krypt_ctx, keydata,
+	int error = (*ctx->krypt_cipher->setkey)(ctx->krypt_keyctx, keydata,
 	    keylen);
 
 	if (!error)
@@ -112,10 +112,10 @@ krypt_encrypt(krypt_ctx_t ctx, uint8_t *data, int datalen)
 		return EINVAL;
 
 	if (cipher->reinit) {
-		(*cipher->reinit)(ctx->krypt_ctx, iv);
+		(*cipher->reinit)(ctx->krypt_keyctx, iv);
 
 		for (int i = 0; i < datalen; i += blocksize) {
-			(*cipher->encrypt)(ctx->krypt_ctx, data + i, iv);
+			(*cipher->encrypt)(ctx->krypt_keyctx, data + i, iv);
 		}
 	} else {
 		for (int i = 0; i < datalen; i += blocksize) {
@@ -127,7 +127,7 @@ krypt_encrypt(krypt_ctx_t ctx, uint8_t *data, int datalen)
 			    (i == 0) ? iv : (data + i - blocksize),
 			    blocksize);
 
-			(*cipher->encrypt)(ctx->krypt_ctx, data + i, iv);
+			(*cipher->encrypt)(ctx->krypt_keyctx, data + i, iv);
 		}
 	}
 
@@ -150,10 +150,10 @@ krypt_decrypt(krypt_ctx_t ctx, uint8_t *data, int datalen)
 		return EINVAL;
 
 	if (cipher->reinit) {
-		(*cipher->reinit)(ctx->krypt_ctx, iv);
+		(*cipher->reinit)(ctx->krypt_keyctx, iv);
 
 		for (int i = 0; i < datalen; i += blocksize) {
-			(*cipher->decrypt)(ctx->krypt_ctx, data + i, iv);
+			(*cipher->decrypt)(ctx->krypt_keyctx, data + i, iv);
 		}
 	} else {
 		/*
@@ -162,7 +162,7 @@ krypt_decrypt(krypt_ctx_t ctx, uint8_t *data, int datalen)
 		 */
 
 		for (int i = datalen - blocksize; i >= 0; i -= blocksize) {
-			(*cipher->decrypt)(ctx->krypt_ctx, data + i, iv);
+			(*cipher->decrypt)(ctx->krypt_keyctx, data + i, iv);
 
 			/*
 			 * XOR with the IV/previous block, as appropriate

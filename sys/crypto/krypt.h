@@ -6,7 +6,7 @@
 struct krypt_cipher {
 	const char *name;
 	uint16_t blocksize;
-	uint16_t ctxsize;
+	uint16_t keyctxsize;
 
 	int (*probe)(const char *name, int keysize_in_bits);
 
@@ -19,7 +19,7 @@ struct krypt_cipher {
 struct krypt_ctx {
 	int krypt_flags;
 	const struct krypt_cipher *krypt_cipher;
-	void *krypt_ctx;
+	void *krypt_keyctx;
 	uint8_t *krypt_iv;
 };
 
