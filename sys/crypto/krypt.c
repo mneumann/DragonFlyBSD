@@ -86,9 +86,9 @@ krypt_setiv(krypt_session_t session, const uint8_t *ivdata, int ivlen)
 	if (!ivdata)
 		return EINVAL;
 
-	bzero(session->krypt_iv, session->krypt_cipher->blocksize);
+	bzero(session->krypt_iv, session->krypt_cipher->ivsize);
 	memcpy(session->krypt_iv, ivdata,
-	    MIN(ivlen, session->krypt_cipher->blocksize));
+	    MIN(ivlen, session->krypt_cipher->ivsize));
 
 	return (0);
 }
