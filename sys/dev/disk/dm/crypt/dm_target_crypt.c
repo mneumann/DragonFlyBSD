@@ -52,6 +52,11 @@
 
 #include <sys/ktr.h>
 #include <sys/spinlock2.h>
+#include <sys/lock.h>
+#include <sys/kthread.h>
+#include <sys/queue.h>
+#include <sys/proc.h>
+#include <sys/types.h>
 
 #include <dev/disk/dm/dm.h>
 MALLOC_DEFINE(M_DMCRYPT, "dm_crypt", "Device Mapper Target Crypt");
@@ -115,6 +120,44 @@ struct essiv_ivgen_priv {
 	u_int8_t		crypto_keyhash[SHA512_DIGEST_LENGTH];
 };
 
+struct work_queue_job {
+	int wqj_type;
+	void *wqj_data;
+	STAILQ_ENTRY(work_queue_job) wqj_next;
+};
+
+struct work_queue {
+	struct lock wq_lock;
+	STAILQ_HEAD(, work_queue_job) wq_jobs;
+};
+
+
+static struct work_queue_job*
+work_queue_get_job(struct work_queue *wq)
+{
+	struct work_queue_job *job;
+	lockmgr(&wq->wq_lock, LK_EXCLUSIVE);
+	while ((job = STAILQ_FIRST(&wq->wq_jobs)) == NULL) {
+		lksleep(&wq->wq_jobs,
+			&wq->wq_lock,
+			0,
+			"dm_target_crypt: wq empty",
+			0);
+	}
+	STAILQ_REMOVE_HEAD(&wq->wq_jobs, wqj_next);
+	lockmgr(&wq->wq_lock, LK_RELEASE);
+	return job;
+}
+
+static void
+work_queue_put_job(struct work_queue *wq, struct work_queue_job *job)
+{
+	lockmgr(&wq->wq_lock, LK_EXCLUSIVE);
+	STAILQ_INSERT_TAIL(&wq->wq_jobs, job, wqj_next);
+	lockmgr(&wq->wq_lock, LK_RELEASE);
+	wakeup_one(&wq->wq_jobs);
+}
+
 typedef struct target_crypt_config {
 	size_t	params_len;
 	dm_pdev_t *pdev;
@@ -135,6 +178,9 @@ typedef struct target_crypt_config {
 
 	struct malloc_pipe	read_mpipe;
 	struct malloc_pipe	write_mpipe;
+
+	struct thread		*crypto_worker;
+	struct work_queue	crypto_work_queue;
 } dm_target_crypt_config_t;
 
 struct dmtc_helper {
@@ -564,6 +610,19 @@ dm_target_crypt_validate_alg(const char *crypto_alg, const char *crypto_mode, in
 	return 0;
 }
 
+
+static void
+crypto_worker_proc(void *wq_arg)
+{
+	struct work_queue *wq = wq_arg;
+	struct work_queue_job *job;
+
+	while ((job = work_queue_get_job(wq)) != NULL) {
+		kprintf("Got job: %d\n", job->wqj_type);
+		kfree(job, M_DMCRYPT);
+	}
+}
+
 static int
 dm_target_crypt_init(dm_table_entry_t *table_en, int argc, char **argv)
 {
@@ -701,6 +760,30 @@ dm_target_crypt_init(dm_table_entry_t *table_en, int argc, char **argv)
 
 	/* Initialize mpipes */
 	dmtc_init_mpipe(priv);
+
+	/* Create crypto worker thread and work queue */
+
+	STAILQ_INIT(&priv->crypto_work_queue.wq_jobs);
+
+	lockinit(&priv->crypto_work_queue.wq_lock,
+			"dm_target_crypt: crypto wq",
+			0,
+			LK_CANRECURSE);
+
+	struct work_queue_job *job = kmalloc(
+			sizeof(struct work_queue_job),
+			M_DMCRYPT,
+			M_ZERO | M_WAITOK);
+
+	job->wqj_type = 42;
+	job->wqj_data = "test";
+
+	work_queue_put_job(&priv->crypto_work_queue, job);
+
+    	kthread_create(crypto_worker_proc,
+			&priv->crypto_work_queue,
+			&priv->crypto_worker,
+			"dm_target_crypt: crypto worker");
 
 	return 0;
 
