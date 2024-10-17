@@ -1087,7 +1087,7 @@ dmtc_crypto_write_start(dm_target_crypt_config_t *priv, struct bio *bio)
 		crd->crd_alg = priv->crypto_alg;
 
 		crd->crd_len = DEV_BSIZE /* XXX */;
-		crd->crd_flags = 0
+		crd->crd_flags = 0;
 		crd->crd_flags |= CRD_F_ENCRYPT;
 
 		/*
