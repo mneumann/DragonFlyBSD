@@ -102,47 +102,44 @@ swcr_encdec(struct cryptodesc *crd, struct swcr_data *sw, caddr_t buf,
 	if (exf->reinit)
 		exf->reinit(kschedule, iv);
 
-	{
-		/*
-		 * contiguous buffer
-		 */
-		if (exf->reinit) {
-			for(i = 0; i < crd->crd_len; i += blks) {
-				if (crd->crd_flags & CRD_F_ENCRYPT) {
-					exf->encrypt(kschedule, buf + i, iv);
-				} else {
-					exf->decrypt(kschedule, buf + i, iv);
-				}
-			}
-		} else if (crd->crd_flags & CRD_F_ENCRYPT) {
-			for (i = 0; i < crd->crd_len; i += blks) {
-				/* XOR with the IV/previous block, as appropriate. */
-				if (i == 0)
-					for (k = 0; k < blks; k++)
-						buf[i + k] ^= ivp[k];
-				else
-					for (k = 0; k < blks; k++)
-						buf[i + k] ^= buf[i + k - blks];
+	/*
+	 * contiguous buffer
+	 */
+	if (exf->reinit) {
+		for(i = 0; i < crd->crd_len; i += blks) {
+			if (crd->crd_flags & CRD_F_ENCRYPT) {
 				exf->encrypt(kschedule, buf + i, iv);
-			}
-		} else {		/* Decrypt */
-			/*
-			 * Start at the end, so we don't need to keep the
-			 * encrypted block as the IV for the next block.
-			 */
-			for (i = crd->crd_len - blks; i >= 0; i -= blks) {
+			} else {
 				exf->decrypt(kschedule, buf + i, iv);
-
-				/* XOR with the IV/previous block, as appropriate */
-				if (i == 0)
-					for (k = 0; k < blks; k++)
-						buf[i + k] ^= ivp[k];
-				else
-					for (k = 0; k < blks; k++)
-						buf[i + k] ^= buf[i + k - blks];
 			}
 		}
-		error = 0; /* Done w/contiguous buffer encrypt/decrypt */
+	} else if (crd->crd_flags & CRD_F_ENCRYPT) {
+		for (i = 0; i < crd->crd_len; i += blks) {
+			/* XOR with the IV/previous block, as appropriate. */
+			if (i == 0)
+				for (k = 0; k < blks; k++)
+					buf[i + k] ^= ivp[k];
+			else
+				for (k = 0; k < blks; k++)
+					buf[i + k] ^= buf[i + k - blks];
+			exf->encrypt(kschedule, buf + i, iv);
+		}
+	} else {		/* Decrypt */
+		/*
+		 * Start at the end, so we don't need to keep the
+		 * encrypted block as the IV for the next block.
+		 */
+		for (i = crd->crd_len - blks; i >= 0; i -= blks) {
+			exf->decrypt(kschedule, buf + i, iv);
+
+			/* XOR with the IV/previous block, as appropriate */
+			if (i == 0)
+				for (k = 0; k < blks; k++)
+					buf[i + k] ^= ivp[k];
+			else
+				for (k = 0; k < blks; k++)
+					buf[i + k] ^= buf[i + k - blks];
+		}
 	}
 
 	/*
@@ -153,7 +150,7 @@ swcr_encdec(struct cryptodesc *crd, struct swcr_data *sw, caddr_t buf,
 	--sw->sw_kschedule_refs;
 	spin_unlock(&swcr_spin);
 
-	return error;
+	return (0);
 }
 
 /*
@@ -168,7 +165,6 @@ swcr_newsession(device_t dev, u_int32_t *sid, struct cryptoini *cri)
 	struct enc_xform *txf;
 	u_int32_t i;
 	u_int32_t n;
-	int error;
 
 	if (sid == NULL || cri == NULL)
 		return EINVAL;
