@@ -13,12 +13,12 @@
 #define KRYPT_FLAGS_KEY_OK	2
 #define KRYPT_FLAGS_IV_OK	4
 
-extern const struct krypt_cipher_def krypt_ciphers[];
+extern const struct krypt_cipher krypt_ciphers[];
 
-const struct krypt_cipher_def *
+const struct krypt_cipher *
 krypt_find_cipher(const char *cipher_name, int keysize_in_bits)
 {
-	for (const struct krypt_cipher_def *cipherp = krypt_ciphers;
+	for (const struct krypt_cipher *cipherp = krypt_ciphers;
 	     cipherp->name; ++cipherp) {
 		if ((*cipherp->probe)(cipher_name, keysize_in_bits) == 0) {
 			return cipherp;
@@ -29,7 +29,7 @@ krypt_find_cipher(const char *cipher_name, int keysize_in_bits)
 }
 
 int
-krypt_init(krypt_ctx_t ctx, const struct krypt_cipher_def *cipher)
+krypt_init(krypt_ctx_t ctx, const struct krypt_cipher *cipher)
 {
 	if (!cipher)
 		return EINVAL;
@@ -104,7 +104,7 @@ krypt_encrypt(krypt_ctx_t ctx, uint8_t *data, int datalen)
 	if (!data)
 		return EINVAL;
 
-	const struct krypt_cipher_def *cipher = ctx->krypt_cipher;
+	const struct krypt_cipher *cipher = ctx->krypt_cipher;
 	const int blocksize = cipher->blocksize;
 	uint8_t *iv = ctx->krypt_iv;
 
@@ -142,7 +142,7 @@ krypt_decrypt(krypt_ctx_t ctx, uint8_t *data, int datalen)
 	if (!data)
 		return EINVAL;
 
-	const struct krypt_cipher_def *cipher = ctx->krypt_cipher;
+	const struct krypt_cipher *cipher = ctx->krypt_cipher;
 	const int blocksize = cipher->blocksize;
 	uint8_t *iv = ctx->krypt_iv;
 
