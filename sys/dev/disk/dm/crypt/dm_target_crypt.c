@@ -519,23 +519,6 @@ plain64_ivgen(dm_target_crypt_config_t *priv, u_int8_t *iv,
 	*((uint64_t *)iv) = htole64((uint64_t)(sector + priv->iv_offset));
 }
 
-#if 0
-static void
-geli_ivgen(dm_target_crypt_config_t *priv, u_int8_t *iv,
-	   size_t iv_len, off_t sector)
-{
-
-	SHA512_CTX	ctx512;
-	u_int8_t	md[SHA512_DIGEST_LENGTH]; /* Max. Digest Size */
-
-	memcpy(&ctx512, &priv->essivsha512_ctx, sizeof(SHA512_CTX));
-	SHA512_Update(&ctx512, (u_int8_t*)&sector, sizeof(off_t));
-	SHA512_Final(md, &ctx512);
-
-	memcpy(iv, md, iv_len);
-}
-#endif
-
 /*
  * Init function called from dm_table_load_ioctl.
  * cryptsetup actually passes us this:
