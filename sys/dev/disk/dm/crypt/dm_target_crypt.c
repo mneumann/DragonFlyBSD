@@ -927,33 +927,26 @@ dmtc_bio_read_done(struct bio *bio)
 /*
  * STRATEGY READ PATH PART 2/3
  */
-static void
-dmtc_crypto_read_retry(void *arg1, void *arg2)
-{
-	dm_target_crypt_config_t *priv = arg1;
-	struct bio *bio = arg2;
-
-	dmtc_crypto_read_start(priv, bio);
-}
 
 static void
 dmtc_crypto_read_start(dm_target_crypt_config_t *priv, struct bio *bio)
 {
-	struct dmtc_helper *dmtc;
-	struct cryptodesc *crd;
-	struct cryptop *crp;
-	int i, bytes, sectors, sz;
+	struct cryptop _crp;
+	struct cryptodesc _crd;
+	struct cryptop *crp = &_crp;
+	struct cryptodesc *crd = &_crd;
+	int i, bytes, sectors;
 	off_t isector;
-	u_char *ptr, *space;
+	uint8_t *data_buf;
 
 	/*
 	 * Note: b_resid no good after read I/O, it will be 0, use
 	 *	 b_bcount.
 	 */
 	bytes = bio->bio_buf->b_bcount;
+	data_buf = bio->bio_buf->b_data;
 	isector = bio->bio_offset / DEV_BSIZE;	/* ivgen salt base? */
 	sectors = bytes / DEV_BSIZE;		/* Number of sectors */
-	sz = sectors * (sizeof(*crp) + sizeof(*crd));
 
 	/*
 	 * For reads with bogus page we can't decrypt in place as stuff
@@ -963,54 +956,21 @@ dmtc_crypto_read_start(dm_target_crypt_config_t *priv, struct bio *bio)
 	 * read already completed and threw crypted data into the buffer
 	 * cache buffer.  Disable for now.
 	 */
-	space = mpipe_alloc_callback(&priv->read_mpipe,
-				     dmtc_crypto_read_retry, priv, bio);
-	if (space == NULL)
-		return;
-
-	dmtc = (struct dmtc_helper *)space;
-	dmtc->free_addr = space;
-	space += sizeof(struct dmtc_helper);
-	dmtc->orig_buf = NULL;
-	dmtc->data_buf = bio->bio_buf->b_data;
-	dmtc->priv = priv;
-	bio->bio_caller_info2.ptr = dmtc;
 	bio->bio_buf->b_error = 0;
 
-	/*
-	 * Load crypto descriptors (crp/crd loop)
-	 */
-	bzero(space, sz);
-	ptr = space;
-	bio->bio_caller_info3.value = sectors;
-	cpu_sfence();
-#if 0
-	kprintf("Read, bytes = %d (b_bcount), "
-		"sectors = %d (bio = %p, b_cmd = %d)\n",
-		bytes, sectors, bio, bio->bio_buf->b_cmd);
-#endif
 	for (i = 0; i < sectors; i++) {
-		crp = (struct cryptop *)ptr;
-		ptr += sizeof(*crp);
-		crd = (struct cryptodesc *)ptr;
-		ptr += sizeof (*crd);
-
-		crp->crp_buf = dmtc->data_buf + i * DEV_BSIZE;
-
+		bzero(crp, sizeof(*crp));
+		crp->crp_buf = data_buf + i * DEV_BSIZE;
 		crp->crp_sid = priv->crypto_sid;
 		crp->crp_ilen = crp->crp_olen = DEV_BSIZE;
-
 		crp->crp_desc = crd;
 		crp->crp_flags = 0;
 
+		bzero(crd, sizeof(*crd));
 		crd->crd_alg = priv->crypto_alg;
-
 		crd->crd_len = DEV_BSIZE /* XXX */;
 		crd->crd_flags = 0;
 		crd->crd_flags &= ~CRD_F_ENCRYPT;
-
-		KTR_LOG(dmcrypt_crypto_read_start, crp, bio->bio_buf, i,
-		    sectors);
 
 		/*
 		 * Note: last argument is used to generate salt(?) and is
@@ -1031,39 +991,25 @@ dmtc_crypto_read_start(dm_target_crypt_config_t *priv, struct bio *bio)
 				error);
 			bio->bio_buf->b_error = error;
 		}
-
-		/*
-		 * On the last chunk of the decryption we do any required copybacks
-		 * and complete the I/O.
-		 */
-		int n = atomic_fetchadd_int(&bio->bio_caller_info3.value, -1);
-#if 0
-		kprintf("dmtc_crypto_cb_read_done %p, n = %d\n", bio, n);
-#endif
-
-		KTR_LOG(dmcrypt_crypto_cb_read_done, crp, bio->bio_buf, n);
-
-		if (n == 1) {
-			/*
-			 * For the B_HASBOGUS case we didn't decrypt in place,
-			 * so we need to copy stuff back into the buf.
-			 *
-			 * (disabled for now).
-			 */
-			if (bio->bio_buf->b_error) {
-				bio->bio_buf->b_flags |= B_ERROR;
-			}
-#if 0
-			else if (bio->bio_buf->b_flags & B_HASBOGUS) {
-				memcpy(bio->bio_buf->b_data, dmtc->data_buf,
-				       bio->bio_buf->b_bcount);
-			}
-#endif
-			mpipe_free(&dmtc->priv->read_mpipe, dmtc->free_addr);
-			struct bio *obio = pop_bio(bio);
-			biodone(obio);
-		}
 	}
+
+	/*
+	 * For the B_HASBOGUS case we didn't decrypt in place,
+	 * so we need to copy stuff back into the buf.
+	 *
+	 * (disabled for now).
+	 */
+	if (bio->bio_buf->b_error) {
+		bio->bio_buf->b_flags |= B_ERROR;
+	}
+#if 0
+	else if (bio->bio_buf->b_flags & B_HASBOGUS) {
+		memcpy(bio->bio_buf->b_data, dmtc->data_buf,
+		       bio->bio_buf->b_bcount);
+	}
+#endif
+	struct bio *obio = pop_bio(bio);
+	biodone(obio);
 }
 
 /* END OF STRATEGY READ SECTION */
