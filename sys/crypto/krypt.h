@@ -13,9 +13,9 @@ struct krypt_cipher {
 
 	int (*setkey)(void *ctx, const uint8_t *keydata, int keylen);
 	void (*encrypt)(const void *ctx, uint8_t *data, int datalen,
-	    const uint8_t *iv);
+	    uint8_t *iv);
 	void (*decrypt)(const void *ctx, uint8_t *data, int datalen,
-	    const uint8_t *iv);
+	    uint8_t *iv);
 };
 
 struct krypt_session {
