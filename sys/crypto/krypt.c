@@ -29,62 +29,62 @@ krypt_find_cipher(const char *cipher_name, int keysize_in_bits)
 }
 
 int
-krypt_init(krypt_ctx_t ctx, const struct krypt_cipher *cipher)
+krypt_init(krypt_session_t session, const struct krypt_cipher *cipher)
 {
 	if (!cipher)
 		return EINVAL;
-	if (ctx->krypt_flags != 0)
+	if (session->krypt_flags != 0)
 		return EINVAL;
 
-	ctx->krypt_keyctx = malloc(cipher->keyctxsize);
-	ctx->krypt_iv = malloc(cipher->blocksize);
+	session->krypt_ctx = malloc(cipher->ctxsize);
+	session->krypt_iv = malloc(cipher->blocksize);
 
-	if (!ctx->krypt_keyctx || !ctx->krypt_iv) {
-		if (ctx->krypt_keyctx)
-			free(ctx->krypt_keyctx);
-		if (ctx->krypt_iv)
-			free(ctx->krypt_iv);
+	if (!session->krypt_ctx || !session->krypt_iv) {
+		if (session->krypt_ctx)
+			free(session->krypt_ctx);
+		if (session->krypt_iv)
+			free(session->krypt_iv);
 		return ENOMEM;
 	}
 
-	bzero(ctx->krypt_keyctx, cipher->keyctxsize);
-	bzero(ctx->krypt_iv, cipher->blocksize);
+	bzero(session->krypt_ctx, cipher->ctxsize);
+	bzero(session->krypt_iv, cipher->blocksize);
 
-	ctx->krypt_cipher = cipher;
-	ctx->krypt_flags |= KRYPT_FLAGS_INITIALIZED;
+	session->krypt_cipher = cipher;
+	session->krypt_flags |= KRYPT_FLAGS_INITIALIZED;
 
 	return (0);
 }
 
 int
-krypt_setkey(krypt_ctx_t ctx, const uint8_t *keydata, int keylen)
+krypt_setkey(krypt_session_t session, const uint8_t *keydata, int keylen)
 {
-	if ((ctx->krypt_flags & KRYPT_FLAGS_INITIALIZED) == 0)
+	if ((session->krypt_flags & KRYPT_FLAGS_INITIALIZED) == 0)
 		return EINVAL;
 	if (!keydata)
 		return EINVAL;
 
-	int error = (*ctx->krypt_cipher->setkey)(ctx->krypt_keyctx, keydata,
-	    keylen);
+	int error = (*session->krypt_cipher->setkey)(session->krypt_ctx,
+	    keydata, keylen);
 
 	if (!error)
-		ctx->krypt_flags |= KRYPT_FLAGS_KEY_OK;
+		session->krypt_flags |= KRYPT_FLAGS_KEY_OK;
 	// else unset FLAGS_KEY_OK
 
 	return error;
 }
 
 int
-krypt_setiv(krypt_ctx_t ctx, const uint8_t *ivdata, int ivlen)
+krypt_setiv(krypt_session_t session, const uint8_t *ivdata, int ivlen)
 {
-	if ((ctx->krypt_flags & KRYPT_FLAGS_INITIALIZED) == 0)
+	if ((session->krypt_flags & KRYPT_FLAGS_INITIALIZED) == 0)
 		return EINVAL;
 	if (!ivdata)
 		return EINVAL;
 
-	bzero(ctx->krypt_iv, ctx->krypt_cipher->blocksize);
-	memcpy(ctx->krypt_iv, ivdata,
-	    MIN(ivlen, ctx->krypt_cipher->blocksize));
+	bzero(session->krypt_iv, session->krypt_cipher->blocksize);
+	memcpy(session->krypt_iv, ivdata,
+	    MIN(ivlen, session->krypt_cipher->blocksize));
 
 	return (0);
 }
@@ -97,25 +97,25 @@ xor_block(uint8_t *dst, const uint8_t *src, int blocksize)
 }
 
 int
-krypt_encrypt(krypt_ctx_t ctx, uint8_t *data, int datalen)
+krypt_encrypt(krypt_session_t session, uint8_t *data, int datalen)
 {
-	if ((ctx->krypt_flags & KRYPT_FLAGS_INITIALIZED) == 0)
+	if ((session->krypt_flags & KRYPT_FLAGS_INITIALIZED) == 0)
 		return EINVAL;
 	if (!data)
 		return EINVAL;
 
-	const struct krypt_cipher *cipher = ctx->krypt_cipher;
+	const struct krypt_cipher *cipher = session->krypt_cipher;
 	const int blocksize = cipher->blocksize;
-	uint8_t *iv = ctx->krypt_iv;
+	uint8_t *iv = session->krypt_iv;
 
 	if ((datalen % blocksize) != 0)
 		return EINVAL;
 
 	if (cipher->reinit) {
-		(*cipher->reinit)(ctx->krypt_keyctx, iv);
+		(*cipher->reinit)(session->krypt_ctx, iv);
 
 		for (int i = 0; i < datalen; i += blocksize) {
-			(*cipher->encrypt)(ctx->krypt_keyctx, data + i, iv);
+			(*cipher->encrypt)(session->krypt_ctx, data + i, iv);
 		}
 	} else {
 		for (int i = 0; i < datalen; i += blocksize) {
@@ -127,7 +127,7 @@ krypt_encrypt(krypt_ctx_t ctx, uint8_t *data, int datalen)
 			    (i == 0) ? iv : (data + i - blocksize),
 			    blocksize);
 
-			(*cipher->encrypt)(ctx->krypt_keyctx, data + i, iv);
+			(*cipher->encrypt)(session->krypt_ctx, data + i, iv);
 		}
 	}
 
@@ -135,25 +135,25 @@ krypt_encrypt(krypt_ctx_t ctx, uint8_t *data, int datalen)
 }
 
 int
-krypt_decrypt(krypt_ctx_t ctx, uint8_t *data, int datalen)
+krypt_decrypt(krypt_session_t session, uint8_t *data, int datalen)
 {
-	if ((ctx->krypt_flags & KRYPT_FLAGS_INITIALIZED) == 0)
+	if ((session->krypt_flags & KRYPT_FLAGS_INITIALIZED) == 0)
 		return EINVAL;
 	if (!data)
 		return EINVAL;
 
-	const struct krypt_cipher *cipher = ctx->krypt_cipher;
+	const struct krypt_cipher *cipher = session->krypt_cipher;
 	const int blocksize = cipher->blocksize;
-	uint8_t *iv = ctx->krypt_iv;
+	uint8_t *iv = session->krypt_iv;
 
 	if ((datalen % blocksize) != 0)
 		return EINVAL;
 
 	if (cipher->reinit) {
-		(*cipher->reinit)(ctx->krypt_keyctx, iv);
+		(*cipher->reinit)(session->krypt_ctx, iv);
 
 		for (int i = 0; i < datalen; i += blocksize) {
-			(*cipher->decrypt)(ctx->krypt_keyctx, data + i, iv);
+			(*cipher->decrypt)(session->krypt_ctx, data + i, iv);
 		}
 	} else {
 		/*
@@ -162,7 +162,7 @@ krypt_decrypt(krypt_ctx_t ctx, uint8_t *data, int datalen)
 		 */
 
 		for (int i = datalen - blocksize; i >= 0; i -= blocksize) {
-			(*cipher->decrypt)(ctx->krypt_keyctx, data + i, iv);
+			(*cipher->decrypt)(session->krypt_ctx, data + i, iv);
 
 			/*
 			 * XOR with the IV/previous block, as appropriate
@@ -177,7 +177,7 @@ krypt_decrypt(krypt_ctx_t ctx, uint8_t *data, int datalen)
 }
 
 int
-krypt_free(krypt_ctx_t ctx)
+krypt_free(krypt_session_t session)
 {
 	return EINVAL;
 }
@@ -185,15 +185,15 @@ krypt_free(krypt_ctx_t ctx)
 int
 main(int argn, const char **argv)
 {
-	struct krypt_ctx ctx;
-	bzero(&ctx, sizeof(ctx));
+	struct krypt_session session;
+	bzero(&session, sizeof(session));
 
-	if (krypt_init(&ctx, krypt_find_cipher("null", 8)))
+	if (krypt_init(&session, krypt_find_cipher("null", 8)))
 		printf("ERROR\n");
 	else
 		printf("OK\n");
 
-	if (krypt_setkey(&ctx, "test", 4))
+	if (krypt_setkey(&session, "test", 4))
 		printf("ERROR: setkey\n");
 
 	return 0;
