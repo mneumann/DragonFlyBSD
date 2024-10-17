@@ -75,7 +75,6 @@ swcr_encdec(struct cryptodesc *crd, struct swcr_data *sw, caddr_t buf,
 	u_int8_t *kschedule;
 	struct enc_xform *exf;
 	int i, k, blks, ivlen;
-	int error;
 
 	exf = sw->sw_exf;
 	blks = exf->blocksize;
@@ -165,6 +164,7 @@ swcr_newsession(device_t dev, u_int32_t *sid, struct cryptoini *cri)
 	struct enc_xform *txf;
 	u_int32_t i;
 	u_int32_t n;
+	int error;
 
 	if (sid == NULL || cri == NULL)
 		return EINVAL;
