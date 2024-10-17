@@ -24,7 +24,8 @@ krypt_find_cipher(const char *cipher_name, int keysize_in_bits)
 {
 	for (const struct krypt_cipher *cipherp = krypt_ciphers;
 	     cipherp->name; ++cipherp) {
-		if ((*cipherp->probe)(cipher_name, keysize_in_bits) == 0) {
+		if ((*cipherp->probe)(cipher_name, keysize_in_bits) ==
+		    0) {
 			return cipherp;
 		}
 	}
@@ -61,7 +62,8 @@ krypt_init(krypt_session_t session, const struct krypt_cipher *cipher)
 }
 
 int
-krypt_setkey(krypt_session_t session, const uint8_t *keydata, int keylen)
+krypt_setkey(krypt_session_t session, const uint8_t *keydata,
+    int keylen)
 {
 	if ((session->krypt_flags & KRYPT_FLAGS_INITIALIZED) == 0)
 		return EINVAL;
@@ -93,13 +95,6 @@ krypt_setiv(krypt_session_t session, const uint8_t *ivdata, int ivlen)
 	return (0);
 }
 
-static inline void
-xor_block(uint8_t *dst, const uint8_t *src, int blocksize)
-{
-	for (int i = 0; i < blocksize; i++)
-		dst[i] ^= src[i];
-}
-
 int
 krypt_encrypt(krypt_session_t session, uint8_t *data, int datalen)
 {
@@ -107,33 +102,11 @@ krypt_encrypt(krypt_session_t session, uint8_t *data, int datalen)
 		return EINVAL;
 	if (!data)
 		return EINVAL;
-
-	const struct krypt_cipher *cipher = session->krypt_cipher;
-	const int blocksize = cipher->blocksize;
-	uint8_t *iv = session->krypt_iv;
-
-	if ((datalen % blocksize) != 0)
+	if ((datalen % session->krypt_cipher->blocksize) != 0)
 		return EINVAL;
 
-	if (cipher->reinit) {
-		(*cipher->reinit)(session->krypt_ctx, iv);
-
-		for (int i = 0; i < datalen; i += blocksize) {
-			(*cipher->encrypt)(session->krypt_ctx, data + i, iv);
-		}
-	} else {
-		for (int i = 0; i < datalen; i += blocksize) {
-			/*
-			 * XOR with the IV/previous block, as
-			 * appropriate.
-			 */
-			xor_block(data + i,
-			    (i == 0) ? iv : (data + i - blocksize),
-			    blocksize);
-
-			(*cipher->encrypt)(session->krypt_ctx, data + i, iv);
-		}
-	}
+	(*session->krypt_cipher->encrypt)(session->krypt_ctx, data,
+	    datalen, session->krypt_iv);
 
 	return (0);
 }
@@ -145,37 +118,11 @@ krypt_decrypt(krypt_session_t session, uint8_t *data, int datalen)
 		return EINVAL;
 	if (!data)
 		return EINVAL;
-
-	const struct krypt_cipher *cipher = session->krypt_cipher;
-	const int blocksize = cipher->blocksize;
-	uint8_t *iv = session->krypt_iv;
-
-	if ((datalen % blocksize) != 0)
+	if ((datalen % session->krypt_cipher->blocksize) != 0)
 		return EINVAL;
 
-	if (cipher->reinit) {
-		(*cipher->reinit)(session->krypt_ctx, iv);
-
-		for (int i = 0; i < datalen; i += blocksize) {
-			(*cipher->decrypt)(session->krypt_ctx, data + i, iv);
-		}
-	} else {
-		/*
-		 * Start at the end, so we don't need to keep the
-		 * encrypted block as the IV for the next block.
-		 */
-
-		for (int i = datalen - blocksize; i >= 0; i -= blocksize) {
-			(*cipher->decrypt)(session->krypt_ctx, data + i, iv);
-
-			/*
-			 * XOR with the IV/previous block, as appropriate
-			 */
-			xor_block(data + i,
-			    (i == 0) ? iv : (data + i - blocksize),
-			    blocksize);
-		}
-	}
+	(*session->krypt_cipher->decrypt)(session->krypt_ctx, data,
+	    datalen, session->krypt_iv);
 
 	return (0);
 }

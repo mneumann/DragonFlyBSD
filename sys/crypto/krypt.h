@@ -12,9 +12,10 @@ struct krypt_cipher {
 	int (*probe)(const char *name, int keysize_in_bits);
 
 	int (*setkey)(void *ctx, const uint8_t *keydata, int keylen);
-	void (*reinit)(void *ctx, uint8_t *iv);
-	void (*encrypt)(void *ctx, uint8_t *data, const uint8_t *iv);
-	void (*decrypt)(void *ctx, uint8_t *data, const uint8_t *iv);
+	void (*encrypt)(const void *ctx, uint8_t *data, int datalen,
+	    const uint8_t *iv);
+	void (*decrypt)(const void *ctx, uint8_t *data, int datalen,
+	    const uint8_t *iv);
 };
 
 struct krypt_session {
@@ -29,9 +30,12 @@ typedef struct krypt_session *krypt_session_t;
 const struct krypt_cipher *krypt_find_cipher(const char *cipher_name,
     int keysize_in_bits);
 
-int krypt_init(krypt_session_t session, const struct krypt_cipher *cipher);
-int krypt_setkey(krypt_session_t session, const uint8_t *keydata, int keylen);
-int krypt_setiv(krypt_session_t session, const uint8_t *ivdata, int ivlen);
+int krypt_init(krypt_session_t session,
+    const struct krypt_cipher *cipher);
+int krypt_setkey(krypt_session_t session, const uint8_t *keydata,
+    int keylen);
+int krypt_setiv(krypt_session_t session, const uint8_t *ivdata,
+    int ivlen);
 int krypt_encrypt(krypt_session_t session, uint8_t *data, int datalen);
 int krypt_decrypt(krypt_session_t session, uint8_t *data, int datalen);
 int krypt_free(krypt_session_t session);
