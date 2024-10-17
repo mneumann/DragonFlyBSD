@@ -58,4 +58,10 @@ SRCS+=	bus_if.h device_if.h opt_ddb.h
 
 SUBDIR=	rc4
 
+format:
+	clang-format15 -i krypt*.*
+
+krypt: krypt.c krypt.h krypt_ciphers.c
+	cc krypt.c krypt_ciphers.c -o krypt
+
 .include <bsd.kmod.mk>
