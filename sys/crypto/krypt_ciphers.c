@@ -40,10 +40,7 @@
  * PURPOSE.
  */
 
-#include <sys/kernel.h>
-
-#include <string.h>
-
+#include <sys/systm.h>
 #include "krypt.h"
 
 /**

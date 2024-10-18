@@ -1,12 +1,5 @@
 #include <sys/types.h>
 #include <sys/param.h>
-#include <sys/errno.h>
-#include <sys/kernel.h>
-#include <sys/malloc.h>
-
-#include <stdbool.h>
-#include <string.h>
-
 #include "krypt.h"
 
 extern const struct crypto_symm_cipher crypto_symm_ciphers[];
