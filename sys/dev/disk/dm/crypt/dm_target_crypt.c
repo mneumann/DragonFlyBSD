@@ -129,16 +129,17 @@ struct workqueue_job {
 	STAILQ_ENTRY(workqueue_job) wqj_next;
 };
 
+typedef void workqueue_job_destructor_cb(struct workqueue_job *job, void *context);
+
 struct workqueue {
 	struct lock wq_lock;
 	STAILQ_HEAD(, workqueue_job) wq_jobs;
+	workqueue_job_destructor_cb *wq_job_destructor;
+	void *wq_context;
 };
 
 static void
 workqueue_submit_job(struct workqueue *wq, workqueue_job_cb *cb, void *arg1);
-
-static void
-workqueue_free_job(struct workqueue *wq __unused, struct workqueue_job *job);
 
 static struct workqueue_job*
 workqueue_dequeue(struct workqueue *wq);
@@ -167,6 +168,7 @@ typedef struct target_crypt_config {
 
 	struct thread		*crypto_worker;
 	struct workqueue	crypto_workqueue;
+
 } dm_target_crypt_config_t;
 
 struct dmtc_helper {
@@ -588,14 +590,11 @@ workqueue_worker(void *wq_arg)
 		{
 			(*job->wqj_cb)(job->wqj_data);
 		}
-		workqueue_free_job(wq, job);
+		if (wq->wq_job_destructor)
+		{
+			(*wq->wq_job_destructor)(job, wq->wq_context);
+		}
 	}
-}
-
-static void
-workqueue_free_job(struct workqueue *wq __unused, struct workqueue_job *job)
-{
-	kfree(job, M_DMCRYPT);
 }
 
 static struct workqueue_job*
@@ -634,6 +633,12 @@ static void
 print_42(void *arg __unused)
 {
 	kprintf("YES: 42\n");
+}
+
+static void
+destruct_crypto_job(struct workqueue_job *job, void *context __unused)
+{
+	kfree(job, M_DMCRYPT);
 }
 
 static int
@@ -782,6 +787,16 @@ dm_target_crypt_init(dm_table_entry_t *table_en, int argc, char **argv)
 			"dm_target_crypt: crypto wq",
 			0,
 			LK_CANRECURSE);
+
+	priv->crypto_workqueue.wq_job_destructor = destruct_crypto_job;
+	priv->crypto_workqueue.wq_context = NULL;
+
+
+	/*
+	mpipe_init(&priv->crypto_workqueue.wq_jobs_mpipe, M_DMCRYPT,
+			sizeof(struct workqueue_job),
+			1000, 1000, MPF_NOZERO | MPF_CALLBACK, NULL, NULL, NULL);
+			*/
 
 	workqueue_submit_job(&priv->crypto_workqueue, print_42, NULL);
 
