@@ -1239,3 +1239,4 @@ dmtc_mod_handler(module_t mod, int type, void *unused)
 }
 
 DM_TARGET_MODULE(dm_target_crypt, dmtc_mod_handler);
+MODULE_DEPEND(dm_target_crypt, crypto, 1, 1, 1);
