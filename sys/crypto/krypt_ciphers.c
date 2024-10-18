@@ -42,7 +42,6 @@
 
 #include <sys/kernel.h>
 
-#include <crypto/rijndael/rijndael.h>
 #include <string.h>
 
 #include "krypt.h"
@@ -95,29 +94,37 @@ typedef void (
  */
 
 static int
-cipher_null_probe(const char *name, int keysize_in_bits)
+cipher_null_probe(const char *algo_name, const char *mode_name __unused,
+    int keysize_in_bits __unused)
 {
-	if (strcmp(name, "null") == 0)
+	if (strcmp(algo_name, "null") == 0)
 		return (0);
 	return (-1);
 }
 
 static int
-cipher_null_setkey(void *ctx, const uint8_t *keydata, int keylen)
+cipher_null_setkey(struct crypto_symm_cipher_context *ctx __unused,
+    const uint8_t *keydata __unused, int keylen __unused)
 {
 	return (0);
 }
 
-static void
-cipher_null_encrypt(const void *ctx, uint8_t *data, int datalen,
-    uint8_t *iv)
+static int
+cipher_null_encrypt(const struct crypto_symm_cipher_context *ctx
+			__unused,
+    uint8_t *data __unused, int datalen __unused,
+    struct crypto_symm_cipher_iv *iv __unused)
 {
+	return (0);
 }
 
-static void
-cipher_null_decrypt(const void *ctx, uint8_t *data, int datalen,
-    uint8_t *iv)
+static int
+cipher_null_decrypt(const struct crypto_symm_cipher_context *ctx
+			__unused,
+    uint8_t *data, int datalen,
+    struct crypto_symm_cipher_iv *iv __unused)
 {
+	return (0);
 }
 
 /**
@@ -129,45 +136,56 @@ cipher_null_decrypt(const void *ctx, uint8_t *data, int datalen,
 #define AES_BLOCK_LEN 16
 
 static int
-aes_cbc_probe(const char *name, int keysize_in_bits)
+aes_cbc_probe(const char *algo_name, const char *mode_name,
+    int keysize_in_bits)
 {
-	if (strcmp(name, "aes-cbc") != 0)
-		return (-1);
-
-	if (keysize_in_bits == 128 || keysize_in_bits == 192 ||
-	    keysize_in_bits == 256)
+	if ((strcmp(algo_name, "aes") == 0) &&
+	    (strcmp(mode_name, "cbc") == 0) &&
+	    (keysize_in_bits == 128 || keysize_in_bits == 192 ||
+		keysize_in_bits == 256))
 		return (0);
-
-	return (-1);
+	else
+		return (-1);
 }
 
 static int
-aes_cbc_setkey(void *ctx, const uint8_t *keydata, int keylen)
+aes_cbc_setkey(struct crypto_symm_cipher_context *ctx,
+    const uint8_t *keydata, int keylen)
 {
 	if (keylen != 16 && keylen != 24 && keylen != 32)
 		return (EINVAL);
 
-	rijndael_set_key(ctx, keydata, keylen * 8);
+	rijndael_set_key((void *)ctx, keydata, keylen * 8);
 
 	return (0);
 }
 
-static void
-aes_cbc_encrypt(const void *ctx, uint8_t *data, int datalen,
-    uint8_t *iv)
+static int
+aes_cbc_encrypt(const struct crypto_symm_cipher_context *ctx,
+    uint8_t *data, int datalen, struct crypto_symm_cipher_iv *iv)
 {
-	ENCRYPT_DATA_CBC(rijndael_encrypt, ctx, data, datalen,
-	    AES_BLOCK_LEN, iv);
+	if ((datalen % AES_BLOCK_LEN) != 0)
+		return EINVAL;
+
+	ENCRYPT_DATA_CBC(rijndael_encrypt, (const void *)ctx, data,
+	    datalen, AES_BLOCK_LEN, (uint8_t *)iv);
+
+	return (0);
 }
 
-static void
-aes_cbc_decrypt(const void *ctx, uint8_t *data, int datalen,
-    uint8_t *iv)
+static int
+aes_cbc_decrypt(const struct crypto_symm_cipher_context *ctx,
+    uint8_t *data, int datalen, struct crypto_symm_cipher_iv *iv)
 {
-	DECRYPT_DATA_CBC(rijndael_decrypt, ctx, data, datalen,
-	    AES_BLOCK_LEN, iv);
-}
+	if ((datalen % AES_BLOCK_LEN) != 0)
+		return EINVAL;
 
+	DECRYPT_DATA_CBC(rijndael_decrypt, (const void *)ctx, data,
+	    datalen, AES_BLOCK_LEN, (uint8_t *)iv);
+
+	return (0);
+}
+#if 0
 /**
  * --------------------------------------
  * AES-XTS
@@ -285,8 +303,9 @@ aes_xts_decrypt(const void *ctx, uint8_t *data, int datalen,
 /**
  *
  */
+#endif
 
-const struct krypt_cipher krypt_ciphers[4] = {
+const struct crypto_symm_cipher crypto_symm_ciphers[3] = {
 	{ "null", 4, 0, 0, cipher_null_probe, cipher_null_setkey,
 	    cipher_null_encrypt, cipher_null_decrypt },
 
@@ -297,9 +316,10 @@ const struct krypt_cipher krypt_ciphers[4] = {
 	    aes_cbc_probe, aes_cbc_setkey, aes_cbc_encrypt,
 	    aes_cbc_decrypt },
 
+#if 0
 	{ "aes-xts", AES_XTS_BLOCK_LEN, AES_XTS_IV_LEN,
 	    sizeof(struct aes_xts_ctx), aes_xts_probe, aes_xts_setkey,
 	    aes_xts_encrypt, aes_xts_decrypt },
-
+#endif
 	{ NULL, 0, 0, 0, NULL, NULL, NULL, NULL }
 };
