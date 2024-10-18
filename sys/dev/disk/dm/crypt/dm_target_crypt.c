@@ -197,11 +197,9 @@ struct dmtc_dump_helper {
 };
 
 #define DMTC_BUF_SIZE_WRITE \
-    (MAXPHYS + sizeof(struct dmtc_helper) + \
-     MAXPHYS/DEV_BSIZE*(sizeof(struct cryptop) + sizeof(struct cryptodesc)))
+    (MAXPHYS + sizeof(struct dmtc_helper))
 #define DMTC_BUF_SIZE_READ \
-    (sizeof(struct dmtc_helper) + \
-     MAXPHYS/DEV_BSIZE*(sizeof(struct cryptop) + sizeof(struct cryptodesc)))
+    (sizeof(struct dmtc_helper))
 
 static void dmtc_crypto_dump_start(dm_target_crypt_config_t *priv,
 				struct dmtc_dump_helper *dump_helper);
