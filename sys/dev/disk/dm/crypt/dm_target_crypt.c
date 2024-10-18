@@ -121,12 +121,11 @@ struct essiv_ivgen_priv {
 	u_int8_t		crypto_keyhash[SHA512_DIGEST_LENGTH];
 };
 
-typedef void work_queue_job_cb(void *, void *);
+typedef void work_queue_job_cb(void *);
 
 struct work_queue_job {
 	work_queue_job_cb *wqj_cb;
-	void *wqj_data_ptr1;
-	void *wqj_data_ptr2;
+	void *wqj_data;
 	STAILQ_ENTRY(work_queue_job) wqj_next;
 };
 
@@ -136,7 +135,7 @@ struct work_queue {
 };
 
 static void
-work_queue_submit_job(struct work_queue *wq, work_queue_job_cb *cb, void *arg1, void *arg2);
+work_queue_submit_job(struct work_queue *wq, work_queue_job_cb *cb, void *arg1);
 
 static struct work_queue_job*
 work_queue_alloc_job(struct work_queue *wq __unused);
@@ -203,14 +202,12 @@ struct dmtc_dump_helper {
 
 static void dmtc_crypto_dump_start(dm_target_crypt_config_t *priv,
 				struct dmtc_dump_helper *dump_helper);
-static void dmtc_crypto_read_start(dm_target_crypt_config_t *priv,
-				struct bio *bio);
 static void dmtc_crypto_write_start(dm_target_crypt_config_t *priv,
 				struct bio *bio);
 static void dmtc_bio_read_done(struct bio *bio);
 static void dmtc_bio_write_done(struct bio *bio);
 static void
-decrypt_bio_task(void *arg1, void *arg2);
+decrypt_bio_task(void *arg);
 
 static ivgen_ctor_t	essiv_ivgen_ctor;
 static ivgen_dtor_t	essiv_ivgen_dtor;
@@ -594,7 +591,7 @@ crypto_worker_proc(void *wq_arg)
 	while ((job = work_queue_get_job(wq)) != NULL) {
 		if (job->wqj_cb)
 		{
-			(*job->wqj_cb)(job->wqj_data_ptr1, job->wqj_data_ptr2);
+			(*job->wqj_cb)(job->wqj_data);
 		}
 		work_queue_free_job(wq, job);
 	}
@@ -641,17 +638,16 @@ work_queue_put_job(struct work_queue *wq, struct work_queue_job *job)
 }
 
 static void
-work_queue_submit_job(struct work_queue *wq, work_queue_job_cb *cb, void *arg1, void *arg2)
+work_queue_submit_job(struct work_queue *wq, work_queue_job_cb *cb, void *arg)
 {
 	struct work_queue_job *job = work_queue_alloc_job(wq);
 	job->wqj_cb = cb; 
-	job->wqj_data_ptr1 = arg1;
-	job->wqj_data_ptr2 = arg2;
+	job->wqj_data = arg;
 	work_queue_put_job(wq, job);
 }
 
 static void
-print_42(void *arg1 __unused, void *arg2 __unused)
+print_42(void *arg __unused)
 {
 	kprintf("YES: 42\n");
 }
@@ -803,7 +799,7 @@ dm_target_crypt_init(dm_table_entry_t *table_en, int argc, char **argv)
 			0,
 			LK_CANRECURSE);
 
-	work_queue_submit_job(&priv->crypto_work_queue, print_42, NULL, NULL);
+	work_queue_submit_job(&priv->crypto_work_queue, print_42, NULL);
 
     	kthread_create(crypto_worker_proc,
 			&priv->crypto_work_queue,
@@ -951,7 +947,7 @@ dmtc_bio_read_done(struct bio *bio)
 		biodone(obio);
 	} else {
 		priv = bio->bio_caller_info1.ptr;
-		dmtc_crypto_read_start(priv, bio);
+		work_queue_submit_job(&priv->crypto_work_queue, decrypt_bio_task, bio);
 	}
 }
 
@@ -964,10 +960,10 @@ dmtc_bio_read_done(struct bio *bio)
  * This runs in a separate task pool.
  */
 static void
-decrypt_bio_task(void *arg1, void *arg2)
+decrypt_bio_task(void *arg1)
 {
-	dm_target_crypt_config_t *priv = arg1;
-	struct bio *bio = arg2;
+	struct bio *bio = arg1;
+	dm_target_crypt_config_t *priv = bio->bio_caller_info1.ptr;
 	int i, bytes, sectors;
 	off_t isector;
 	uint8_t *data_buf;
@@ -1047,12 +1043,6 @@ decrypt_bio_task(void *arg1, void *arg2)
 	biodone(obio);
 }
 
-static void
-dmtc_crypto_read_start(dm_target_crypt_config_t *priv, struct bio *bio)
-{
-	work_queue_submit_job(&priv->crypto_work_queue, decrypt_bio_task, priv, bio);
-}
-
 /* END OF STRATEGY READ SECTION */
 
 /*
@@ -1074,10 +1064,10 @@ dmtc_crypto_write_retry(void *arg1, void *arg2)
  * This runs in a separate task pool.
  */
 static void
-encrypt_bio_task(void *arg1, void *arg2)
+encrypt_bio_task(void *arg)
 {
-	dm_target_crypt_config_t *priv = arg1;
-	struct bio *bio = arg2;
+	struct bio *bio = arg;
+	dm_target_crypt_config_t *priv;
 	int i, bytes, sectors;
 	off_t isector;
 	struct cryptop crp;
@@ -1085,6 +1075,7 @@ encrypt_bio_task(void *arg1, void *arg2)
 	struct dmtc_helper *dmtc;
 
 	dmtc = bio->bio_caller_info2.ptr;
+	priv = dmtc->priv;
 
 	/*
 	 * Use b_bcount for consistency
@@ -1178,7 +1169,7 @@ dmtc_crypto_write_start(dm_target_crypt_config_t *priv, struct bio *bio)
 	dmtc->data_buf = space;
 	dmtc->priv = priv;
 
-	work_queue_submit_job(&priv->crypto_work_queue, encrypt_bio_task, priv, bio);
+	work_queue_submit_job(&priv->crypto_work_queue, encrypt_bio_task, bio);
 }
 
 /*
