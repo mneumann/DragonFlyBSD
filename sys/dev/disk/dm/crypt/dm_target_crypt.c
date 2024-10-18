@@ -1318,16 +1318,13 @@ dmtc_crypto_dump_start(dm_target_crypt_config_t *priv, struct dmtc_dump_helper *
 			error);
 		}
 
-		/*
-		 * On the last chunk of the encryption we return control
-		 */
-		int n = atomic_fetchadd_int(&dump_helper->sectors, -1);
-
-		if (n == 1) {
-			atomic_add_int(dump_helper->ident, 1);
-			wakeup(dump_helper);
-		}
 	}
+
+	/*
+	 * On the last chunk of the encryption we return control
+	 */
+	atomic_add_int(dump_helper->ident, 1);
+	wakeup(dump_helper);
 }
 
 static int
