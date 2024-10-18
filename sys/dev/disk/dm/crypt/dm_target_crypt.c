@@ -1081,20 +1081,20 @@ dmtc_crypto_write_start(dm_target_crypt_config_t *priv, struct bio *bio)
 	u_char *space;
 
 	/*
-	 * Use b_bcount for consistency
-	 */
-	bytes = bio->bio_buf->b_bcount;
-
-	isector = bio->bio_offset / DEV_BSIZE;	/* ivgen salt base? */
-	sectors = bytes / DEV_BSIZE;		/* Number of sectors */
-
-	/*
 	 * For writes and reads with bogus page don't decrypt in place.
 	 */
 	space = mpipe_alloc_callback(&priv->write_mpipe,
 				     dmtc_crypto_write_retry, priv, bio);
 	if (space == NULL)
 		return;
+
+	/*
+	 * Use b_bcount for consistency
+	 */
+	bytes = bio->bio_buf->b_bcount;
+
+	isector = bio->bio_offset / DEV_BSIZE;	/* ivgen salt base? */
+	sectors = bytes / DEV_BSIZE;		/* Number of sectors */
 
 	dmtc = (struct dmtc_helper *)space;
 	dmtc->free_addr = space;
