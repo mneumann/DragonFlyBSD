@@ -826,6 +826,8 @@ dm_target_crypt_destroy(dm_table_entry_t *table_en)
 {
 	dm_target_crypt_config_t *priv;
 
+	kprintf("dm_target_crypt: destroy\n");
+
 	/*
 	 * Disconnect the crypt config before unbusying the target.
 	 */
@@ -835,8 +837,10 @@ dm_target_crypt_destroy(dm_table_entry_t *table_en)
 	dm_pdev_decr(priv->pdev);
 
 
+	kprintf("shutting down workqueue\n");
 	workqueue_close(&priv->crypto_workqueue);
 	tsleep(&priv->crypto_workqueue, 0, "shutdown crypto tasks", 0);
+	kprintf("done shutting down workqueue\n");
 
 	/*
 	 * Clean up the crypt config
@@ -954,9 +958,15 @@ dmtc_bio_read_start(dm_target_crypt_config_t *priv, struct bio *bio)
 	job->wqj_cb = decrypt_bio_task; 
 	job->wqj_data1 = bio;
 	job->wqj_data2 = job;
+
 	int error = workqueue_submit_job(&priv->crypto_workqueue, job);
-	if (error)
+	if (error) {
+		kprintf("dmtc: Failed to submit job\n");
 		kfree(job, M_DMCRYPT);
+		bio->bio_buf->b_flags |= B_ERROR;
+		struct bio *obio = pop_bio(bio);
+		biodone(obio);
+	}
 }
 
 /*
@@ -1050,6 +1060,9 @@ decrypt_bio_task(void *arg1, void *arg2)
 	 */
 	if (bio->bio_buf->b_error) {
 		bio->bio_buf->b_flags |= B_ERROR;
+	}
+	else if (bio->bio_buf->b_flags & B_HASBOGUS) {
+		kprintf("dmtc: BOGUS\n");
 	}
 #if 0
 	else if (bio->bio_buf->b_flags & B_HASBOGUS) {
@@ -1196,7 +1209,17 @@ dmtc_crypto_write_start(dm_target_crypt_config_t *priv, struct bio *bio)
 	job->wqj_cb = encrypt_bio_task; 
 	job->wqj_data1 = bio;
 	job->wqj_data2 = job;
-	workqueue_submit_job(&priv->crypto_workqueue, job);
+	int error = workqueue_submit_job(&priv->crypto_workqueue, job);
+	if (error) {
+		kprintf("dmtc: write: Failed to submit job\n");
+		kfree(job, M_DMCRYPT);
+		bio->bio_buf->b_error = EPIPE;
+		bio->bio_buf->b_flags |= B_ERROR;
+		mpipe_free(&dmtc->priv->write_mpipe, dmtc->free_addr);
+		struct bio *obio = pop_bio(bio);
+		biodone(obio);
+	}
+
 }
 
 /*
