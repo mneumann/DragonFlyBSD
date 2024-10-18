@@ -98,6 +98,7 @@ typedef void ivgen_t(struct target_crypt_config *, u_int8_t *, size_t, off_t);
 typedef int ivgen_ctor_t(struct target_crypt_config *, char *, void **);
 typedef int ivgen_dtor_t(struct target_crypt_config *, void *);
 
+
 struct iv_generator {
 	const char	*name;
 	ivgen_ctor_t	*ctor;
@@ -120,9 +121,11 @@ struct essiv_ivgen_priv {
 	u_int8_t		crypto_keyhash[SHA512_DIGEST_LENGTH];
 };
 
+typedef void work_queue_job_cb(void *, void *);
 struct work_queue_job {
-	int wqj_type;
-	void *wqj_data;
+	work_queue_job_cb *wqj_cb;
+	void *wqj_data_ptr1;
+	void *wqj_data_ptr2;
 	STAILQ_ENTRY(work_queue_job) wqj_next;
 };
 
@@ -131,32 +134,18 @@ struct work_queue {
 	STAILQ_HEAD(, work_queue_job) wq_jobs;
 };
 
-
 static struct work_queue_job*
-work_queue_get_job(struct work_queue *wq)
-{
-	struct work_queue_job *job;
-	lockmgr(&wq->wq_lock, LK_EXCLUSIVE);
-	while ((job = STAILQ_FIRST(&wq->wq_jobs)) == NULL) {
-		lksleep(&wq->wq_jobs,
-			&wq->wq_lock,
-			0,
-			"dm_target_crypt: wq empty",
-			0);
-	}
-	STAILQ_REMOVE_HEAD(&wq->wq_jobs, wqj_next);
-	lockmgr(&wq->wq_lock, LK_RELEASE);
-	return job;
-}
-
+work_queue_alloc_job(struct work_queue *wq __unused);
 static void
-work_queue_put_job(struct work_queue *wq, struct work_queue_job *job)
-{
-	lockmgr(&wq->wq_lock, LK_EXCLUSIVE);
-	STAILQ_INSERT_TAIL(&wq->wq_jobs, job, wqj_next);
-	lockmgr(&wq->wq_lock, LK_RELEASE);
-	wakeup_one(&wq->wq_jobs);
-}
+work_queue_free_job(struct work_queue *wq __unused, struct work_queue_job *job);
+static struct work_queue_job*
+work_queue_get_job(struct work_queue *wq);
+static void
+work_queue_submit_job(struct work_queue *wq, struct work_queue_job *job);
+
+
+
+
 
 typedef struct target_crypt_config {
 	size_t	params_len;
@@ -220,6 +209,8 @@ static void dmtc_crypto_write_start(dm_target_crypt_config_t *priv,
 				struct bio *bio);
 static void dmtc_bio_read_done(struct bio *bio);
 static void dmtc_bio_write_done(struct bio *bio);
+static void
+decrypt_bio(void *arg1, void *arg2);
 
 static ivgen_ctor_t	essiv_ivgen_ctor;
 static ivgen_dtor_t	essiv_ivgen_dtor;
@@ -601,9 +592,58 @@ crypto_worker_proc(void *wq_arg)
 	struct work_queue_job *job;
 
 	while ((job = work_queue_get_job(wq)) != NULL) {
-		kprintf("Got job: %d\n", job->wqj_type);
-		kfree(job, M_DMCRYPT);
+		if (job->wqj_cb)
+		{
+			(*job->wqj_cb)(job->wqj_data_ptr1, job->wqj_data_ptr2);
+		}
+		work_queue_free_job(wq, job);
 	}
+}
+
+static struct work_queue_job*
+work_queue_alloc_job(struct work_queue *wq __unused)
+{
+	return kmalloc(sizeof(struct work_queue_job),
+			M_DMCRYPT,
+			M_ZERO | M_WAITOK);
+}
+
+static void
+work_queue_free_job(struct work_queue *wq __unused, struct work_queue_job *job)
+{
+	kfree(job, M_DMCRYPT);
+}
+
+static struct work_queue_job*
+work_queue_get_job(struct work_queue *wq)
+{
+	struct work_queue_job *job;
+	lockmgr(&wq->wq_lock, LK_EXCLUSIVE);
+	while ((job = STAILQ_FIRST(&wq->wq_jobs)) == NULL) {
+		lksleep(&wq->wq_jobs,
+			&wq->wq_lock,
+			0,
+			"dm_target_crypt: wq empty",
+			0);
+	}
+	STAILQ_REMOVE_HEAD(&wq->wq_jobs, wqj_next);
+	lockmgr(&wq->wq_lock, LK_RELEASE);
+	return job;
+}
+
+static void
+work_queue_submit_job(struct work_queue *wq, struct work_queue_job *job)
+{
+	lockmgr(&wq->wq_lock, LK_EXCLUSIVE);
+	STAILQ_INSERT_TAIL(&wq->wq_jobs, job, wqj_next);
+	lockmgr(&wq->wq_lock, LK_RELEASE);
+	wakeup_one(&wq->wq_jobs);
+}
+
+static void
+print_42(void *arg1 __unused, void *arg2 __unused)
+{
+	kprintf("YES: 42\n");
 }
 
 static int
@@ -753,15 +793,10 @@ dm_target_crypt_init(dm_table_entry_t *table_en, int argc, char **argv)
 			0,
 			LK_CANRECURSE);
 
-	struct work_queue_job *job = kmalloc(
-			sizeof(struct work_queue_job),
-			M_DMCRYPT,
-			M_ZERO | M_WAITOK);
+	struct work_queue_job *job = work_queue_alloc_job(&priv->crypto_work_queue);
+	job->wqj_cb = print_42;
 
-	job->wqj_type = 42;
-	job->wqj_data = "test";
-
-	work_queue_put_job(&priv->crypto_work_queue, job);
+	work_queue_submit_job(&priv->crypto_work_queue, job);
 
     	kthread_create(crypto_worker_proc,
 			&priv->crypto_work_queue,
@@ -928,16 +963,17 @@ dmtc_bio_read_done(struct bio *bio)
  * STRATEGY READ PATH PART 2/3
  */
 
+
 static void
-dmtc_crypto_read_start(dm_target_crypt_config_t *priv, struct bio *bio)
+decrypt_bio(void *arg1, void *arg2)
 {
-	struct cryptop _crp;
-	struct cryptodesc _crd;
-	struct cryptop *crp = &_crp;
-	struct cryptodesc *crd = &_crd;
+	dm_target_crypt_config_t *priv = arg1;
+	struct bio *bio = arg2;
 	int i, bytes, sectors;
 	off_t isector;
 	uint8_t *data_buf;
+	struct cryptop crp;
+	struct cryptodesc crd;
 
 	/*
 	 * Note: b_resid no good after read I/O, it will be 0, use
@@ -959,18 +995,18 @@ dmtc_crypto_read_start(dm_target_crypt_config_t *priv, struct bio *bio)
 	bio->bio_buf->b_error = 0;
 
 	for (i = 0; i < sectors; i++) {
-		bzero(crp, sizeof(*crp));
-		crp->crp_buf = data_buf + i * DEV_BSIZE;
-		crp->crp_sid = priv->crypto_sid;
-		crp->crp_ilen = crp->crp_olen = DEV_BSIZE;
-		crp->crp_desc = crd;
-		crp->crp_flags = 0;
+		bzero(&crp, sizeof(crp));
+		crp.crp_buf = data_buf + i * DEV_BSIZE;
+		crp.crp_sid = priv->crypto_sid;
+		crp.crp_ilen = crp.crp_olen = DEV_BSIZE;
+		crp.crp_desc = &crd;
+		crp.crp_flags = 0;
 
-		bzero(crd, sizeof(*crd));
-		crd->crd_alg = priv->crypto_alg;
-		crd->crd_len = DEV_BSIZE /* XXX */;
-		crd->crd_flags = 0;
-		crd->crd_flags &= ~CRD_F_ENCRYPT;
+		bzero(&crd, sizeof(crd));
+		crd.crd_alg = priv->crypto_alg;
+		crd.crd_len = DEV_BSIZE /* XXX */;
+		crd.crd_flags = 0;
+		crd.crd_flags &= ~CRD_F_ENCRYPT;
 
 		/*
 		 * Note: last argument is used to generate salt(?) and is
@@ -978,9 +1014,9 @@ dmtc_crypto_read_start(dm_target_crypt_config_t *priv, struct bio *bio)
 		 *	 int.  Changing it now will break pre-existing
 		 *	 crypt volumes.
 		 */
-		priv->ivgen->gen_iv(priv, crd->crd_iv, sizeof(crd->crd_iv),
+		priv->ivgen->gen_iv(priv, crd.crd_iv, sizeof(crd.crd_iv),
 				    isector + i);
-		int error = dmtc_crypto_dispatch(crp);
+		int error = crypto_dispatch(&crp);
 
 		/*
 		 * Cumulative error
@@ -1010,6 +1046,16 @@ dmtc_crypto_read_start(dm_target_crypt_config_t *priv, struct bio *bio)
 #endif
 	struct bio *obio = pop_bio(bio);
 	biodone(obio);
+}
+
+static void
+dmtc_crypto_read_start(dm_target_crypt_config_t *priv, struct bio *bio)
+{
+	struct work_queue_job *job = work_queue_alloc_job(&priv->crypto_work_queue);
+	job->wqj_cb = decrypt_bio;
+	job->wqj_data_ptr1 = priv;
+	job->wqj_data_ptr2 = bio;
+	work_queue_submit_job(&priv->crypto_work_queue, job);
 }
 
 /* END OF STRATEGY READ SECTION */
