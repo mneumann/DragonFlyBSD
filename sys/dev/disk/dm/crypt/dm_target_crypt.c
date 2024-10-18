@@ -121,32 +121,27 @@ struct essiv_ivgen_priv {
 	u_int8_t		crypto_keyhash[SHA512_DIGEST_LENGTH];
 };
 
-typedef void work_queue_job_cb(void *);
+typedef void workqueue_job_cb(void *);
 
-struct work_queue_job {
-	work_queue_job_cb *wqj_cb;
+struct workqueue_job {
+	workqueue_job_cb *wqj_cb;
 	void *wqj_data;
-	STAILQ_ENTRY(work_queue_job) wqj_next;
+	STAILQ_ENTRY(workqueue_job) wqj_next;
 };
 
-struct work_queue {
+struct workqueue {
 	struct lock wq_lock;
-	STAILQ_HEAD(, work_queue_job) wq_jobs;
+	STAILQ_HEAD(, workqueue_job) wq_jobs;
 };
 
 static void
-work_queue_submit_job(struct work_queue *wq, work_queue_job_cb *cb, void *arg1);
+workqueue_submit_job(struct workqueue *wq, workqueue_job_cb *cb, void *arg1);
 
-static struct work_queue_job*
-work_queue_alloc_job(struct work_queue *wq __unused);
 static void
-work_queue_free_job(struct work_queue *wq __unused, struct work_queue_job *job);
-static struct work_queue_job*
-work_queue_get_job(struct work_queue *wq);
-static void
-work_queue_put_job(struct work_queue *wq, struct work_queue_job *job);
+workqueue_free_job(struct workqueue *wq __unused, struct workqueue_job *job);
 
-
+static struct workqueue_job*
+workqueue_dequeue(struct workqueue *wq);
 
 
 typedef struct target_crypt_config {
@@ -171,7 +166,7 @@ typedef struct target_crypt_config {
 	struct malloc_pipe	write_mpipe;
 
 	struct thread		*crypto_worker;
-	struct work_queue	crypto_work_queue;
+	struct workqueue	crypto_workqueue;
 } dm_target_crypt_config_t;
 
 struct dmtc_helper {
@@ -583,38 +578,30 @@ dm_target_crypt_validate_alg(const char *crypto_alg, const char *crypto_mode, in
 
 
 static void
-crypto_worker_proc(void *wq_arg)
+workqueue_worker(void *wq_arg)
 {
-	struct work_queue *wq = wq_arg;
-	struct work_queue_job *job;
+	struct workqueue *wq = wq_arg;
+	struct workqueue_job *job;
 
-	while ((job = work_queue_get_job(wq)) != NULL) {
+	while ((job = workqueue_dequeue(wq)) != NULL) {
 		if (job->wqj_cb)
 		{
 			(*job->wqj_cb)(job->wqj_data);
 		}
-		work_queue_free_job(wq, job);
+		workqueue_free_job(wq, job);
 	}
 }
 
-static struct work_queue_job*
-work_queue_alloc_job(struct work_queue *wq __unused)
-{
-	return kmalloc(sizeof(struct work_queue_job),
-			M_DMCRYPT,
-			M_ZERO | M_WAITOK);
-}
-
 static void
-work_queue_free_job(struct work_queue *wq __unused, struct work_queue_job *job)
+workqueue_free_job(struct workqueue *wq __unused, struct workqueue_job *job)
 {
 	kfree(job, M_DMCRYPT);
 }
 
-static struct work_queue_job*
-work_queue_get_job(struct work_queue *wq)
+static struct workqueue_job*
+workqueue_dequeue(struct workqueue *wq)
 {
-	struct work_queue_job *job;
+	struct workqueue_job *job;
 	lockmgr(&wq->wq_lock, LK_EXCLUSIVE);
 	while ((job = STAILQ_FIRST(&wq->wq_jobs)) == NULL) {
 		lksleep(&wq->wq_jobs,
@@ -629,21 +616,18 @@ work_queue_get_job(struct work_queue *wq)
 }
 
 static void
-work_queue_put_job(struct work_queue *wq, struct work_queue_job *job)
+workqueue_submit_job(struct workqueue *wq, workqueue_job_cb *cb, void *arg)
 {
+	struct workqueue_job *job = kmalloc(sizeof(struct workqueue_job),
+			M_DMCRYPT,
+			M_ZERO | M_WAITOK);
+	job->wqj_cb = cb; 
+	job->wqj_data = arg;
+
 	lockmgr(&wq->wq_lock, LK_EXCLUSIVE);
 	STAILQ_INSERT_TAIL(&wq->wq_jobs, job, wqj_next);
 	lockmgr(&wq->wq_lock, LK_RELEASE);
 	wakeup_one(&wq->wq_jobs);
-}
-
-static void
-work_queue_submit_job(struct work_queue *wq, work_queue_job_cb *cb, void *arg)
-{
-	struct work_queue_job *job = work_queue_alloc_job(wq);
-	job->wqj_cb = cb; 
-	job->wqj_data = arg;
-	work_queue_put_job(wq, job);
 }
 
 static void
@@ -792,17 +776,17 @@ dm_target_crypt_init(dm_table_entry_t *table_en, int argc, char **argv)
 
 	/* Create crypto worker thread and work queue */
 
-	STAILQ_INIT(&priv->crypto_work_queue.wq_jobs);
+	STAILQ_INIT(&priv->crypto_workqueue.wq_jobs);
 
-	lockinit(&priv->crypto_work_queue.wq_lock,
+	lockinit(&priv->crypto_workqueue.wq_lock,
 			"dm_target_crypt: crypto wq",
 			0,
 			LK_CANRECURSE);
 
-	work_queue_submit_job(&priv->crypto_work_queue, print_42, NULL);
+	workqueue_submit_job(&priv->crypto_workqueue, print_42, NULL);
 
-    	kthread_create(crypto_worker_proc,
-			&priv->crypto_work_queue,
+    	kthread_create(workqueue_worker,
+			&priv->crypto_workqueue,
 			&priv->crypto_worker,
 			"dm_target_crypt: crypto worker");
 
@@ -947,7 +931,7 @@ dmtc_bio_read_done(struct bio *bio)
 		biodone(obio);
 	} else {
 		priv = bio->bio_caller_info1.ptr;
-		work_queue_submit_job(&priv->crypto_work_queue, decrypt_bio_task, bio);
+		workqueue_submit_job(&priv->crypto_workqueue, decrypt_bio_task, bio);
 	}
 }
 
@@ -1169,7 +1153,7 @@ dmtc_crypto_write_start(dm_target_crypt_config_t *priv, struct bio *bio)
 	dmtc->data_buf = space;
 	dmtc->priv = priv;
 
-	work_queue_submit_job(&priv->crypto_work_queue, encrypt_bio_task, bio);
+	workqueue_submit_job(&priv->crypto_workqueue, encrypt_bio_task, bio);
 }
 
 /*
