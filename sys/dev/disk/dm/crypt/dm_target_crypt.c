@@ -46,7 +46,7 @@
 #include <crypto/sha1.h>
 #include <crypto/sha2/sha2.h>
 #include <crypto/rmd160/rmd160.h>
-#include <opencrypto/cryptodev.h>
+#include <crypto/krypt.h>
 #include <machine/cpufunc.h>
 #include <cpu/atomic.h>
 
@@ -106,17 +106,9 @@ struct iv_generator {
 	ivgen_t		*gen_iv;
 };
 
-struct essiv_ivgen_data {
-	struct essiv_ivgen_data *next;
-	struct cryptop	crp;
-	struct cryptodesc crd;
-};
-
 struct essiv_ivgen_priv {
-	struct cryptoini	crypto_session;
-	struct spinlock		ivdata_spin;
-	struct essiv_ivgen_data	*ivdata_base;
-	u_int64_t		crypto_sid;
+	struct crypto_symm_cipher_context crypto_context;
+	const struct crypto_symm_cipher *crypto_cipher;
 	size_t			keyhash_len;
 	u_int8_t		crypto_keyhash[SHA512_DIGEST_LENGTH];
 };
@@ -145,16 +137,15 @@ typedef struct target_crypt_config {
 	size_t	params_len;
 	dm_pdev_t *pdev;
 	char	*status_str;
-	int	crypto_alg;
+	const struct crypto_symm_cipher *crypto_cipher;
 	int	crypto_klen;
 	u_int8_t	crypto_key[512>>3];
+	struct crypto_symm_cipher_context	crypto_context;
 
-	u_int64_t	crypto_sid;
 	u_int64_t	block_offset;
 	int64_t		iv_offset;
 	SHA512_CTX	essivsha512_ctx;
 
-	struct cryptoini	crypto_session;
 
 	struct iv_generator	*ivgen;
 	void	*ivgen_priv;
@@ -183,8 +174,6 @@ struct dmtc_dump_helper {
 	int sectors;
 	int *ident;
 
-	struct cryptodesc crd[128];
-	struct cryptop crp[128];
 	u_char space[65536];
 };
 
@@ -285,7 +274,6 @@ essiv_ivgen_ctor(struct target_crypt_config *priv, char *iv_hash, void **p_ivpri
 	u_int8_t crypto_keyhash[SHA512_DIGEST_LENGTH];
 	unsigned int klen, hashlen;
 	int error;
-	int nmax;
 
 	klen = (priv->crypto_klen >> 3);
 
@@ -348,18 +336,18 @@ essiv_ivgen_ctor(struct target_crypt_config *priv, char *iv_hash, void **p_ivpri
 	ivpriv->keyhash_len = sizeof(crypto_keyhash);
 	dmtc_crypto_clear(crypto_keyhash, sizeof(crypto_keyhash));
 
-	ivpriv->crypto_session.cri_alg = priv->crypto_alg;
-	ivpriv->crypto_session.cri_key = (u_int8_t *)ivpriv->crypto_keyhash;
-	ivpriv->crypto_session.cri_klen = hashlen;
 
 	/*
 	 * XXX: in principle we also need to check if the block size of the
 	 *	cipher is a valid iv size for the block cipher.
 	 */
 
-	error = crypto_newsession(&ivpriv->crypto_sid,
-				  &ivpriv->crypto_session,
-				  CRYPTOCAP_F_SOFTWARE | CRYPTOCAP_F_HARDWARE);
+	ivpriv->crypto_cipher = priv->crypto_cipher;
+
+	error = ivpriv->crypto_cipher->setkey(&ivpriv->crypto_context,
+		(const uint8_t *)ivpriv->crypto_keyhash,
+		hashlen);
+
 	if (error) {
 		kprintf("dm_target_crypt: Error during crypto_newsession "
 			"for essiv_ivgen, error = %d\n",
@@ -369,22 +357,6 @@ essiv_ivgen_ctor(struct target_crypt_config *priv, char *iv_hash, void **p_ivpri
 		return ENOTSUP;
 	}
 
-	/*
-	 * mpipe for 512-byte ivgen elements, make sure there are enough
-	 * to cover all in-flight read and write buffers.
-	 */
-	nmax = dmtc_get_nmax() * (int)(MAXPHYS / DEV_BSIZE) * 2;
-
-	spin_init(&ivpriv->ivdata_spin, "ivdata");
-
-	while (nmax) {
-		struct essiv_ivgen_data *ivdata;
-
-		ivdata = kmalloc(sizeof(*ivdata), M_DMCRYPT, M_WAITOK|M_ZERO);
-		ivdata->next = ivpriv->ivdata_base;
-		ivpriv->ivdata_base = ivdata;
-		--nmax;
-	}
 	*p_ivpriv = ivpriv;
 
 	return 0;
@@ -394,18 +366,11 @@ static int
 essiv_ivgen_dtor(struct target_crypt_config *priv, void *arg)
 {
 	struct essiv_ivgen_priv *ivpriv;
-	struct essiv_ivgen_data *ivdata;
 
 	ivpriv = (struct essiv_ivgen_priv *)arg;
 	KKASSERT(ivpriv != NULL);
 
-	crypto_freesession(ivpriv->crypto_sid);
-
-	while ((ivdata = ivpriv->ivdata_base) != NULL) {
-		ivpriv->ivdata_base = ivdata->next;
-		kfree(ivdata, M_DMCRYPT);
-	}
-	spin_uninit(&ivpriv->ivdata_spin);
+	dmtc_crypto_clear(&ivpriv->crypto_context, sizeof(ivpriv->crypto_context));
 
 	dmtc_crypto_clear(ivpriv->crypto_keyhash, ivpriv->keyhash_len);
 	kfree(ivpriv, M_DMCRYPT);
@@ -413,76 +378,31 @@ essiv_ivgen_dtor(struct target_crypt_config *priv, void *arg)
 	return 0;
 }
 
-static __inline struct essiv_ivgen_data *
-alloc_ivdata_elm(struct essiv_ivgen_priv *ivpriv)
-{
-	struct essiv_ivgen_data *ivdata;
-
-	spin_lock(&ivpriv->ivdata_spin);
-	ivdata = ivpriv->ivdata_base;
-	ivpriv->ivdata_base = ivdata->next;
-	spin_unlock(&ivpriv->ivdata_spin);
-
-	return ivdata;
-}
-
-static __inline void
-free_ivdata_elm(struct essiv_ivgen_priv *ivpriv, struct essiv_ivgen_data *ivdata)
-{
-	spin_lock(&ivpriv->ivdata_spin);
-	ivdata->next = ivpriv->ivdata_base;
-	ivpriv->ivdata_base = ivdata;
-	spin_unlock(&ivpriv->ivdata_spin);
-}
-
 static void
 essiv_ivgen(dm_target_crypt_config_t *priv, u_int8_t *iv,
 	    size_t iv_len, off_t sector)
 {
 	struct essiv_ivgen_priv *ivpriv;
-	struct essiv_ivgen_data *ivdata;
-	struct cryptodesc *crd;
-	struct cryptop *crp;
 	int error;
 
 	ivpriv = priv->ivgen_priv;
 	KKASSERT(ivpriv != NULL);
 
-	/*
-	 * We preallocated all necessary ivdata's, so pull one off and use
-	 * it.
-	 */
-	// TODO: stack allocate
-	ivdata = alloc_ivdata_elm(ivpriv);
-	KKASSERT(ivdata != NULL);
-
-	crp = &ivdata->crp;
-	crd = &ivdata->crd;
-
 	bzero(iv, iv_len);
-	bzero(crd, sizeof(struct cryptodesc));
-	bzero(crp, sizeof(struct cryptop));
 	*((off_t *)iv) = htole64(sector + priv->iv_offset);
-	crp->crp_buf = (caddr_t)iv;
 
-	crp->crp_sid = ivpriv->crypto_sid;
-	crp->crp_ilen = crp->crp_olen = iv_len;
+	struct crypto_symm_cipher_iv iv2;
+	bzero(&iv2, sizeof(iv2));
 
-	crp->crp_desc = crd;
-	crp->crp_flags = 0;
-	crd->crd_alg = priv->crypto_alg;
+	error = ivpriv->crypto_cipher->encrypt(
+			&ivpriv->crypto_context,
+			(uint8_t*)iv,
+			iv_len,
+			&iv2
+			);
 
-	bzero(crd->crd_iv, sizeof(crd->crd_iv));
-
-	crd->crd_len = iv_len;
-	crd->crd_flags = 0;
-	crd->crd_flags |= CRD_F_ENCRYPT;
-
-	error = crypto_dispatch(crp);
 	if (error)
 		kprintf("dm_target_crypt: essiv_ivgen, error = %d\n", error);
-
-	free_ivdata_elm(ivpriv, ivdata);
 }
 
 
@@ -524,58 +444,6 @@ hex2key(char *hex, size_t key_len, u_int8_t *key)
 
 	return 0;
 }
-
-static int
-dm_target_crypt_validate_alg(const char *crypto_alg, const char *crypto_mode, int klen)
-{
-	const bool is_cbc = (strcmp(crypto_mode, "cbc") == 0);
-	const bool is_xts = (strcmp(crypto_mode, "xts") == 0);
-	const bool is_aes = (strcmp(crypto_alg, "aes") == 0);
-	const bool is_twofish = (strcmp(crypto_alg, "twofish") == 0);
-	const bool is_serpent = (strcmp(crypto_alg, "serpent") == 0);
-	const bool is_blowfish = (strcmp(crypto_alg, "blowfish") == 0);
-	const bool is_3des = (strcmp(crypto_alg, "3des") == 0);
-	const bool is_des3 = (strncmp(crypto_alg, "des3", 4) == 0);
-	const bool is_camellia = (strcmp(crypto_alg, "camellia") == 0);
-	const bool is_skipjack = (strcmp(crypto_alg, "skipjack") == 0);
-	const bool is_cast5 = (strcmp(crypto_alg, "cast5") == 0);
-	const bool is_null = (strcmp(crypto_alg, "null") == 0);
-
-	if (is_aes && is_xts && (klen == 256 || klen == 512))
-		return CRYPTO_AES_XTS;
-	if (is_aes && is_cbc && (klen == 128 || klen == 192 || klen == 256))
-		return CRYPTO_AES_CBC;
-	if (is_twofish && is_xts && (klen == 256 || klen == 512))
-		return CRYPTO_TWOFISH_XTS;
-	if (is_twofish && is_cbc && (klen == 128 || klen == 192 || klen == 256))
-		return CRYPTO_TWOFISH_CBC;
-	if (is_serpent && is_xts && (klen == 256 || klen == 512))
-		return CRYPTO_SERPENT_XTS;
-	if (is_serpent && is_cbc && (klen == 128 || klen == 192 || klen == 256))
-		return CRYPTO_SERPENT_CBC;
-	if (is_blowfish && klen >= 128 && klen <= 448 && (klen % 8) == 0)
-		return CRYPTO_BLF_CBC;
-	if (is_3des && klen == 168)
-		return CRYPTO_3DES_CBC;
-	if (is_des3 && klen == 168)
-		return CRYPTO_3DES_CBC;
-	if (is_camellia && (klen == 128 || klen == 192 || klen == 256))
-		return CRYPTO_CAMELLIA_CBC;
-	if (is_skipjack && klen == 80)
-		return CRYPTO_SKIPJACK_CBC;
-	if (is_cast5 && klen == 128)
-		return CRYPTO_CAST_CBC;
-	if (is_null && klen == 128)
-		return CRYPTO_NULL_CBC;
-
-	kprintf("dm_target_crypt: only support 'cbc' chaining mode,"
-	    " aes-xts, twofish-xts and serpent-xts, "
-	    "invalid mode '%s-%s'\n",
-	    crypto_alg, crypto_mode);
-
-	return 0;
-}
-
 
 static void
 workqueue_worker(void *wq_arg)
@@ -694,14 +562,11 @@ dm_target_crypt_init(dm_table_entry_t *table_en, int argc, char **argv)
 	 * This code checks for valid combinations of algorithm and mode.
 	 * Currently supported options are:
 	 *
-	 * *-cbc
-	 * aes-xts
-	 * twofish-xts
-	 * serpent-xts
+	 * aes-cbc
 	 */
-	priv->crypto_alg = dm_target_crypt_validate_alg(crypto_alg, crypto_mode, klen);
+	priv->crypto_cipher = crypto_symm_cipher_find(crypto_alg, crypto_mode, klen); 
 	priv->crypto_klen = klen;
-	if (priv->crypto_alg == 0)
+	if (priv->crypto_cipher == NULL)
 		goto notsup;
 
 	/* Save length of param string */
@@ -713,7 +578,7 @@ dm_target_crypt_init(dm_table_entry_t *table_en, int argc, char **argv)
 
 	dm_table_init_target(table_en, priv);
 
-	error = hex2key(key, priv->crypto_klen >> 3,
+	error = hex2key(key, priv->crypto_klen / 8,
 			(u_int8_t *)priv->crypto_key);
 
 	if (error) {
@@ -747,13 +612,10 @@ dm_target_crypt_init(dm_table_entry_t *table_en, int argc, char **argv)
 
 	priv->ivgen = &ivgens[i];
 
-	priv->crypto_session.cri_alg = priv->crypto_alg;
-	priv->crypto_session.cri_key = (u_int8_t *)priv->crypto_key;
-	priv->crypto_session.cri_klen = priv->crypto_klen;
+	error = priv->crypto_cipher->setkey(&priv->crypto_context,
+		(const u_int8_t *)priv->crypto_key,
+		priv->crypto_klen / 8);
 
-	error = crypto_newsession(&priv->crypto_sid,
-				  &priv->crypto_session,
-				  CRYPTOCAP_F_SOFTWARE | CRYPTOCAP_F_HARDWARE);
 	if (error) {
 		kprintf("dm_target_crypt: Error during crypto_newsession, "
 			"error = %d\n",
@@ -851,7 +713,6 @@ dm_target_crypt_destroy(dm_table_entry_t *table_en)
 	if (priv->status_str) {
 		dmtc_crypto_clear(priv->status_str, strlen(priv->status_str));
 		kfree(priv->status_str, M_DMCRYPT);
-		crypto_freesession(priv->crypto_sid);
 	}
 
 	if ((priv->ivgen) && (priv->ivgen->dtor != NULL)) {
@@ -995,8 +856,6 @@ decrypt_bio_task(void *arg1, void *arg2)
 	int i, bytes, sectors;
 	off_t isector;
 	uint8_t *data_buf;
-	struct cryptop crp;
-	struct cryptodesc crd;
 
 	/*
 	 * Note: b_resid no good after read I/O, it will be 0, use
@@ -1018,28 +877,19 @@ decrypt_bio_task(void *arg1, void *arg2)
 	bio->bio_buf->b_error = 0;
 
 	for (i = 0; i < sectors; i++) {
-		bzero(&crp, sizeof(crp));
-		crp.crp_buf = data_buf + i * DEV_BSIZE;
-		crp.crp_sid = priv->crypto_sid;
-		crp.crp_ilen = crp.crp_olen = DEV_BSIZE;
-		crp.crp_desc = &crd;
-		crp.crp_flags = 0;
-
-		bzero(&crd, sizeof(crd));
-		crd.crd_alg = priv->crypto_alg;
-		crd.crd_len = DEV_BSIZE /* XXX */;
-		crd.crd_flags = 0;
-		crd.crd_flags &= ~CRD_F_ENCRYPT;
-
 		/*
 		 * Note: last argument is used to generate salt(?) and is
 		 *	 a 64 bit value, but the original code passed an
 		 *	 int.  Changing it now will break pre-existing
 		 *	 crypt volumes.
 		 */
-		priv->ivgen->gen_iv(priv, crd.crd_iv, sizeof(crd.crd_iv),
-				    isector + i);
-		int error = crypto_dispatch(&crp);
+		struct crypto_symm_cipher_iv iv;
+		priv->ivgen->gen_iv(priv, (uint8_t*)&iv, sizeof(iv), isector + i);
+
+		int error = priv->crypto_cipher->decrypt(
+				&priv->crypto_context,
+				data_buf + i * DEV_BSIZE,
+				DEV_BSIZE, &iv);
 
 		/*
 		 * Cumulative error
@@ -1103,12 +953,13 @@ encrypt_bio_task(void *arg1, void *arg2)
 	dm_target_crypt_config_t *priv;
 	int i, bytes, sectors;
 	off_t isector;
-	struct cryptop crp;
-	struct cryptodesc crd;
 	struct dmtc_helper *dmtc;
+	uint8_t *data_buf;
 
 	dmtc = bio->bio_caller_info2.ptr;
 	priv = dmtc->priv;
+
+	data_buf = dmtc->data_buf;
 
 	/*
 	 * Use b_bcount for consistency
@@ -1118,32 +969,21 @@ encrypt_bio_task(void *arg1, void *arg2)
 	isector = bio->bio_offset / DEV_BSIZE;	/* ivgen salt base? */
 	sectors = bytes / DEV_BSIZE;		/* Number of sectors */
 
-
 	for (i = 0; i < sectors; i++) {
-		bzero(&crp, sizeof(crp));
-		crp.crp_buf = dmtc->data_buf + i * DEV_BSIZE;
-		crp.crp_sid = priv->crypto_sid;
-		crp.crp_ilen = crp.crp_olen = DEV_BSIZE;
-		crp.crp_desc = &crd;
-		crp.crp_flags = 0;
-
-		bzero(&crd, sizeof(crd));
-		crd.crd_alg = priv->crypto_alg;
-		crd.crd_len = DEV_BSIZE /* XXX */;
-		crd.crd_flags = 0;
-		crd.crd_flags |= CRD_F_ENCRYPT;
-
 		/*
 		 * Note: last argument is used to generate salt(?) and is
 		 *	 a 64 bit value, but the original code passed an
 		 *	 int.  Changing it now will break pre-existing
 		 *	 crypt volumes.
 		 */
+		struct crypto_symm_cipher_iv iv;
+		priv->ivgen->gen_iv(priv, (uint8_t*)&iv, sizeof(iv), isector + i);
 
-		priv->ivgen->gen_iv(priv, crd.crd_iv, sizeof(crd.crd_iv),
-				    isector + i);
+		int error = priv->crypto_cipher->encrypt(
+				&priv->crypto_context,
+				data_buf + i * DEV_BSIZE,
+				DEV_BSIZE, &iv);
 
-		int error = crypto_dispatch(&crp);
 
 		/*
 		 * Cumulative error
@@ -1314,8 +1154,6 @@ dm_target_crypt_dump(dm_table_entry_t *table_en, void *data, size_t length, off_
 static void
 dmtc_crypto_dump_start(dm_target_crypt_config_t *priv, struct dmtc_dump_helper *dump_helper)
 {
-	struct cryptodesc *crd;
-	struct cryptop *crp;
 	int i, bytes, sectors;
 	off_t isector;
 
@@ -1332,35 +1170,20 @@ dmtc_crypto_dump_start(dm_target_crypt_config_t *priv, struct dmtc_dump_helper *
 
 	memcpy(dump_helper->space, dump_helper->data, bytes);
 
-	cpu_sfence();
-
 	for (i = 0; i < sectors; i++) {
-		crp = &dump_helper->crp[i];
-		crd = &dump_helper->crd[i];
-
-		crp->crp_buf = dump_helper->space + i * DEV_BSIZE;
-
-		crp->crp_sid = priv->crypto_sid;
-		crp->crp_ilen = crp->crp_olen = DEV_BSIZE;
-
-		crp->crp_desc = crd;
-		crp->crp_flags = 0;
-
-		crd->crd_alg = priv->crypto_alg;
-
-		crd->crd_len = DEV_BSIZE /* XXX */;
-		crd->crd_flags = 0;
-		crd->crd_flags |= CRD_F_ENCRYPT;
-
 		/*
 		 * Note: last argument is used to generate salt(?) and is
 		 *	 a 64 bit value, but the original code passed an
 		 *	 int.  Changing it now will break pre-existing
 		 *	 crypt volumes.
 		 */
-		priv->ivgen->gen_iv(priv, crd->crd_iv, sizeof(crd->crd_iv),
-				    isector + i);
-		int error = crypto_dispatch(crp);
+		struct crypto_symm_cipher_iv iv;
+		priv->ivgen->gen_iv(priv, (uint8_t*)&iv, sizeof(iv), isector + i);
+
+		int error = priv->crypto_cipher->encrypt(
+				&priv->crypto_context,
+				dump_helper->space + i * DEV_BSIZE,
+				DEV_BSIZE, &iv);
 
 		if (error != 0) {
 			kprintf("dm_target_crypt: dmtc_crypto_cb_dump_done "
