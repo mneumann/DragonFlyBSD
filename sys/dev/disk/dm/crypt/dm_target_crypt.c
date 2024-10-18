@@ -346,7 +346,7 @@ essiv_ivgen_ctor(struct target_crypt_config *priv, char *iv_hash, void **p_ivpri
 
 	error = ivpriv->crypto_cipher->setkey(&ivpriv->crypto_context,
 		(const uint8_t *)ivpriv->crypto_keyhash,
-		hashlen);
+		hashlen / 8);
 
 	if (error) {
 		kprintf("dm_target_crypt: Error during crypto_newsession "
