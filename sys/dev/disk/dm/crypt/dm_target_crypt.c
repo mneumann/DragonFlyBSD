@@ -203,7 +203,6 @@ struct dmtc_dump_helper {
     (sizeof(struct dmtc_helper) + \
      MAXPHYS/DEV_BSIZE*(sizeof(struct cryptop) + sizeof(struct cryptodesc)))
 
-static int dmtc_crypto_dispatch(struct cryptop *crp);
 static void dmtc_crypto_dump_start(dm_target_crypt_config_t *priv,
 				struct dmtc_dump_helper *dump_helper);
 static void dmtc_crypto_read_start(dm_target_crypt_config_t *priv,
@@ -885,17 +884,6 @@ dm_target_crypt_destroy(dm_table_entry_t *table_en)
  */
 
 /*
- * Wrapper around crypto_dispatch() to match dispatch_t type
- */
-static int
-dmtc_crypto_dispatch(struct cryptop *crp)
-{
-	KKASSERT(crp != NULL);
-	KTR_LOG(dmcrypt_crypto_dispatch, crp);
-	return crypto_dispatch(crp);
-}
-
-/*
  * Start IO operation, called from dmstrategy routine.
  */
 static int
@@ -1170,7 +1158,7 @@ dmtc_crypto_write_start(dm_target_crypt_config_t *priv, struct bio *bio)
 		priv->ivgen->gen_iv(priv, crd->crd_iv, sizeof(crd->crd_iv),
 				    isector + i);
 
-		int error = dmtc_crypto_dispatch(crp);
+		int error = crypto_dispatch(crp);
 
 		/*
 		 * Cumulative error
@@ -1347,7 +1335,7 @@ dmtc_crypto_dump_start(dm_target_crypt_config_t *priv, struct dmtc_dump_helper *
 		 */
 		priv->ivgen->gen_iv(priv, crd->crd_iv, sizeof(crd->crd_iv),
 				    isector + i);
-		int error = dmtc_crypto_dispatch(crp);
+		int error = crypto_dispatch(crp);
 
 		if (error != 0) {
 			kprintf("dm_target_crypt: dmtc_crypto_cb_dump_done "
