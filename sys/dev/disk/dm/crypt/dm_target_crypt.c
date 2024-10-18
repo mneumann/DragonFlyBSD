@@ -52,7 +52,11 @@
 
 #include <sys/ktr.h>
 #include <sys/spinlock2.h>
-#include <sys/taskqueue.h>
+#include <sys/lock.h>
+#include <sys/kthread.h>
+#include <sys/queue.h>
+#include <sys/proc.h>
+#include <sys/types.h>
 
 #include <dev/disk/dm/dm.h>
 MALLOC_DEFINE(M_DMCRYPT, "dm_crypt", "Device Mapper Target Crypt");
@@ -117,6 +121,34 @@ struct essiv_ivgen_priv {
 	u_int8_t		crypto_keyhash[SHA512_DIGEST_LENGTH];
 };
 
+typedef void work_queue_job_cb(void *);
+
+struct work_queue_job {
+	work_queue_job_cb *wqj_cb;
+	void *wqj_data;
+	STAILQ_ENTRY(work_queue_job) wqj_next;
+};
+
+struct work_queue {
+	struct lock wq_lock;
+	STAILQ_HEAD(, work_queue_job) wq_jobs;
+};
+
+static void
+work_queue_submit_job(struct work_queue *wq, work_queue_job_cb *cb, void *arg1);
+
+static struct work_queue_job*
+work_queue_alloc_job(struct work_queue *wq __unused);
+static void
+work_queue_free_job(struct work_queue *wq __unused, struct work_queue_job *job);
+static struct work_queue_job*
+work_queue_get_job(struct work_queue *wq);
+static void
+work_queue_put_job(struct work_queue *wq, struct work_queue_job *job);
+
+
+
+
 typedef struct target_crypt_config {
 	size_t	params_len;
 	dm_pdev_t *pdev;
@@ -137,9 +169,9 @@ typedef struct target_crypt_config {
 
 	struct malloc_pipe	read_mpipe;
 	struct malloc_pipe	write_mpipe;
-	struct malloc_pipe	task_mpipe;
 
-	struct taskqueue	*crypto_taskq;
+	struct thread		*crypto_worker;
+	struct work_queue	crypto_work_queue;
 } dm_target_crypt_config_t;
 
 struct dmtc_helper {
@@ -147,7 +179,6 @@ struct dmtc_helper {
 	caddr_t	free_addr;
 	caddr_t	orig_buf;
 	caddr_t data_buf;
-	struct task task;
 };
 
 struct dmtc_dump_helper {
@@ -171,13 +202,12 @@ struct dmtc_dump_helper {
 
 static void dmtc_crypto_dump_start(dm_target_crypt_config_t *priv,
 				struct dmtc_dump_helper *dump_helper);
-static void dmtc_crypto_read_start(dm_target_crypt_config_t *priv, struct bio *bio);
 static void dmtc_crypto_write_start(dm_target_crypt_config_t *priv,
 				struct bio *bio);
 static void dmtc_bio_read_done(struct bio *bio);
 static void dmtc_bio_write_done(struct bio *bio);
-static void decrypt_bio_task(void *arg, int pending);
-static void encrypt_bio_task(void *arg, int pending);
+static void
+decrypt_bio_task(void *arg);
 
 static ivgen_ctor_t	essiv_ivgen_ctor;
 static ivgen_dtor_t	essiv_ivgen_dtor;
@@ -551,6 +581,77 @@ dm_target_crypt_validate_alg(const char *crypto_alg, const char *crypto_mode, in
 	return 0;
 }
 
+
+static void
+crypto_worker_proc(void *wq_arg)
+{
+	struct work_queue *wq = wq_arg;
+	struct work_queue_job *job;
+
+	while ((job = work_queue_get_job(wq)) != NULL) {
+		if (job->wqj_cb)
+		{
+			(*job->wqj_cb)(job->wqj_data);
+		}
+		work_queue_free_job(wq, job);
+	}
+}
+
+static struct work_queue_job*
+work_queue_alloc_job(struct work_queue *wq __unused)
+{
+	return kmalloc(sizeof(struct work_queue_job),
+			M_DMCRYPT,
+			M_ZERO | M_WAITOK);
+}
+
+static void
+work_queue_free_job(struct work_queue *wq __unused, struct work_queue_job *job)
+{
+	kfree(job, M_DMCRYPT);
+}
+
+static struct work_queue_job*
+work_queue_get_job(struct work_queue *wq)
+{
+	struct work_queue_job *job;
+	lockmgr(&wq->wq_lock, LK_EXCLUSIVE);
+	while ((job = STAILQ_FIRST(&wq->wq_jobs)) == NULL) {
+		lksleep(&wq->wq_jobs,
+			&wq->wq_lock,
+			0,
+			"dm_target_crypt: wq empty",
+			0);
+	}
+	STAILQ_REMOVE_HEAD(&wq->wq_jobs, wqj_next);
+	lockmgr(&wq->wq_lock, LK_RELEASE);
+	return job;
+}
+
+static void
+work_queue_put_job(struct work_queue *wq, struct work_queue_job *job)
+{
+	lockmgr(&wq->wq_lock, LK_EXCLUSIVE);
+	STAILQ_INSERT_TAIL(&wq->wq_jobs, job, wqj_next);
+	lockmgr(&wq->wq_lock, LK_RELEASE);
+	wakeup_one(&wq->wq_jobs);
+}
+
+static void
+work_queue_submit_job(struct work_queue *wq, work_queue_job_cb *cb, void *arg)
+{
+	struct work_queue_job *job = work_queue_alloc_job(wq);
+	job->wqj_cb = cb; 
+	job->wqj_data = arg;
+	work_queue_put_job(wq, job);
+}
+
+static void
+print_42(void *arg __unused)
+{
+	kprintf("YES: 42\n");
+}
+
 static int
 dm_target_crypt_init(dm_table_entry_t *table_en, int argc, char **argv)
 {
@@ -689,22 +790,21 @@ dm_target_crypt_init(dm_table_entry_t *table_en, int argc, char **argv)
 	/* Initialize mpipes */
 	dmtc_init_mpipe(priv);
 
-	/* Create crypto task queue */
+	/* Create crypto worker thread and work queue */
 
-	priv->crypto_taskq = taskqueue_create(
-			"dm_target_crypt_taskq",
-			M_WAITOK, 
-			taskqueue_thread_enqueue,
-			NULL);
-	mpipe_init(&priv->task_mpipe, M_DMCRYPT, sizeof(struct task),
-		   1000, 10000, MPF_NOZERO | MPF_CALLBACK, NULL, NULL, NULL);
+	STAILQ_INIT(&priv->crypto_work_queue.wq_jobs);
 
-	taskqueue_start_threads(
-			&priv->crypto_taskq,
-			ncpus,
-			TDPRI_KERN_DAEMON,
-			ncpus,
-			"dm_target_crypt_taskq_");
+	lockinit(&priv->crypto_work_queue.wq_lock,
+			"dm_target_crypt: crypto wq",
+			0,
+			LK_CANRECURSE);
+
+	work_queue_submit_job(&priv->crypto_work_queue, print_42, NULL);
+
+    	kthread_create(crypto_worker_proc,
+			&priv->crypto_work_queue,
+			&priv->crypto_worker,
+			"dm_target_crypt: crypto worker");
 
 	return 0;
 
@@ -743,13 +843,6 @@ dm_target_crypt_destroy(dm_table_entry_t *table_en)
 	if (priv == NULL)
 		return 0;
 	dm_pdev_decr(priv->pdev);
-
-
-	/*
-	 * Free task queue
-	 */
-	taskqueue_free(priv->crypto_taskq);
-	mpipe_done(&priv->task_mpipe);
 
 	/*
 	 * Clean up the crypt config
@@ -854,7 +947,7 @@ dmtc_bio_read_done(struct bio *bio)
 		biodone(obio);
 	} else {
 		priv = bio->bio_caller_info1.ptr;
-		dmtc_crypto_read_start(priv, bio);
+		work_queue_submit_job(&priv->crypto_work_queue, decrypt_bio_task, bio);
 	}
 }
 
@@ -862,41 +955,15 @@ dmtc_bio_read_done(struct bio *bio)
  * STRATEGY READ PATH PART 2/3
  */
 
-static void
-dmtc_crypto_read_retry(void *arg1, void *arg2)
-{
-	dmtc_crypto_read_start(arg1, arg2);
-}
-
-static void
-dmtc_crypto_read_start(dm_target_crypt_config_t *priv, struct bio *bio)
-{
-	struct task *task;
-
-	task = (struct task*)mpipe_alloc_callback(&priv->task_mpipe,
-				     dmtc_crypto_read_retry, priv, bio);
-
-	if (task == NULL)
-		return;
-
-	TASK_INIT(task, 0, decrypt_bio_task, bio);
-
-
-	bio->bio_caller_info2.ptr = task;
-
-	taskqueue_enqueue(priv->crypto_taskq, task);
-}
 
 /**
  * This runs in a separate task pool.
  */
-
 static void
-decrypt_bio_task(void *arg, int pending __unused)
+decrypt_bio_task(void *arg1)
 {
-	struct bio *bio = arg;
+	struct bio *bio = arg1;
 	dm_target_crypt_config_t *priv = bio->bio_caller_info1.ptr;
-	struct task *task = bio->bio_caller_info2.ptr;
 	int i, bytes, sectors;
 	off_t isector;
 	uint8_t *data_buf;
@@ -974,8 +1041,6 @@ decrypt_bio_task(void *arg, int pending __unused)
 #endif
 	struct bio *obio = pop_bio(bio);
 	biodone(obio);
-
-	mpipe_free(&priv->task_mpipe, task);
 }
 
 /* END OF STRATEGY READ SECTION */
@@ -999,7 +1064,7 @@ dmtc_crypto_write_retry(void *arg1, void *arg2)
  * This runs in a separate task pool.
  */
 static void
-encrypt_bio_task(void *arg, int pending __unused)
+encrypt_bio_task(void *arg)
 {
 	struct bio *bio = arg;
 	dm_target_crypt_config_t *priv;
@@ -1009,7 +1074,7 @@ encrypt_bio_task(void *arg, int pending __unused)
 	struct cryptodesc crd;
 	struct dmtc_helper *dmtc;
 
-	dmtc = bio->bio_caller_info3.ptr;
+	dmtc = bio->bio_caller_info2.ptr;
 	priv = dmtc->priv;
 
 	/*
@@ -1097,16 +1162,14 @@ dmtc_crypto_write_start(dm_target_crypt_config_t *priv, struct bio *bio)
 	space += sizeof(struct dmtc_helper);
 	memcpy(space, bio->bio_buf->b_data, bytes);
 
-	bio->bio_caller_info3.ptr = dmtc;
+	bio->bio_caller_info2.ptr = dmtc;
 	bio->bio_buf->b_error = 0;
 
 	dmtc->orig_buf = bio->bio_buf->b_data;
 	dmtc->data_buf = space;
 	dmtc->priv = priv;
 
-	TASK_INIT(&dmtc->task, 0, encrypt_bio_task, bio);
-
-	taskqueue_enqueue(priv->crypto_taskq, &dmtc->task);
+	work_queue_submit_job(&priv->crypto_work_queue, encrypt_bio_task, bio);
 }
 
 /*
@@ -1118,7 +1181,7 @@ dmtc_bio_write_done(struct bio *bio)
 	struct dmtc_helper *dmtc;
 	struct bio *obio;
 
-	dmtc = bio->bio_caller_info3.ptr;
+	dmtc = bio->bio_caller_info2.ptr;
 	bio->bio_buf->b_data = dmtc->orig_buf;
 	mpipe_free(&dmtc->priv->write_mpipe, dmtc->free_addr);
 
