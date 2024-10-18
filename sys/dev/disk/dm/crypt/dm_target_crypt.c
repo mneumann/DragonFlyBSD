@@ -133,13 +133,12 @@ struct workqueue_job {
 struct workqueue {
 	struct lock wq_lock;
 	STAILQ_HEAD(, workqueue_job) wq_jobs;
+	bool wq_is_closing;
 };
 
-static void
-workqueue_submit_job(struct workqueue *wq, struct workqueue_job *job);
-
-static struct workqueue_job*
-workqueue_dequeue(struct workqueue *wq);
+static int workqueue_submit_job(struct workqueue *wq, struct workqueue_job *job);
+static struct workqueue_job* workqueue_dequeue(struct workqueue *wq);
+static void workqueue_close(struct workqueue *wq);
 
 
 typedef struct target_crypt_config {
@@ -587,6 +586,17 @@ workqueue_worker(void *wq_arg)
 	while ((job = workqueue_dequeue(wq)) != NULL) {
 		(*job->wqj_cb)(job->wqj_data1, job->wqj_data2);
 	}
+
+	wakeup(wq);
+}
+
+static void
+workqueue_close(struct workqueue *wq)
+{
+	lockmgr(&wq->wq_lock, LK_EXCLUSIVE);
+	wq->wq_is_closing = true;
+	lockmgr(&wq->wq_lock, LK_RELEASE);
+	wakeup(&wq->wq_jobs);
 }
 
 static struct workqueue_job*
@@ -594,25 +604,38 @@ workqueue_dequeue(struct workqueue *wq)
 {
 	struct workqueue_job *job;
 	lockmgr(&wq->wq_lock, LK_EXCLUSIVE);
-	while ((job = STAILQ_FIRST(&wq->wq_jobs)) == NULL) {
-		lksleep(&wq->wq_jobs,
-			&wq->wq_lock,
-			0,
-			"dm_target_crypt: wq empty",
-			0);
+	while (true) {
+		job = STAILQ_FIRST(&wq->wq_jobs);
+		if (job) {
+			STAILQ_REMOVE_HEAD(&wq->wq_jobs, wqj_next);
+			break;
+		} else if (wq->wq_is_closing) {
+			break;
+		} else {
+			lksleep(&wq->wq_jobs,
+				&wq->wq_lock,
+				0,
+				"dm_target_crypt: wq empty",
+				0);
+		}
 	}
-	STAILQ_REMOVE_HEAD(&wq->wq_jobs, wqj_next);
 	lockmgr(&wq->wq_lock, LK_RELEASE);
 	return job;
 }
 
-static void
+static int
 workqueue_submit_job(struct workqueue *wq, struct workqueue_job *job)
 {
 	lockmgr(&wq->wq_lock, LK_EXCLUSIVE);
-	STAILQ_INSERT_TAIL(&wq->wq_jobs, job, wqj_next);
-	lockmgr(&wq->wq_lock, LK_RELEASE);
-	wakeup_one(&wq->wq_jobs);
+	if (wq->wq_is_closing) {
+		lockmgr(&wq->wq_lock, LK_RELEASE);
+		return (EPIPE);
+	} else {
+		STAILQ_INSERT_TAIL(&wq->wq_jobs, job, wqj_next);
+		lockmgr(&wq->wq_lock, LK_RELEASE);
+		wakeup_one(&wq->wq_jobs);
+		return (0);
+	}
 }
 
 static int
@@ -811,6 +834,10 @@ dm_target_crypt_destroy(dm_table_entry_t *table_en)
 		return 0;
 	dm_pdev_decr(priv->pdev);
 
+
+	workqueue_close(&priv->crypto_workqueue);
+	tsleep(&priv->crypto_workqueue, 0, "shutdown crypto tasks", 0);
+
 	/*
 	 * Clean up the crypt config
 	 *
@@ -927,7 +954,9 @@ dmtc_bio_read_start(dm_target_crypt_config_t *priv, struct bio *bio)
 	job->wqj_cb = decrypt_bio_task; 
 	job->wqj_data1 = bio;
 	job->wqj_data2 = job;
-	workqueue_submit_job(&priv->crypto_workqueue, job);
+	int error = workqueue_submit_job(&priv->crypto_workqueue, job);
+	if (error)
+		kfree(job, M_DMCRYPT);
 }
 
 /*
