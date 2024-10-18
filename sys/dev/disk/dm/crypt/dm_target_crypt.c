@@ -139,7 +139,10 @@ struct workqueue {
 };
 
 static void
-workqueue_submit_job(struct workqueue *wq, workqueue_job_cb *cb, void *arg1);
+workqueue_submit_job(struct workqueue *wq, struct workqueue_job *job);
+
+static void
+cryptojob_submit(struct workqueue *wq, workqueue_job_cb *cb, void *arg);
 
 static struct workqueue_job*
 workqueue_dequeue(struct workqueue *wq);
@@ -202,6 +205,8 @@ static void dmtc_crypto_dump_start(dm_target_crypt_config_t *priv,
 static void dmtc_crypto_write_start(dm_target_crypt_config_t *priv,
 				struct bio *bio);
 static void dmtc_bio_read_done(struct bio *bio);
+static void dmtc_bio_read_start(dm_target_crypt_config_t *priv, struct bio *bio);
+//static void dmtc_bio_read_retry(void *arg1, void *arg2);
 static void dmtc_bio_write_done(struct bio *bio);
 static void
 decrypt_bio_task(void *arg);
@@ -615,14 +620,19 @@ workqueue_dequeue(struct workqueue *wq)
 }
 
 static void
-workqueue_submit_job(struct workqueue *wq, workqueue_job_cb *cb, void *arg)
+cryptojob_submit(struct workqueue *wq, workqueue_job_cb *cb, void *arg)
 {
 	struct workqueue_job *job = kmalloc(sizeof(struct workqueue_job),
 			M_DMCRYPT,
 			M_ZERO | M_WAITOK);
 	job->wqj_cb = cb; 
 	job->wqj_data = arg;
+	workqueue_submit_job(wq, job);
+}
 
+static void
+workqueue_submit_job(struct workqueue *wq, struct workqueue_job *job)
+{
 	lockmgr(&wq->wq_lock, LK_EXCLUSIVE);
 	STAILQ_INSERT_TAIL(&wq->wq_jobs, job, wqj_next);
 	lockmgr(&wq->wq_lock, LK_RELEASE);
@@ -630,13 +640,7 @@ workqueue_submit_job(struct workqueue *wq, workqueue_job_cb *cb, void *arg)
 }
 
 static void
-print_42(void *arg __unused)
-{
-	kprintf("YES: 42\n");
-}
-
-static void
-destruct_crypto_job(struct workqueue_job *job, void *context __unused)
+cryptojob_destruct(struct workqueue_job *job, void *context __unused)
 {
 	kfree(job, M_DMCRYPT);
 }
@@ -788,7 +792,7 @@ dm_target_crypt_init(dm_table_entry_t *table_en, int argc, char **argv)
 			0,
 			LK_CANRECURSE);
 
-	priv->crypto_workqueue.wq_job_destructor = destruct_crypto_job;
+	priv->crypto_workqueue.wq_job_destructor = cryptojob_destruct;
 	priv->crypto_workqueue.wq_context = NULL;
 
 
@@ -797,8 +801,6 @@ dm_target_crypt_init(dm_table_entry_t *table_en, int argc, char **argv)
 			sizeof(struct workqueue_job),
 			1000, 1000, MPF_NOZERO | MPF_CALLBACK, NULL, NULL, NULL);
 			*/
-
-	workqueue_submit_job(&priv->crypto_workqueue, print_42, NULL);
 
     	kthread_create(workqueue_worker,
 			&priv->crypto_workqueue,
@@ -946,9 +948,25 @@ dmtc_bio_read_done(struct bio *bio)
 		biodone(obio);
 	} else {
 		priv = bio->bio_caller_info1.ptr;
-		workqueue_submit_job(&priv->crypto_workqueue, decrypt_bio_task, bio);
+		dmtc_bio_read_start(priv, bio);
 	}
 }
+
+static void
+dmtc_bio_read_start(dm_target_crypt_config_t *priv, struct bio *bio)
+{
+	cryptojob_submit(&priv->crypto_workqueue, decrypt_bio_task, bio);
+}
+
+/*
+static void
+dmtc_bio_read_retry(void *arg1, void *arg2)
+{
+	dmtc_bio_read_start(arg1, arg2);
+}
+*/
+
+
 
 /*
  * STRATEGY READ PATH PART 2/3
@@ -1168,7 +1186,7 @@ dmtc_crypto_write_start(dm_target_crypt_config_t *priv, struct bio *bio)
 	dmtc->data_buf = space;
 	dmtc->priv = priv;
 
-	workqueue_submit_job(&priv->crypto_workqueue, encrypt_bio_task, bio);
+	cryptojob_submit(&priv->crypto_workqueue, encrypt_bio_task, bio);
 }
 
 /*
