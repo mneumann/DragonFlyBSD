@@ -1070,23 +1070,21 @@ dmtc_crypto_write_retry(void *arg1, void *arg2)
 	dmtc_crypto_write_start(priv, bio);
 }
 
+/**
+ * This runs in a separate task pool.
+ */
 static void
-dmtc_crypto_write_start(dm_target_crypt_config_t *priv, struct bio *bio)
+encrypt_bio_task(void *arg1, void *arg2)
 {
-	struct dmtc_helper *dmtc;
-	struct cryptodesc crd;
-	struct cryptop crp;
+	dm_target_crypt_config_t *priv = arg1;
+	struct bio *bio = arg2;
 	int i, bytes, sectors;
 	off_t isector;
-	u_char *space;
+	struct cryptop crp;
+	struct cryptodesc crd;
+	struct dmtc_helper *dmtc;
 
-	/*
-	 * For writes and reads with bogus page don't decrypt in place.
-	 */
-	space = mpipe_alloc_callback(&priv->write_mpipe,
-				     dmtc_crypto_write_retry, priv, bio);
-	if (space == NULL)
-		return;
+	dmtc = bio->bio_caller_info2.ptr;
 
 	/*
 	 * Use b_bcount for consistency
@@ -1096,17 +1094,6 @@ dmtc_crypto_write_start(dm_target_crypt_config_t *priv, struct bio *bio)
 	isector = bio->bio_offset / DEV_BSIZE;	/* ivgen salt base? */
 	sectors = bytes / DEV_BSIZE;		/* Number of sectors */
 
-	dmtc = (struct dmtc_helper *)space;
-	dmtc->free_addr = space;
-	space += sizeof(struct dmtc_helper);
-	memcpy(space, bio->bio_buf->b_data, bytes);
-
-	bio->bio_caller_info2.ptr = dmtc;
-	bio->bio_buf->b_error = 0;
-
-	dmtc->orig_buf = bio->bio_buf->b_data;
-	dmtc->data_buf = space;
-	dmtc->priv = priv;
 
 	for (i = 0; i < sectors; i++) {
 		bzero(&crp, sizeof(crp));
@@ -1156,6 +1143,42 @@ dmtc_crypto_write_start(dm_target_crypt_config_t *priv, struct bio *bio)
 		bio->bio_done = dmtc_bio_write_done;
 		vn_strategy(priv->pdev->pdev_vnode, bio);
 	}
+}
+
+
+static void
+dmtc_crypto_write_start(dm_target_crypt_config_t *priv, struct bio *bio)
+{
+	struct dmtc_helper *dmtc;
+	int bytes;
+	u_char *space;
+
+	/*
+	 * For writes and reads with bogus page don't decrypt in place.
+	 */
+	space = mpipe_alloc_callback(&priv->write_mpipe,
+				     dmtc_crypto_write_retry, priv, bio);
+	if (space == NULL)
+		return;
+
+	/*
+	 * Use b_bcount for consistency
+	 */
+	bytes = bio->bio_buf->b_bcount;
+
+	dmtc = (struct dmtc_helper *)space;
+	dmtc->free_addr = space;
+	space += sizeof(struct dmtc_helper);
+	memcpy(space, bio->bio_buf->b_data, bytes);
+
+	bio->bio_caller_info2.ptr = dmtc;
+	bio->bio_buf->b_error = 0;
+
+	dmtc->orig_buf = bio->bio_buf->b_data;
+	dmtc->data_buf = space;
+	dmtc->priv = priv;
+
+	work_queue_submit_job(&priv->crypto_work_queue, encrypt_bio_task, priv, bio);
 }
 
 /*
