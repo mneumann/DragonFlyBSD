@@ -1076,11 +1076,11 @@ static void
 dmtc_crypto_write_start(dm_target_crypt_config_t *priv, struct bio *bio)
 {
 	struct dmtc_helper *dmtc;
-	struct cryptodesc *crd;
-	struct cryptop *crp;
-	int i, bytes, sectors, sz;
+	struct cryptodesc crd;
+	struct cryptop crp;
+	int i, bytes, sectors;
 	off_t isector;
-	u_char *ptr, *space;
+	u_char *space;
 
 	/*
 	 * Use b_bcount for consistency
@@ -1089,7 +1089,6 @@ dmtc_crypto_write_start(dm_target_crypt_config_t *priv, struct bio *bio)
 
 	isector = bio->bio_offset / DEV_BSIZE;	/* ivgen salt base? */
 	sectors = bytes / DEV_BSIZE;		/* Number of sectors */
-	sz = sectors * (sizeof(*crp) + sizeof(*crd));
 
 	/*
 	 * For writes and reads with bogus page don't decrypt in place.
@@ -1102,48 +1101,28 @@ dmtc_crypto_write_start(dm_target_crypt_config_t *priv, struct bio *bio)
 	dmtc = (struct dmtc_helper *)space;
 	dmtc->free_addr = space;
 	space += sizeof(struct dmtc_helper);
-	memcpy(space + sz, bio->bio_buf->b_data, bytes);
+	memcpy(space, bio->bio_buf->b_data, bytes);
 
 	bio->bio_caller_info2.ptr = dmtc;
 	bio->bio_buf->b_error = 0;
 
 	dmtc->orig_buf = bio->bio_buf->b_data;
-	dmtc->data_buf = space + sz;
+	dmtc->data_buf = space;
 	dmtc->priv = priv;
 
-	/*
-	 * Load crypto descriptors (crp/crd loop)
-	 */
-	bzero(space, sz);
-	ptr = space;
-	bio->bio_caller_info3.value = sectors;
-	cpu_sfence();
-#if 0
-	kprintf("Write, bytes = %d (b_bcount), "
-		"sectors = %d (bio = %p, b_cmd = %d)\n",
-		bytes, sectors, bio, bio->bio_buf->b_cmd);
-#endif
 	for (i = 0; i < sectors; i++) {
-		crp = (struct cryptop *)ptr;
-		ptr += sizeof(*crp);
-		crd = (struct cryptodesc *)ptr;
-		ptr += sizeof (*crd);
+		bzero(&crp, sizeof(crp));
+		crp.crp_buf = dmtc->data_buf + i * DEV_BSIZE;
+		crp.crp_sid = priv->crypto_sid;
+		crp.crp_ilen = crp.crp_olen = DEV_BSIZE;
+		crp.crp_desc = &crd;
+		crp.crp_flags = 0;
 
-		crp->crp_buf = dmtc->data_buf + i * DEV_BSIZE;
-
-		crp->crp_sid = priv->crypto_sid;
-		crp->crp_ilen = crp->crp_olen = DEV_BSIZE;
-
-		crp->crp_opaque = (void *)bio;
-
-		crp->crp_desc = crd;
-		crp->crp_flags = 0;
-
-		crd->crd_alg = priv->crypto_alg;
-
-		crd->crd_len = DEV_BSIZE /* XXX */;
-		crd->crd_flags = 0;
-		crd->crd_flags |= CRD_F_ENCRYPT;
+		bzero(&crd, sizeof(crd));
+		crd.crd_alg = priv->crypto_alg;
+		crd.crd_len = DEV_BSIZE /* XXX */;
+		crd.crd_flags = 0;
+		crd.crd_flags |= CRD_F_ENCRYPT;
 
 		/*
 		 * Note: last argument is used to generate salt(?) and is
@@ -1152,13 +1131,10 @@ dmtc_crypto_write_start(dm_target_crypt_config_t *priv, struct bio *bio)
 		 *	 crypt volumes.
 		 */
 
-		KTR_LOG(dmcrypt_crypto_write_start, crp, bio->bio_buf,
-		    i, sectors);
-
-		priv->ivgen->gen_iv(priv, crd->crd_iv, sizeof(crd->crd_iv),
+		priv->ivgen->gen_iv(priv, crd.crd_iv, sizeof(crd.crd_iv),
 				    isector + i);
 
-		int error = crypto_dispatch(crp);
+		int error = crypto_dispatch(&crp);
 
 		/*
 		 * Cumulative error
@@ -1169,31 +1145,18 @@ dmtc_crypto_write_start(dm_target_crypt_config_t *priv, struct bio *bio)
 			error);
 			bio->bio_buf->b_error = error;
 		}
+	}
 
-		/*
-		 * On the last chunk of the encryption we issue the write
-		 */
-		int n = atomic_fetchadd_int(&bio->bio_caller_info3.value, -1);
-#if 0
-		kprintf("dmtc_crypto_cb_write_done %p, n = %d\n", bio, n);
-#endif
-
-		KTR_LOG(dmcrypt_crypto_cb_write_done, crp, bio->bio_buf, n);
-
-		if (n == 1) {
-			if (bio->bio_buf->b_error) {
-				bio->bio_buf->b_flags |= B_ERROR;
-				mpipe_free(&dmtc->priv->write_mpipe, dmtc->free_addr);
-				struct bio *obio = pop_bio(bio);
-				biodone(obio);
-			} else {
-				dmtc->orig_buf = bio->bio_buf->b_data;
-				bio->bio_buf->b_data = dmtc->data_buf;
-				bio->bio_done = dmtc_bio_write_done;
-				vn_strategy(priv->pdev->pdev_vnode, bio);
-			}
-		}
-
+	if (bio->bio_buf->b_error) {
+		bio->bio_buf->b_flags |= B_ERROR;
+		mpipe_free(&dmtc->priv->write_mpipe, dmtc->free_addr);
+		struct bio *obio = pop_bio(bio);
+		biodone(obio);
+	} else {
+		dmtc->orig_buf = bio->bio_buf->b_data;
+		bio->bio_buf->b_data = dmtc->data_buf;
+		bio->bio_done = dmtc_bio_write_done;
+		vn_strategy(priv->pdev->pdev_vnode, bio);
 	}
 }
 
