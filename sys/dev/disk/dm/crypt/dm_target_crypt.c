@@ -122,6 +122,7 @@ struct essiv_ivgen_priv {
 };
 
 typedef void work_queue_job_cb(void *, void *);
+
 struct work_queue_job {
 	work_queue_job_cb *wqj_cb;
 	void *wqj_data_ptr1;
@@ -134,6 +135,9 @@ struct work_queue {
 	STAILQ_HEAD(, work_queue_job) wq_jobs;
 };
 
+static void
+work_queue_submit_job(struct work_queue *wq, work_queue_job_cb *cb, void *arg1, void *arg2);
+
 static struct work_queue_job*
 work_queue_alloc_job(struct work_queue *wq __unused);
 static void
@@ -141,8 +145,7 @@ work_queue_free_job(struct work_queue *wq __unused, struct work_queue_job *job);
 static struct work_queue_job*
 work_queue_get_job(struct work_queue *wq);
 static void
-work_queue_submit_job(struct work_queue *wq, struct work_queue_job *job);
-
+work_queue_put_job(struct work_queue *wq, struct work_queue_job *job);
 
 
 
@@ -632,12 +635,22 @@ work_queue_get_job(struct work_queue *wq)
 }
 
 static void
-work_queue_submit_job(struct work_queue *wq, struct work_queue_job *job)
+work_queue_put_job(struct work_queue *wq, struct work_queue_job *job)
 {
 	lockmgr(&wq->wq_lock, LK_EXCLUSIVE);
 	STAILQ_INSERT_TAIL(&wq->wq_jobs, job, wqj_next);
 	lockmgr(&wq->wq_lock, LK_RELEASE);
 	wakeup_one(&wq->wq_jobs);
+}
+
+static void
+work_queue_submit_job(struct work_queue *wq, work_queue_job_cb *cb, void *arg1, void *arg2)
+{
+	struct work_queue_job *job = work_queue_alloc_job(wq);
+	job->wqj_cb = cb; 
+	job->wqj_data_ptr1 = arg1;
+	job->wqj_data_ptr2 = arg2;
+	work_queue_put_job(wq, job);
 }
 
 static void
@@ -793,10 +806,7 @@ dm_target_crypt_init(dm_table_entry_t *table_en, int argc, char **argv)
 			0,
 			LK_CANRECURSE);
 
-	struct work_queue_job *job = work_queue_alloc_job(&priv->crypto_work_queue);
-	job->wqj_cb = print_42;
-
-	work_queue_submit_job(&priv->crypto_work_queue, job);
+	work_queue_submit_job(&priv->crypto_work_queue, print_42, NULL, NULL);
 
     	kthread_create(crypto_worker_proc,
 			&priv->crypto_work_queue,
@@ -964,6 +974,9 @@ dmtc_bio_read_done(struct bio *bio)
  */
 
 
+/**
+ * This runs in a separate task pool.
+ */
 static void
 decrypt_bio(void *arg1, void *arg2)
 {
@@ -1051,11 +1064,7 @@ decrypt_bio(void *arg1, void *arg2)
 static void
 dmtc_crypto_read_start(dm_target_crypt_config_t *priv, struct bio *bio)
 {
-	struct work_queue_job *job = work_queue_alloc_job(&priv->crypto_work_queue);
-	job->wqj_cb = decrypt_bio;
-	job->wqj_data_ptr1 = priv;
-	job->wqj_data_ptr2 = bio;
-	work_queue_submit_job(&priv->crypto_work_queue, job);
+	work_queue_submit_job(&priv->crypto_work_queue, decrypt_bio, priv, bio);
 }
 
 /* END OF STRATEGY READ SECTION */
