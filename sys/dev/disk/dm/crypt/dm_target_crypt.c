@@ -210,7 +210,7 @@ static void dmtc_crypto_write_start(dm_target_crypt_config_t *priv,
 static void dmtc_bio_read_done(struct bio *bio);
 static void dmtc_bio_write_done(struct bio *bio);
 static void
-decrypt_bio(void *arg1, void *arg2);
+decrypt_bio_task(void *arg1, void *arg2);
 
 static ivgen_ctor_t	essiv_ivgen_ctor;
 static ivgen_dtor_t	essiv_ivgen_dtor;
@@ -964,7 +964,7 @@ dmtc_bio_read_done(struct bio *bio)
  * This runs in a separate task pool.
  */
 static void
-decrypt_bio(void *arg1, void *arg2)
+decrypt_bio_task(void *arg1, void *arg2)
 {
 	dm_target_crypt_config_t *priv = arg1;
 	struct bio *bio = arg2;
@@ -1050,7 +1050,7 @@ decrypt_bio(void *arg1, void *arg2)
 static void
 dmtc_crypto_read_start(dm_target_crypt_config_t *priv, struct bio *bio)
 {
-	work_queue_submit_job(&priv->crypto_work_queue, decrypt_bio, priv, bio);
+	work_queue_submit_job(&priv->crypto_work_queue, decrypt_bio_task, priv, bio);
 }
 
 /* END OF STRATEGY READ SECTION */
