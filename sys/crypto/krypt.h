@@ -2,7 +2,6 @@
 #define _CRYPTO_KRYPT_H_
 
 #include <crypto/rijndael/rijndael.h>
-#include <stdint.h>
 
 struct crypto_symm_cipher_context {
 	union {
