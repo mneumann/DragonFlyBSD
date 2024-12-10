@@ -144,7 +144,6 @@ struct dmtc_dump_helper {
 	off_t offset;
 
 	int sectors;
-	int *ident;
 
 	u_char space[65536];
 };
@@ -896,7 +895,6 @@ dm_target_crypt_dump(dm_table_entry_t *table_en, void *data, size_t length, off_
 {
 	static struct dmtc_dump_helper dump_helper;
 	dm_target_crypt_config_t *priv;
-	int id;
 	static int first_call = 1;
 
 	priv = table_en->target_config;
@@ -930,18 +928,7 @@ dm_target_crypt_dump(dm_table_entry_t *table_en, void *data, size_t length, off_
 	dump_helper.length = length;
 	dump_helper.offset = offset +
 	    priv->block_offset * DEV_BSIZE;
-	dump_helper.ident = &id;
 	dmtc_crypto_dump_start(priv, &dump_helper);
-
-	/*
-	 * Hackery to make stuff appear synchronous. The crypto callback will
-	 * set id to 1 and call wakeup on it. If the request completed
-	 * synchronously, id will be 1 and we won't bother to sleep. If not,
-	 * the crypto request will complete asynchronously and we sleep until
-	 * it's done.
-	 */
-	if (id == 0)
-		tsleep(&dump_helper, 0, "cryptdump", 0);
 
 	dump_helper.offset = dm_pdev_correct_dump_offset(priv->pdev,
 	    dump_helper.offset);
@@ -995,12 +982,6 @@ dmtc_crypto_dump_start(dm_target_crypt_config_t *priv, struct dmtc_dump_helper *
 		}
 
 	}
-
-	/*
-	 * On the last chunk of the encryption we return control
-	 */
-	atomic_add_int(dump_helper->ident, 1);
-	wakeup(dump_helper);
 }
 
 static int
