@@ -32,9 +32,14 @@
 
 #include <sys/param.h>
 #include <sys/systm.h>
+#include <sys/sysctl.h>
 
 #include <crypto/aesni/aesni.h>
 #include <crypto/crypto_cipher.h>
+
+static int aesni_disable = 0;
+// TUNABLE_INT("hw.aesni_disable", &aesni_disable);
+SYSCTL_INT(_hw, OID_AUTO, aesni_disable, CTLFLAG_RW, &aesni_disable, 0, "Disable AESNI");
 
 /*
  * Internal functions, implemented in assembler.
@@ -93,7 +98,9 @@ static int
 cipher_aesni_cbc_probe(const char *algo_name, const char *mode_name,
     int keysize_in_bits)
 {
-	// TODO: disable via sysctl/TUNABLE
+	if (aesni_disable)
+		return (-1);
+
 	if ((cpu_feature2 & CPUID2_AESNI) == 0)
 		return (EINVAL);
 
