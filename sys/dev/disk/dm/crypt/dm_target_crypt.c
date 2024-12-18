@@ -381,9 +381,9 @@ dm_target_crypt_init(dm_table_entry_t *table_en, int argc, char **argv)
 {
 	dm_target_crypt_config_t *priv;
 	size_t len;
-	char *crypto_alg, *crypto_mode, *iv_mode, *iv_opt, *key, *dev;
+	char *crypto_alg, *crypto_mode, *iv_mode, *iv_opt, *hex_key, *dev;
 	char *status_str;
-	int i, klen, error;
+	int i, klen_in_bits, error;
 	uint64_t iv_offset, block_offset;
 
 	if (argc != 5) {
@@ -404,18 +404,18 @@ dm_target_crypt_init(dm_table_entry_t *table_en, int argc, char **argv)
 	crypto_mode = strsep(&argv[0], "-");
 	iv_opt = strsep(&argv[0], "-");
 	iv_mode = strsep(&iv_opt, ":");
-	key = argv[1];
+	hex_key = argv[1];
 	iv_offset = strtouq(argv[2], NULL, 0);
 	dev = argv[3];
 	block_offset = strtouq(argv[4], NULL, 0);
-	/* bits / 8 = bytes, 1 byte = 2 hexa chars, so << 2 */
-	klen = strlen(key) << 2;
+	/* hex_key is specified in hex, so one hex char == 4 bits */
+	klen_in_bits = strlen(hex_key) * 4;
 
 #if 0
 	kprintf("dm_target_crypt - new: dev=%s, crypto_alg=%s, crypto_mode=%s, "
 		"iv_mode=%s, iv_opt=%s, key=%s, iv_offset=%ju, "
 		"block_offset=%ju\n",
-		dev, crypto_alg, crypto_mode, iv_mode, iv_opt, key, iv_offset,
+		dev, crypto_alg, crypto_mode, iv_mode, iv_opt, hex_key, iv_offset,
 		block_offset);
 #endif
 
@@ -434,8 +434,8 @@ dm_target_crypt_init(dm_table_entry_t *table_en, int argc, char **argv)
 	 *
 	 * aes-cbc
 	 */
-	priv->crypto_cipher = crypto_cipher_find(crypto_alg, crypto_mode, klen);
-	priv->crypto_klen = klen;
+	priv->crypto_cipher = crypto_cipher_find(crypto_alg, crypto_mode, klen_in_bits);
+	priv->crypto_klen = klen_in_bits;
 	if (priv->crypto_cipher == NULL)
 		goto notsup;
 
@@ -448,7 +448,7 @@ dm_target_crypt_init(dm_table_entry_t *table_en, int argc, char **argv)
 
 	dm_table_init_target(table_en, priv);
 
-	error = hex2key(key, priv->crypto_klen / 8,
+	error = hex2key(hex_key, priv->crypto_klen / 8,
 			(u_int8_t *)priv->crypto_key);
 
 	if (error) {
@@ -493,15 +493,15 @@ dm_target_crypt_init(dm_table_entry_t *table_en, int argc, char **argv)
 		goto notsup;
 	}
 
-	memset(key, '0', strlen(key));
+	memset(hex_key, '0', strlen(hex_key));
 	if (iv_opt) {
 		ksprintf(status_str, "%s-%s-%s:%s %s %ju %s %ju",
 		    crypto_alg, crypto_mode, iv_mode, iv_opt,
-		    key, iv_offset, dev, block_offset);
+		    hex_key, iv_offset, dev, block_offset);
 	} else {
 		ksprintf(status_str, "%s-%s-%s %s %ju %s %ju",
 		    crypto_alg, crypto_mode, iv_mode,
-		    key, iv_offset, dev, block_offset);
+		    hex_key, iv_offset, dev, block_offset);
 	}
 	priv->status_str = status_str;
 
