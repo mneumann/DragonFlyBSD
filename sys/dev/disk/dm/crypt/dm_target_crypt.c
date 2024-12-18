@@ -47,42 +47,8 @@
 #include <crypto/rmd160/rmd160.h>
 #include <crypto/krypt.h>
 
-#include <sys/ktr.h>
-
 #include <dev/disk/dm/dm.h>
 MALLOC_DEFINE(M_DMCRYPT, "dm_crypt", "Device Mapper Target Crypt");
-
-KTR_INFO_MASTER(dmcrypt);
-
-#if !defined(KTR_DMCRYPT)
-#define KTR_DMCRYPT	KTR_ALL
-#endif
-
-// XXX
-KTR_INFO(KTR_DMCRYPT, dmcrypt, crypto_dispatch, 0,
-    "crypto_dispatch(%p)", struct cryptop *crp);
-KTR_INFO(KTR_DMCRYPT, dmcrypt, crypt_strategy, 0,
-    "crypt_strategy(b_cmd = %d, bp = %p)", int cmd, struct buf *bp);
-KTR_INFO(KTR_DMCRYPT, dmcrypt, bio_write_encrypt, 1,
-    "bio_write_encrypt(crp = %p, bp = %p, sector = %d/%d)",
-    struct cryptop *crp, struct buf *bp, int i, int sectors);
-KTR_INFO(KTR_DMCRYPT, dmcrypt, crypto_cb_write_done, 1,
-    "crypto_cb_write_done(crp = %p, bp = %p, n = %d)",
-    struct cryptop *crp, struct buf *bp, int n);
-KTR_INFO(KTR_DMCRYPT, dmcrypt, bio_write_done, 1,
-    "bio_write_done(bp = %p)", struct buf *bp);
-KTR_INFO(KTR_DMCRYPT, dmcrypt, crypto_write_retry, 1,
-    "crypto_write_retry(crp = %p)", struct buf *bp);
-KTR_INFO(KTR_DMCRYPT, dmcrypt, crypto_read_retry, 1,
-    "crypto_read_retry(crp = %p)", struct buf *bp);
-KTR_INFO(KTR_DMCRYPT, dmcrypt, bio_read_done, 2,
-    "bio_read_done(bp = %p)", struct buf *bp);
-KTR_INFO(KTR_DMCRYPT, dmcrypt, crypto_read_start, 2,
-    "crypto_read_start(crp = %p, bp = %p, sector = %d/%d)",
-    struct cryptop *crp, struct buf *bp, int i, int sectors);
-KTR_INFO(KTR_DMCRYPT, dmcrypt, crypto_cb_read_done, 2,
-    "crypto_cb_read_done(crp = %p, bp = %p, n = %d)",
-    struct cryptop *crp, struct buf *bp, int n);
 
 struct target_crypt_config;
 
@@ -643,8 +609,6 @@ dm_target_crypt_strategy(dm_table_entry_t *table_en, struct buf *bp)
 		}
 	}
 
-	KTR_LOG(dmcrypt_crypt_strategy, bp->b_cmd, bp);
-
 	switch (bp->b_cmd) {
 	case BUF_CMD_READ:
 		bio = push_bio(&bp->b_bio1);
@@ -678,8 +642,6 @@ dmtc_bio_read_done(struct bio *bio)
 	struct bio *obio;
 
 	dm_target_crypt_config_t *priv;
-
-	KTR_LOG(dmcrypt_bio_read_done, bio->bio_buf);
 
 	/*
 	 * If a read error occurs we shortcut the operation, otherwise
@@ -785,8 +747,6 @@ dmtc_bio_read_decrypt_retry(void *arg1, void *arg2)
 	dm_target_crypt_config_t *priv = arg1;
 	struct bio *bio = arg2;
 
-	KTR_LOG(dmcrypt_crypto_read_retry, bio->bio_buf);
-
 	dmtc_bio_read_decrypt(priv, bio);
 }
 
@@ -845,8 +805,6 @@ dmtc_bio_write_encrypt_retry(void *arg1, void *arg2)
 	dm_target_crypt_config_t *priv = arg1;
 	struct bio *bio = arg2;
 
-	KTR_LOG(dmcrypt_bio_write_retry, bio->bio_buf);
-
 	dmtc_bio_write_encrypt(priv, bio);
 }
 
@@ -862,8 +820,6 @@ dmtc_bio_write_done(struct bio *bio)
 
 	// Restore original bio buffer
 	bio->bio_buf->b_data = bio->bio_caller_info2.ptr;
-
-	KTR_LOG(dmcrypt_bio_write_done, bio->bio_buf);
 
 	obio = pop_bio(bio);
 	biodone(obio);
