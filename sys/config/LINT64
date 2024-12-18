@@ -2025,7 +2025,6 @@ device		crypto		# core crypto support
 
 device		rndtest		# FIPS 140-2 entropy tester
 
-device		aesni		# hardware crypto/RNG for AES-NI
 device		rdrand		# hardware RNG for RdRand
 
 #
