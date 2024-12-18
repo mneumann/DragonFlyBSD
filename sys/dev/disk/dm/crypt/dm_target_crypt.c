@@ -458,6 +458,9 @@ dm_target_crypt_init(dm_table_entry_t *table_en, int argc, char **argv)
 	if (priv->crypto_cipher == NULL)
 		goto notsup;
 
+	kprintf("dm_target_crypt: using crypto_cipher: %s\n",
+			priv->crypto_cipher->description);
+
 	/* Save length of param string */
 	priv->params_len = len;
 	priv->block_offset = block_offset;
