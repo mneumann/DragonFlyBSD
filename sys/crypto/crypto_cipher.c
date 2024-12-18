@@ -100,26 +100,23 @@ cipher_null_probe(const char *algo_name, const char *mode_name __unused,
 }
 
 static int
-cipher_null_setkey(struct crypto_symm_cipher_context *ctx __unused,
+cipher_null_setkey(struct crypto_cipher_context *ctx __unused,
     const uint8_t *keydata __unused, int keylen __unused)
 {
 	return (0);
 }
 
 static int
-cipher_null_encrypt(const struct crypto_symm_cipher_context *ctx
-			__unused,
+cipher_null_encrypt(const struct crypto_cipher_context *ctx __unused,
     uint8_t *data __unused, int datalen __unused,
-    struct crypto_symm_cipher_iv *iv __unused)
+    struct crypto_cipher_iv *iv __unused)
 {
 	return (0);
 }
 
 static int
-cipher_null_decrypt(const struct crypto_symm_cipher_context *ctx
-			__unused,
-    uint8_t *data, int datalen,
-    struct crypto_symm_cipher_iv *iv __unused)
+cipher_null_decrypt(const struct crypto_cipher_context *ctx __unused,
+    uint8_t *data, int datalen, struct crypto_cipher_iv *iv __unused)
 {
 	return (0);
 }
@@ -146,7 +143,7 @@ aes_cbc_probe(const char *algo_name, const char *mode_name,
 }
 
 static int
-aes_cbc_setkey(struct crypto_symm_cipher_context *ctx,
+aes_cbc_setkey(struct crypto_cipher_context *ctx,
     const uint8_t *keydata, int keylen)
 {
 	if (keylen != 16 && keylen != 24 && keylen != 32)
@@ -158,8 +155,8 @@ aes_cbc_setkey(struct crypto_symm_cipher_context *ctx,
 }
 
 static int
-aes_cbc_encrypt(const struct crypto_symm_cipher_context *ctx,
-    uint8_t *data, int datalen, struct crypto_symm_cipher_iv *iv)
+aes_cbc_encrypt(const struct crypto_cipher_context *ctx, uint8_t *data,
+    int datalen, struct crypto_cipher_iv *iv)
 {
 	if ((datalen % AES_BLOCK_LEN) != 0)
 		return EINVAL;
@@ -171,8 +168,8 @@ aes_cbc_encrypt(const struct crypto_symm_cipher_context *ctx,
 }
 
 static int
-aes_cbc_decrypt(const struct crypto_symm_cipher_context *ctx,
-    uint8_t *data, int datalen, struct crypto_symm_cipher_iv *iv)
+aes_cbc_decrypt(const struct crypto_cipher_context *ctx, uint8_t *data,
+    int datalen, struct crypto_cipher_iv *iv)
 {
 	if ((datalen % AES_BLOCK_LEN) != 0)
 		return EINVAL;
