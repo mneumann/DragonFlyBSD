@@ -104,6 +104,9 @@ struct dmtc_dump_helper {
 	u_char space[65536];
 };
 
+static const struct crypto_cipher *
+dmtc_find_crypto_cipher(const char *crypto_alg, const char *crypto_mode, int klen_in_bits);
+
 #define DMTC_BUF_SIZE_WRITE (MAXPHYS)
 #define DMTC_BUF_SIZE_READ (MAXPHYS)
 
@@ -376,6 +379,28 @@ hex2key(char *hex, size_t key_len, u_int8_t *key)
 	return 0;
 }
 
+/**
+ * Map between dm_target_crypt algorithm naming and our own crypto/crypt_cipher naming
+ * It happens that they are identical, but it doesn't have to be this way.
+ */
+static const struct crypto_cipher *
+dmtc_find_crypto_cipher(const char *crypto_alg, const char *crypto_mode, int klen_in_bits)
+{
+	#define ALGO_MODE_EQ(algo, mode) \
+		((strcmp(crypto_alg, algo) == 0) && (strcmp(crypto_mode, mode) == 0))
+
+	if (ALGO_MODE_EQ("aes", "cbc"))
+		return crypto_cipher_find("aes", "cbc", klen_in_bits);
+
+	if (ALGO_MODE_EQ("aes", "xts"))
+		return crypto_cipher_find("aes", "xts", klen_in_bits);
+
+	kprintf("dm_target_crypt: unsupported algo: %s and mode: %s\n",
+			crypto_alg, crypto_mode);
+
+	return NULL;
+}
+
 static int
 dm_target_crypt_init(dm_table_entry_t *table_en, int argc, char **argv)
 {
@@ -428,13 +453,7 @@ dm_target_crypt_init(dm_table_entry_t *table_en, int argc, char **argv)
 		return ENOENT;
 	}
 
-	/*
-	 * This code checks for valid combinations of algorithm and mode.
-	 * Currently supported options are:
-	 *
-	 * aes-cbc
-	 */
-	priv->crypto_cipher = crypto_cipher_find(crypto_alg, crypto_mode, klen_in_bits);
+	priv->crypto_cipher = dmtc_find_crypto_cipher(crypto_alg, crypto_mode, klen_in_bits);
 	priv->crypto_klen = klen_in_bits;
 	if (priv->crypto_cipher == NULL)
 		goto notsup;
