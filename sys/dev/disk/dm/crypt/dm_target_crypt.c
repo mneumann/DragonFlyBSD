@@ -209,43 +209,43 @@ essiv_ivgen_ctor(struct target_crypt_config *priv, char *iv_hash, void **p_ivpri
 	if (iv_hash == NULL)
 		return EINVAL;
 
-	if (!strcmp(iv_hash, "sha1")) {
+	if (strcmp(iv_hash, "sha1") == 0) {
 		SHA1_CTX ctx;
 
 		hashlen = SHA1_RESULTLEN;
 		SHA1Init(&ctx);
 		SHA1Update(&ctx, priv->crypto_key, klen);
 		SHA1Final(crypto_keyhash, &ctx);
-	} else if (!strcmp(iv_hash, "sha256")) {
+	} else if (strcmp(iv_hash, "sha256") == 0) {
 		SHA256_CTX ctx;
 
 		hashlen = SHA256_DIGEST_LENGTH;
 		SHA256_Init(&ctx);
 		SHA256_Update(&ctx, priv->crypto_key, klen);
 		SHA256_Final(crypto_keyhash, &ctx);
-	} else if (!strcmp(iv_hash, "sha384")) {
+	} else if (strcmp(iv_hash, "sha384") == 0) {
 		SHA384_CTX ctx;
 
 		hashlen = SHA384_DIGEST_LENGTH;
 		SHA384_Init(&ctx);
 		SHA384_Update(&ctx, priv->crypto_key, klen);
 		SHA384_Final(crypto_keyhash, &ctx);
-	} else if (!strcmp(iv_hash, "sha512")) {
+	} else if (strcmp(iv_hash, "sha512") == 0) {
 		SHA512_CTX ctx;
 
 		hashlen = SHA512_DIGEST_LENGTH;
 		SHA512_Init(&ctx);
 		SHA512_Update(&ctx, priv->crypto_key, klen);
 		SHA512_Final(crypto_keyhash, &ctx);
-	} else if (!strcmp(iv_hash, "md5")) {
+	} else if (strcmp(iv_hash, "md5") == 0) {
 		MD5_CTX ctx;
 
 		hashlen = MD5_DIGEST_LENGTH;
 		MD5Init(&ctx);
 		MD5Update(&ctx, priv->crypto_key, klen);
 		MD5Final(crypto_keyhash, &ctx);
-	} else if (!strcmp(iv_hash, "rmd160") ||
-		   !strcmp(iv_hash, "ripemd160")) {
+	} else if (strcmp(iv_hash, "rmd160") == 0 ||
+		   strcmp(iv_hash, "ripemd160") == 0) {
 		RMD160_CTX ctx;
 
 		hashlen = 160/8;
@@ -459,7 +459,7 @@ dm_target_crypt_init(dm_table_entry_t *table_en, int argc, char **argv)
 
 	/* Handle cmd */
 	for(i = 0; ivgens[i].name != NULL; i++) {
-		if (!strcmp(iv_mode, ivgens[i].name))
+		if (strcmp(iv_mode, ivgens[i].name) == 0)
 			break;
 	}
 
