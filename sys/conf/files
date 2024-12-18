@@ -2269,7 +2269,7 @@ crypto/serpent/serpent.c		optional crypto
 net/zlib.c				optional crypto
 opencrypto/crypto.c			optional crypto
 opencrypto/cryptodev_if.m		optional crypto
-crypto/krypt.c				optional crypto
+crypto/crypto_cipher.c			optional crypto
 # drm_agpsupport.c must be included if CONFIG_AGP is set
 #dev/drm/drm_agpsupport.c		optional drm compile-with "${NORMAL_C} -include $S/dev/drm/kconfig.h ${WERROR}"
 dev/drm/drm_atomic.c			optional drm compile-with "${NORMAL_C} -include $S/dev/drm/kconfig.h ${WERROR}"

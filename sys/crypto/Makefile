@@ -55,13 +55,13 @@ SRCS+=	skipjack.c
 SRCS+=	twofish.c
 
 .PATH:	${.CURDIR}
-SRCS+=	krypt.c
+SRCS+=	crypto_cipher.c
 
 SRCS+=	bus_if.h device_if.h opt_ddb.h
 
 SUBDIR=	rc4
 
 format:
-	clang-format15 -i krypt*.*
+	clang-format14 -i crypto_cipher.c crypto_cipher.h
 
 .include <bsd.kmod.mk>

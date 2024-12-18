@@ -41,7 +41,7 @@
 #include <sys/param.h>
 #include <sys/systm.h>
 
-#include "krypt.h"
+#include "crypto_cipher.h"
 
 /**
  * --------------------------------------
@@ -302,7 +302,7 @@ aes_xts_decrypt(const void *ctx, uint8_t *data, int datalen,
  */
 #endif
 
-const struct crypto_symm_cipher crypto_symm_ciphers[3] = {
+const struct crypto_cipher crypto_ciphers[3] = {
 	{ "null", 4, 0, 0, cipher_null_probe, cipher_null_setkey,
 	    cipher_null_encrypt, cipher_null_decrypt },
 
@@ -326,12 +326,11 @@ const struct crypto_symm_cipher crypto_symm_ciphers[3] = {
  * --------------------------------------
  */
 
-const struct crypto_symm_cipher *
-crypto_symm_cipher_find(const char *algo_name, const char *mode_name,
+const struct crypto_cipher *
+crypto_cipher_find(const char *algo_name, const char *mode_name,
     int keysize_in_bits)
 {
-	for (const struct crypto_symm_cipher *cipherp =
-		 crypto_symm_ciphers;
+	for (const struct crypto_cipher *cipherp = crypto_ciphers;
 	     cipherp->name; ++cipherp) {
 		if ((*cipherp->probe)(algo_name, mode_name,
 			keysize_in_bits) == 0) {

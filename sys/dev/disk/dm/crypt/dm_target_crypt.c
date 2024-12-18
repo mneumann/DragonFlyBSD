@@ -46,7 +46,7 @@
 #include <crypto/sha1.h>
 #include <crypto/sha2/sha2.h>
 #include <crypto/rmd160/rmd160.h>
-#include <crypto/krypt.h>
+#include <crypto/crypto_cipher.h>
 #include <dev/disk/dm/dm.h>
 
 MALLOC_DEFINE(M_DMCRYPT, "dm_crypt", "Device Mapper Target Crypt");
@@ -68,8 +68,8 @@ struct iv_generator {
 };
 
 struct essiv_ivgen_priv {
-	struct crypto_symm_cipher_context crypto_context;
-	const struct crypto_symm_cipher *crypto_cipher;
+	struct crypto_cipher_context crypto_context;
+	const struct crypto_cipher  *crypto_cipher;
 	size_t			keyhash_len;
 	u_int8_t		crypto_keyhash[SHA512_DIGEST_LENGTH];
 };
@@ -78,10 +78,10 @@ typedef struct target_crypt_config {
 	size_t	params_len;
 	dm_pdev_t *pdev;
 	char	*status_str;
-	const struct crypto_symm_cipher *crypto_cipher;
+	const struct crypto_cipher *crypto_cipher;
 	int	crypto_klen;
 	u_int8_t	crypto_key[512>>3];
-	struct crypto_symm_cipher_context	crypto_context;
+	struct crypto_cipher_context	crypto_context;
 
 	u_int64_t	block_offset;
 	int64_t		iv_offset;
@@ -320,7 +320,7 @@ essiv_ivgen(dm_target_crypt_config_t *priv, u_int8_t *iv,
 	bzero(iv, iv_len);
 	*((off_t *)iv) = htole64(sector + priv->iv_offset);
 
-	struct crypto_symm_cipher_iv iv2;
+	struct crypto_cipher_iv iv2;
 	bzero(&iv2, sizeof(iv2));
 
 	error = ivpriv->crypto_cipher->encrypt(
@@ -432,7 +432,7 @@ dm_target_crypt_init(dm_table_entry_t *table_en, int argc, char **argv)
 	 *
 	 * aes-cbc
 	 */
-	priv->crypto_cipher = crypto_symm_cipher_find(crypto_alg, crypto_mode, klen); 
+	priv->crypto_cipher = crypto_cipher_find(crypto_alg, crypto_mode, klen);
 	priv->crypto_klen = klen;
 	if (priv->crypto_cipher == NULL)
 		goto notsup;
@@ -661,7 +661,7 @@ static int
 dmtc_bio_encdec(dm_target_crypt_config_t *priv, uint8_t *data_buf, int bytes, off_t offset,
 		crypto_cipher_blockfn_t blockfn)
 {
-	struct crypto_symm_cipher_iv iv;
+	struct crypto_cipher_iv iv;
 	int sectors = bytes / DEV_BSIZE;	/* Number of sectors */
 	off_t isector = offset / DEV_BSIZE;	/* ivgen salt base? */
 
