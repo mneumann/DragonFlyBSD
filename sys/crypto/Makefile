@@ -2,9 +2,8 @@
 
 KMOD=	crypto
 
-.PATH:	${.CURDIR}/../opencrypto
-SRCS=	crypto.c
-SRCS+=	cryptodev_if.c cryptodev_if.h
+.PATH:	${.CURDIR}
+SRCS+=	crypto_mod.c crypto_cipher.c
 
 SRCS+=	sha1.c
 SRCS+=	chachapoly.c
@@ -12,21 +11,13 @@ SRCS+=	chachapoly.c
 .PATH:	${.CURDIR}/blake2
 SRCS+=	blake2s.c
 
-.PATH:	${.CURDIR}/blowfish
-SRCS+=	bf_enc.c bf_skey.c
-
-.PATH:	${.CURDIR}/camellia
-SRCS+=	camellia.c camellia-api.c
-
-.PATH:	${.CURDIR}/cast
-SRCS+=	cast.c
-
 .PATH:	${.CURDIR}/chacha20
 SRCS+=	chacha.c
 
 .PATH:	${.CURDIR}/curve25519
 SRCS+=	curve25519.c
 
+# required by: smb_crypt
 .PATH:	${.CURDIR}/des
 SRCS+=	des_ecb.c des_enc.c des_setkey.c
 
@@ -39,29 +30,16 @@ SRCS+=	rijndael-alg-fst.c rijndael-api.c
 .PATH:	${.CURDIR}/rmd160
 SRCS+=	rmd160.c
 
-.PATH:	${.CURDIR}/serpent
-SRCS+=	serpent.c
-
 .PATH:	${.CURDIR}/sha2
 SRCS+=	sha2.c
 
 .PATH:	${.CURDIR}/siphash
 SRCS+=	siphash.c
 
-.PATH:	${.CURDIR}/skipjack
-SRCS+=	skipjack.c
-
-.PATH:	${.CURDIR}/twofish
-SRCS+=	twofish.c
-
-.PATH:	${.CURDIR}
-SRCS+=	crypto_cipher.c
-
-SRCS+=	bus_if.h device_if.h opt_ddb.h
-
+# required by: netgraph
 SUBDIR=	rc4
 
 format:
-	clang-format14 -i crypto_cipher.c crypto_cipher.h
+	clang-format14 -i crypto_cipher.c crypto_cipher.h crypto_mod.c
 
 .include <bsd.kmod.mk>

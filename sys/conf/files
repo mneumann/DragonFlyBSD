@@ -2244,11 +2244,9 @@ libprop/prop_object.c			standard
 libprop/prop_stack.c			standard
 libprop/prop_string.c			standard
 libprop/prop_rb.c			standard
+crypto/crypto_mod.c			optional crypto
+crypto/crypto_cipher.c			optional crypto
 crypto/blake2/blake2s.c			optional crypto
-crypto/blowfish/bf_skey.c		optional crypto
-crypto/camellia/camellia.c		optional crypto
-crypto/camellia/camellia-api.c		optional crypto
-crypto/cast/cast.c			optional crypto
 crypto/chacha20/chacha.c		optional crypto
 crypto/chachapoly.c			optional crypto
 crypto/curve25519/curve25519.c		optional crypto
@@ -2263,13 +2261,6 @@ crypto/rmd160/rmd160.c			optional crypto
 crypto/sha1.c				optional crypto
 crypto/sha2/sha2.c			standard
 crypto/siphash/siphash.c		optional crypto
-crypto/skipjack/skipjack.c		optional crypto
-crypto/twofish/twofish.c		optional crypto
-crypto/serpent/serpent.c		optional crypto
-net/zlib.c				optional crypto
-opencrypto/crypto.c			optional crypto
-opencrypto/cryptodev_if.m		optional crypto
-crypto/crypto_cipher.c			optional crypto
 # drm_agpsupport.c must be included if CONFIG_AGP is set
 #dev/drm/drm_agpsupport.c		optional drm compile-with "${NORMAL_C} -include $S/dev/drm/kconfig.h ${WERROR}"
 dev/drm/drm_atomic.c			optional drm compile-with "${NORMAL_C} -include $S/dev/drm/kconfig.h ${WERROR}"

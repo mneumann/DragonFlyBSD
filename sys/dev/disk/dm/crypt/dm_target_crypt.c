@@ -2,7 +2,8 @@
  * Copyright (c) 2010, 2024 The DragonFly Project.  All rights reserved.
  *
  * This code is derived from software contributed to The DragonFly Project
- * by Alex Hornung <ahornung@gmail.com>.
+ * by Alex Hornung <ahornung@gmail.com> and
+ * Michael Neumann <mneumann@ntecs.de>.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -53,7 +54,6 @@ MALLOC_DEFINE(M_DMCRYPT, "dm_crypt", "Device Mapper Target Crypt");
 
 struct target_crypt_config;
 
-typedef void dispatch_t(void *);
 typedef void ivgen_t(struct target_crypt_config *, u_int8_t *, size_t, off_t);
 
 typedef int ivgen_ctor_t(struct target_crypt_config *, char *, void **);
@@ -940,4 +940,4 @@ dmtc_mod_handler(module_t mod, int type, void *unused)
 }
 
 DM_TARGET_MODULE(dm_target_crypt, dmtc_mod_handler);
-MODULE_DEPEND(dm_target_crypt, crypto, 1, 1, 1);
+MODULE_DEPEND(dm_target_crypt, crypto, 2, 2, 2);

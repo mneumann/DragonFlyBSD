@@ -35,7 +35,6 @@ hptrr_lib.bo			optional	hptrr			\
 	clean 		"hptrr_lib.bo"
 
 # XXX use assembler versions of bf_enc
-crypto/blowfish/bf_enc.c		optional	crypto
 crypto/des/des_enc.c			optional	crypto
 crypto/des/des_ecb.c			optional	crypto
 crypto/des/des_setkey.c			optional	crypto
