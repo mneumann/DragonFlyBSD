@@ -1,8 +1,8 @@
 /*
- * Copyright (c) 2010 The DragonFly Project.  All rights reserved.
+ * Copyright (c) 2010, 2024 The DragonFly Project.  All rights reserved.
  *
  * This code is derived from software contributed to The DragonFly Project
- * by Alex Hornung <ahornung@gmail.com>
+ * by Alex Hornung <ahornung@gmail.com>.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,8 +35,9 @@
 /*
  * This file implements initial version of device-mapper crypt target.
  */
-#include <sys/endian.h>
 
+#include <sys/systm.h>
+#include <sys/endian.h>
 #include <sys/bio.h>
 #include <sys/kerneldump.h>
 #include <sys/malloc.h>
@@ -46,8 +47,8 @@
 #include <crypto/sha2/sha2.h>
 #include <crypto/rmd160/rmd160.h>
 #include <crypto/krypt.h>
-
 #include <dev/disk/dm/dm.h>
+
 MALLOC_DEFINE(M_DMCRYPT, "dm_crypt", "Device Mapper Target Crypt");
 
 struct target_crypt_config;
