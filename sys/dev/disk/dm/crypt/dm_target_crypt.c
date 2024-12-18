@@ -709,9 +709,6 @@ dmtc_bio_encdec(dm_target_crypt_config_t *priv, uint8_t *data_buf, int bytes, of
 				data_buf + i * DEV_BSIZE,
 				DEV_BSIZE, &iv);
 
-		// TODO: required?
-		lwkt_yield();
-
 		if (error) {
 			break;
 		}
