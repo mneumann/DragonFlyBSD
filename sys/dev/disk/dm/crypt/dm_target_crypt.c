@@ -62,12 +62,13 @@ KTR_INFO_MASTER(dmcrypt);
 #define KTR_DMCRYPT	KTR_ALL
 #endif
 
+// XXX
 KTR_INFO(KTR_DMCRYPT, dmcrypt, crypto_dispatch, 0,
     "crypto_dispatch(%p)", struct cryptop *crp);
 KTR_INFO(KTR_DMCRYPT, dmcrypt, crypt_strategy, 0,
     "crypt_strategy(b_cmd = %d, bp = %p)", int cmd, struct buf *bp);
-KTR_INFO(KTR_DMCRYPT, dmcrypt, crypto_write_start, 1,
-    "crypto_write_start(crp = %p, bp = %p, sector = %d/%d)",
+KTR_INFO(KTR_DMCRYPT, dmcrypt, bio_write_encrypt, 1,
+    "bio_write_encrypt(crp = %p, bp = %p, sector = %d/%d)",
     struct cryptop *crp, struct buf *bp, int i, int sectors);
 KTR_INFO(KTR_DMCRYPT, dmcrypt, crypto_cb_write_done, 1,
     "crypto_cb_write_done(crp = %p, bp = %p, n = %d)",
@@ -76,6 +77,8 @@ KTR_INFO(KTR_DMCRYPT, dmcrypt, bio_write_done, 1,
     "bio_write_done(bp = %p)", struct buf *bp);
 KTR_INFO(KTR_DMCRYPT, dmcrypt, crypto_write_retry, 1,
     "crypto_write_retry(crp = %p)", struct buf *bp);
+KTR_INFO(KTR_DMCRYPT, dmcrypt, crypto_read_retry, 1,
+    "crypto_read_retry(crp = %p)", struct buf *bp);
 KTR_INFO(KTR_DMCRYPT, dmcrypt, bio_read_done, 2,
     "bio_read_done(bp = %p)", struct buf *bp);
 KTR_INFO(KTR_DMCRYPT, dmcrypt, crypto_read_start, 2,
@@ -121,7 +124,6 @@ typedef struct target_crypt_config {
 	int64_t		iv_offset;
 	SHA512_CTX	essivsha512_ctx;
 
-
 	struct iv_generator	*ivgen;
 	void	*ivgen_priv;
 
@@ -130,35 +132,31 @@ typedef struct target_crypt_config {
 
 } dm_target_crypt_config_t;
 
-struct dmtc_helper {
-	dm_target_crypt_config_t *priv;
-	caddr_t	free_addr;
-	caddr_t	orig_buf;
-	caddr_t data_buf;
-};
-
 struct dmtc_dump_helper {
 	dm_target_crypt_config_t *priv;
 	void *data;
 	size_t length;
 	off_t offset;
 
-	int sectors;
-
 	u_char space[65536];
 };
 
-#define DMTC_BUF_SIZE_WRITE \
-    (MAXPHYS + sizeof(struct dmtc_helper))
-#define DMTC_BUF_SIZE_READ \
-    (sizeof(struct dmtc_helper))
+#define DMTC_BUF_SIZE_WRITE (MAXPHYS)
+#define DMTC_BUF_SIZE_READ (MAXPHYS)
 
-static void dmtc_crypto_dump_start(dm_target_crypt_config_t *priv,
+static void dmtc_crypto_dump(dm_target_crypt_config_t *priv,
 				struct dmtc_dump_helper *dump_helper);
-static void dmtc_crypto_write_start(dm_target_crypt_config_t *priv,
-				struct bio *bio);
+
+static int
+dmtc_bio_encdec(dm_target_crypt_config_t *priv, uint8_t *data_buf, int bytes, off_t offset,
+		crypto_cipher_blockfn_t blockfn);
+
 static void dmtc_bio_read_done(struct bio *bio);
-static void dmtc_bio_read_start(dm_target_crypt_config_t *priv, struct bio *bio);
+static void dmtc_bio_read_decrypt(dm_target_crypt_config_t *priv, struct bio *bio);
+static void dmtc_bio_read_decrypt_retry(void *arg1, void *arg2);
+
+static void dmtc_bio_write_encrypt(dm_target_crypt_config_t *priv, struct bio *bio);
+static void dmtc_bio_write_encrypt_retry(void *arg1, void *arg2);
 static void dmtc_bio_write_done(struct bio *bio);
 
 static ivgen_ctor_t	essiv_ivgen_ctor;
@@ -613,8 +611,16 @@ dm_target_crypt_destroy(dm_table_entry_t *table_en)
  *			STRATEGY SUPPORT FUNCTIONS			*
  ************************************************************************
  *
- * READ PATH:	doio -> bio_read_done -> crypto_work -> crypto_cb_read_done
- * WRITE PATH:	crypto_work -> crypto_cb_write_done -> doio -> bio_write_done
+ * READ PATH:	doio -> bio_read_done -> bio_read_decrypt
+ * WRITE PATH:	bio_write_encrypt -> doio -> bio_write_done
+ */
+
+/**
+ * Use of bio_caller_infoX:
+ *
+ * bio_caller_info1: priv
+ * bio_caller_info2: orig b_data pointer (WRITE PATH only)
+ * bio_caller_info3: data_buf (WRITE PATH only)
  */
 
 /*
@@ -657,7 +663,7 @@ dm_target_crypt_strategy(dm_table_entry_t *table_en, struct buf *bp)
 		bio->bio_offset = bp->b_bio1.bio_offset +
 				  priv->block_offset * DEV_BSIZE;
 		bio->bio_caller_info1.ptr = priv;
-		dmtc_crypto_write_start(priv, bio);
+		dmtc_bio_write_encrypt(priv, bio);
 		break;
 	default:
 		vn_strategy(priv->pdev->pdev_vnode, &bp->b_bio1);
@@ -667,8 +673,9 @@ dm_target_crypt_strategy(dm_table_entry_t *table_en, struct buf *bp)
 }
 
 /*
- * STRATEGY READ PATH PART 1/3 (after read BIO completes)
+ * STRATEGY READ PATH (after read BIO completes)
  */
+
 static void
 dmtc_bio_read_done(struct bio *bio)
 {
@@ -680,81 +687,90 @@ dmtc_bio_read_done(struct bio *bio)
 
 	/*
 	 * If a read error occurs we shortcut the operation, otherwise
-	 * go on to stage 2.
+	 * go on to stage 2 (decrypt).
 	 */
 	if (bio->bio_buf->b_flags & B_ERROR) {
 		obio = pop_bio(bio);
 		biodone(obio);
 	} else {
 		priv = bio->bio_caller_info1.ptr;
-		dmtc_bio_read_start(priv, bio);
+		dmtc_bio_read_decrypt(priv, bio);
 	}
 }
 
-static void
-dmtc_bio_read_start(dm_target_crypt_config_t *priv, struct bio *bio)
+static int
+dmtc_bio_encdec(dm_target_crypt_config_t *priv, uint8_t *data_buf, int bytes, off_t offset,
+		crypto_cipher_blockfn_t blockfn)
 {
-	int i, bytes, sectors;
-	off_t isector;
-	uint8_t *data_buf;
+	struct crypto_symm_cipher_iv iv;
+	int sectors = bytes / DEV_BSIZE;	/* Number of sectors */
+	off_t isector = offset / DEV_BSIZE;	/* ivgen salt base? */
 
-	/*
-	 * Note: b_resid no good after read I/O, it will be 0, use
-	 *	 b_bcount.
-	 */
-	bytes = bio->bio_buf->b_bcount;
-	data_buf = bio->bio_buf->b_data;
-	isector = bio->bio_offset / DEV_BSIZE;	/* ivgen salt base? */
-	sectors = bytes / DEV_BSIZE;		/* Number of sectors */
+	KKASSERT((sectors * DEV_BSIZE) == bytes);
 
-	/*
-	 * For reads with bogus page we can't decrypt in place as stuff
-	 * can get ripped out from under us.
-	 *
-	 * XXX actually it looks like we can, and in any case the initial
-	 * read already completed and threw crypted data into the buffer
-	 * cache buffer.  Disable for now.
-	 */
-	bio->bio_buf->b_error = 0;
-
-	for (i = 0; i < sectors; i++) {
+	for (int i = 0; i < sectors; i++) {
 		/*
 		 * Note: last argument is used to generate salt(?) and is
 		 *	 a 64 bit value, but the original code passed an
 		 *	 int.  Changing it now will break pre-existing
 		 *	 crypt volumes.
 		 */
-		struct crypto_symm_cipher_iv iv;
-		priv->ivgen->gen_iv(priv, (uint8_t*)&iv, sizeof(iv), isector + i);
+		priv->ivgen->gen_iv(
+				priv,
+				(uint8_t*)&iv,
+				sizeof(iv),
+				isector + i);
 
-		int error = priv->crypto_cipher->decrypt(
-				&priv->crypto_context,
+		int error = blockfn(&priv->crypto_context,
 				data_buf + i * DEV_BSIZE,
 				DEV_BSIZE, &iv);
 
-		/*
-		 * Cumulative error
-		 */
 		if (error) {
-			kprintf("dm_target_crypt: dmtc_crypto_cb_read_done "
-				"crp_etype = %d\n",
-				error);
-			bio->bio_buf->b_error = error;
+			return (error);
 		}
 	}
 
+	return (0);
+}
+
+static void
+dmtc_bio_read_decrypt(dm_target_crypt_config_t *priv, struct bio *bio)
+{
+	int bytes;
+	uint8_t *data_buf;
+
+	data_buf = mpipe_alloc_callback(&priv->read_mpipe,
+				     dmtc_bio_read_decrypt_retry, priv, bio);
+	if (data_buf == NULL)
+		return;
+
 	/*
-	 * For the B_HASBOGUS case we didn't decrypt in place,
-	 * so we need to copy stuff back into the buf.
-	 *
-	 * (disabled for now).
+	 * Note: b_resid no good after read I/O, it will be 0, use
+	 *	 b_bcount.
 	 */
+	bytes = bio->bio_buf->b_bcount;
+
+	KKASSERT(bytes <= DMTC_BUF_SIZE_READ);
+
+	/*
+	 * Unconditionally copy in data. Never decrypt in place!
+	 *
+	 * For reads with bogus page we can't decrypt in place as stuff
+	 * can get ripped out from under us.
+	 */
+	memcpy(data_buf, bio->bio_buf->b_data, bytes);
+
+	bio->bio_buf->b_error = dmtc_bio_encdec(priv, data_buf, bytes, bio->bio_offset,
+						priv->crypto_cipher->decrypt);
+
 	if (bio->bio_buf->b_error) {
+		kprintf("dm_target_crypt: dmtc_bio_read_decrypt error = %d\n",
+					bio->bio_buf->b_error);
+
 		bio->bio_buf->b_flags |= B_ERROR;
 	}
-	// XXX
-	else if (bio->bio_buf->b_flags & B_HASBOGUS) {
-		kprintf("dmtc: BOGUS\n");
+	else {
+		memcpy(bio->bio_buf->b_data, data_buf, bytes);
 	}
 #if 0
 	else if (bio->bio_buf->b_flags & B_HASBOGUS) {
@@ -762,47 +778,40 @@ dmtc_bio_read_start(dm_target_crypt_config_t *priv, struct bio *bio)
 		       bio->bio_buf->b_bcount);
 	}
 #endif
+	mpipe_free(&priv->read_mpipe, data_buf);
 	struct bio *obio = pop_bio(bio);
 	biodone(obio);
-
 }
 
-/*
- * STRATEGY READ PATH PART 2/3
- */
-
-/* END OF STRATEGY READ SECTION */
-
-/*
- * STRATEGY WRITE PATH PART 1/3
- */
-
 static void
-dmtc_crypto_write_retry(void *arg1, void *arg2)
+dmtc_bio_read_decrypt_retry(void *arg1, void *arg2)
 {
 	dm_target_crypt_config_t *priv = arg1;
 	struct bio *bio = arg2;
 
-	KTR_LOG(dmcrypt_crypto_write_retry, bio->bio_buf);
+	KTR_LOG(dmcrypt_crypto_read_retry, bio->bio_buf);
 
-	dmtc_crypto_write_start(priv, bio);
+	dmtc_bio_read_decrypt(priv, bio);
 }
 
+/* END OF STRATEGY READ SECTION */
+
+/*
+ * STRATEGY WRITE PATH
+ */
 
 static void
-dmtc_crypto_write_start(dm_target_crypt_config_t *priv, struct bio *bio)
+dmtc_bio_write_encrypt(dm_target_crypt_config_t *priv, struct bio *bio)
 {
-	struct dmtc_helper *dmtc;
-	int i, bytes, sectors;
-	off_t isector;
-	u_char *space;
+	int bytes;
+	uint8_t *data_buf;
 
 	/*
 	 * For writes and reads with bogus page don't decrypt in place.
 	 */
-	space = mpipe_alloc_callback(&priv->write_mpipe,
-				     dmtc_crypto_write_retry, priv, bio);
-	if (space == NULL)
+	data_buf = mpipe_alloc_callback(&priv->write_mpipe,
+				     dmtc_bio_write_encrypt_retry, priv, bio);
+	if (data_buf == NULL)
 		return;
 
 	/*
@@ -810,78 +819,60 @@ dmtc_crypto_write_start(dm_target_crypt_config_t *priv, struct bio *bio)
 	 */
 	bytes = bio->bio_buf->b_bcount;
 
-	dmtc = (struct dmtc_helper *)space;
-	dmtc->free_addr = space;
-	space += sizeof(struct dmtc_helper);
-	memcpy(space, bio->bio_buf->b_data, bytes);
+	KKASSERT(bytes <= DMTC_BUF_SIZE_WRITE);
 
-	bio->bio_caller_info2.ptr = dmtc;
-	bio->bio_buf->b_error = 0;
+	memcpy(data_buf, bio->bio_buf->b_data, bytes);
 
-	dmtc->orig_buf = bio->bio_buf->b_data;
-	dmtc->data_buf = space;
-	dmtc->priv = priv;
-
-	isector = bio->bio_offset / DEV_BSIZE;	/* ivgen salt base? */
-	sectors = bytes / DEV_BSIZE;		/* Number of sectors */
-
-	for (i = 0; i < sectors; i++) {
-		/*
-		 * Note: last argument is used to generate salt(?) and is
-		 *	 a 64 bit value, but the original code passed an
-		 *	 int.  Changing it now will break pre-existing
-		 *	 crypt volumes.
-		 */
-		struct crypto_symm_cipher_iv iv;
-		priv->ivgen->gen_iv(priv, (uint8_t*)&iv, sizeof(iv), isector + i);
-
-		int error = priv->crypto_cipher->encrypt(
-				&priv->crypto_context,
-				dmtc->data_buf + i * DEV_BSIZE,
-				DEV_BSIZE, &iv);
-
-		/*
-		 * Cumulative error
-		 */
-		if (error != 0) {
-			kprintf("dm_target_crypt: dmtc_crypto_cb_write_done "
-				"crp_etype = %d\n",
-			error);
-			bio->bio_buf->b_error = error;
-		}
-	}
+	bio->bio_buf->b_error = dmtc_bio_encdec(priv, data_buf, bytes, bio->bio_offset,
+						priv->crypto_cipher->encrypt);
 
 	if (bio->bio_buf->b_error) {
+		kprintf("dm_target_crypt: dmtc_bio_write_encrypt error = %d\n",
+					bio->bio_buf->b_error);
+
 		bio->bio_buf->b_flags |= B_ERROR;
-		mpipe_free(&dmtc->priv->write_mpipe, dmtc->free_addr);
+		mpipe_free(&priv->write_mpipe, data_buf);
 		struct bio *obio = pop_bio(bio);
 		biodone(obio);
 	} else {
-		dmtc->orig_buf = bio->bio_buf->b_data;
-		bio->bio_buf->b_data = dmtc->data_buf;
+		bio->bio_caller_info2.ptr = bio->bio_buf->b_data; /* orig_buf */
+		bio->bio_caller_info3.ptr = data_buf;
+		bio->bio_buf->b_data = data_buf;
 		bio->bio_done = dmtc_bio_write_done;
 		vn_strategy(priv->pdev->pdev_vnode, bio);
 	}
 }
 
-/*
- * STRATEGY WRITE PATH PART 3/3
- */
+static void
+dmtc_bio_write_encrypt_retry(void *arg1, void *arg2)
+{
+	dm_target_crypt_config_t *priv = arg1;
+	struct bio *bio = arg2;
+
+	KTR_LOG(dmcrypt_bio_write_retry, bio->bio_buf);
+
+	dmtc_bio_write_encrypt(priv, bio);
+}
+
 static void
 dmtc_bio_write_done(struct bio *bio)
 {
-	struct dmtc_helper *dmtc;
 	struct bio *obio;
+	dm_target_crypt_config_t *priv;
 
-	dmtc = bio->bio_caller_info2.ptr;
-	bio->bio_buf->b_data = dmtc->orig_buf;
-	mpipe_free(&dmtc->priv->write_mpipe, dmtc->free_addr);
+	priv = bio->bio_caller_info1.ptr;
+
+	mpipe_free(&priv->write_mpipe, bio->bio_caller_info3.ptr);
+
+	// Restore original bio buffer
+	bio->bio_buf->b_data = bio->bio_caller_info2.ptr;
 
 	KTR_LOG(dmcrypt_bio_write_done, bio->bio_buf);
 
 	obio = pop_bio(bio);
 	biodone(obio);
 }
+
 /* END OF STRATEGY WRITE SECTION */
 
 
@@ -906,7 +897,6 @@ dm_target_crypt_dump(dm_table_entry_t *table_en, void *data, size_t length, off_
 
 	/* Magically enable tsleep */
 	tsleep_crypto_dump = 1;
-	id = 0;
 
 	/*
 	 * 0 length means flush buffers and return
@@ -928,7 +918,7 @@ dm_target_crypt_dump(dm_table_entry_t *table_en, void *data, size_t length, off_
 	dump_helper.length = length;
 	dump_helper.offset = offset +
 	    priv->block_offset * DEV_BSIZE;
-	dmtc_crypto_dump_start(priv, &dump_helper);
+	dmtc_crypto_dump(priv, &dump_helper);
 
 	dump_helper.offset = dm_pdev_correct_dump_offset(priv->pdev,
 	    dump_helper.offset);
@@ -942,45 +932,19 @@ dm_target_crypt_dump(dm_table_entry_t *table_en, void *data, size_t length, off_
 }
 
 static void
-dmtc_crypto_dump_start(dm_target_crypt_config_t *priv, struct dmtc_dump_helper *dump_helper)
+dmtc_crypto_dump(dm_target_crypt_config_t *priv, struct dmtc_dump_helper *dump_helper)
 {
-	int i, bytes, sectors;
-	off_t isector;
+	int bytes = dump_helper->length;
 
-	bytes = dump_helper->length;
-
-	isector = dump_helper->offset / DEV_BSIZE;	/* ivgen salt base? */
-	sectors = bytes / DEV_BSIZE;		/* Number of sectors */
-	dump_helper->sectors = sectors;
-#if 0
-	kprintf("Dump, bytes = %d, "
-		"sectors = %d, LENGTH=%zu\n", bytes, sectors, dump_helper->length);
-#endif
 	KKASSERT(dump_helper->length <= 65536);
 
 	memcpy(dump_helper->space, dump_helper->data, bytes);
 
-	for (i = 0; i < sectors; i++) {
-		/*
-		 * Note: last argument is used to generate salt(?) and is
-		 *	 a 64 bit value, but the original code passed an
-		 *	 int.  Changing it now will break pre-existing
-		 *	 crypt volumes.
-		 */
-		struct crypto_symm_cipher_iv iv;
-		priv->ivgen->gen_iv(priv, (uint8_t*)&iv, sizeof(iv), isector + i);
-
-		int error = priv->crypto_cipher->encrypt(
-				&priv->crypto_context,
-				dump_helper->space + i * DEV_BSIZE,
-				DEV_BSIZE, &iv);
-
-		if (error != 0) {
-			kprintf("dm_target_crypt: dmtc_crypto_cb_dump_done "
-				"crp_etype = %d\n",
-			error);
-		}
-
+	int error = dmtc_bio_encdec(priv, dump_helper->space, bytes, dump_helper->offset,
+			priv->crypto_cipher->encrypt);
+	if (error != 0) {
+		kprintf("dm_target_crypt: dmtc_crypto_dump = %d\n",
+		error);
 	}
 }
 

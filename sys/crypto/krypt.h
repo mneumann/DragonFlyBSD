@@ -14,6 +14,10 @@ struct crypto_symm_cipher_iv {
 	uint8_t _iv[64];
 };
 
+typedef int (*crypto_cipher_blockfn_t)(
+    const struct crypto_symm_cipher_context *ctx, uint8_t *data,
+    int datalen, struct crypto_symm_cipher_iv *iv);
+
 struct crypto_symm_cipher {
 	const char *name;
 	uint16_t blocksize;
@@ -26,13 +30,8 @@ struct crypto_symm_cipher {
 	int (*setkey)(struct crypto_symm_cipher_context *ctx,
 	    const uint8_t *keydata, int keylen);
 
-	int (*encrypt)(const struct crypto_symm_cipher_context *ctx,
-	    uint8_t *data, int datalen,
-	    struct crypto_symm_cipher_iv *iv);
-
-	int (*decrypt)(const struct crypto_symm_cipher_context *ctx,
-	    uint8_t *data, int datalen,
-	    struct crypto_symm_cipher_iv *iv);
+	crypto_cipher_blockfn_t encrypt;
+	crypto_cipher_blockfn_t decrypt;
 };
 
 const struct crypto_symm_cipher *
