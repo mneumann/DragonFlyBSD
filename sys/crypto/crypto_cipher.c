@@ -41,7 +41,7 @@
 #include <sys/param.h>
 #include <sys/systm.h>
 
-#include "crypto_cipher.h"
+#include <crypto/crypto_cipher.h>
 
 /**
  * --------------------------------------
@@ -121,6 +121,18 @@ cipher_null_decrypt(const struct crypto_cipher_context *ctx __unused,
 	return (0);
 }
 
+const struct crypto_cipher cipher_null = {
+	"null",
+	"null",
+	4,
+	0,
+	0,
+	cipher_null_probe,
+	cipher_null_setkey,
+	cipher_null_encrypt,
+	cipher_null_decrypt,
+};
+
 /**
  * --------------------------------------
  * AES-CBC (Rijndael-128)
@@ -179,6 +191,19 @@ aes_cbc_decrypt(const struct crypto_cipher_context *ctx, uint8_t *data,
 
 	return (0);
 }
+
+const struct crypto_cipher cipher_aes_cbc = {
+	"aes-cbc",
+	"AES-CBC (Rijndael-128) in software",
+	AES_BLOCK_LEN,
+	AES_BLOCK_LEN,
+	sizeof(rijndael_ctx),
+	aes_cbc_probe,
+	aes_cbc_setkey,
+	aes_cbc_encrypt,
+	aes_cbc_decrypt,
+};
+
 #if 0
 /**
  * --------------------------------------
@@ -299,23 +324,16 @@ aes_xts_decrypt(const void *ctx, uint8_t *data, int datalen,
  */
 #endif
 
-const struct crypto_cipher crypto_ciphers[3] = {
-	{ "null", 4, 0, 0, cipher_null_probe, cipher_null_setkey,
-	    cipher_null_encrypt, cipher_null_decrypt },
-
-	/*
-	 * AES-CBC (Rijndael-128)
-	 */
-	{ "aes-cbc", AES_BLOCK_LEN, AES_BLOCK_LEN, sizeof(rijndael_ctx),
-	    aes_cbc_probe, aes_cbc_setkey, aes_cbc_encrypt,
-	    aes_cbc_decrypt },
+const struct crypto_cipher *crypto_ciphers[3] = {
+	&cipher_null,
+	&cipher_aes_cbc,
 
 #if 0
 	{ "aes-xts", AES_XTS_BLOCK_LEN, AES_XTS_IV_LEN,
 	    sizeof(struct aes_xts_ctx), aes_xts_probe, aes_xts_setkey,
 	    aes_xts_encrypt, aes_xts_decrypt },
 #endif
-	{ NULL, 0, 0, 0, NULL, NULL, NULL, NULL }
+	NULL,
 };
 
 /**
@@ -327,8 +345,9 @@ const struct crypto_cipher *
 crypto_cipher_find(const char *algo_name, const char *mode_name,
     int keysize_in_bits)
 {
-	for (const struct crypto_cipher *cipherp = crypto_ciphers;
-	     cipherp->name; ++cipherp) {
+	for (const struct crypto_cipher **cipherpp = crypto_ciphers;
+	     *cipherpp; ++cipherpp) {
+		const struct crypto_cipher *cipherp = *cipherpp;
 		if ((*cipherp->probe)(algo_name, mode_name,
 			keysize_in_bits) == 0) {
 			return cipherp;

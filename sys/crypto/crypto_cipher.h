@@ -19,7 +19,8 @@ typedef int (
     uint8_t *data, int datalen, struct crypto_cipher_iv *iv);
 
 struct crypto_cipher {
-	const char *name;
+	const char *shortname;
+	const char *description;
 	uint16_t blocksize;
 	uint16_t ivsize;
 	uint16_t ctxsize;
