@@ -87,7 +87,7 @@ aesni_encrypt_cbc(int rounds, const void *key_schedule, size_t len,
 	(AESNI_ALIGNED_KEY_SCHEDULES(ctx, CONST)->dec_schedule)
 
 #define KKASSERT_AESNI_ALIGNED(ptr) \
-	KKASSERT((((uintptr_t)(uint8_t *)ptr) % AESNI_ALIGN) == 0)
+	KKASSERT((((uintptr_t)(const uint8_t *)ptr) % AESNI_ALIGN) == 0)
 
 static int
 cipher_aesni_cbc_probe(const char *algo_name, const char *mode_name,
