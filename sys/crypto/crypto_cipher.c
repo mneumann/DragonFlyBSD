@@ -101,7 +101,7 @@ cipher_null_probe(const char *algo_name, const char *mode_name __unused,
 
 static int
 cipher_null_setkey(struct crypto_cipher_context *ctx __unused,
-    const uint8_t *keydata __unused, int keylen __unused)
+    const uint8_t *keydata __unused, int keylen_in_bytes __unused)
 {
 	return (0);
 }
@@ -156,14 +156,19 @@ aes_cbc_probe(const char *algo_name, const char *mode_name,
 
 static int
 aes_cbc_setkey(struct crypto_cipher_context *ctx,
-    const uint8_t *keydata, int keylen)
+    const uint8_t *keydata, int keylen_in_bytes)
 {
-	if (keylen != 16 && keylen != 24 && keylen != 32)
+	switch (keylen_in_bytes * 8) {
+	case 128:
+	case 192:
+	case 256:
+		rijndael_set_key((void *)ctx, keydata,
+		    keylen_in_bytes * 8);
+		return (0);
+
+	default:
 		return (EINVAL);
-
-	rijndael_set_key((void *)ctx, keydata, keylen * 8);
-
-	return (0);
+	}
 }
 
 static int
@@ -324,8 +329,10 @@ aes_xts_decrypt(const void *ctx, uint8_t *data, int datalen,
  */
 #endif
 
-const struct crypto_cipher *crypto_ciphers[3] = {
+const struct crypto_cipher *crypto_ciphers[4] = {
 	&cipher_null,
+	/* first probe AESNI, then fallback to software AES */
+	&cipher_aesni_cbc,
 	&cipher_aes_cbc,
 
 #if 0

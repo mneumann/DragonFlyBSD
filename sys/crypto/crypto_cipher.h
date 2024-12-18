@@ -1,17 +1,21 @@
 #ifndef _CRYPTO_CIPHER_H_
 #define _CRYPTO_CIPHER_H_
 
+#include <crypto/aesni/aesni.h>
 #include <crypto/rijndael/rijndael.h>
 
 struct crypto_cipher_context {
 	union {
-		rijndael_ctx ctx;
-	} ctx;
+		rijndael_ctx _rijndael;
+		aesni_ctx _aesni;
+	} _ctx;
 };
 
 struct crypto_cipher_iv {
-	// TODO
-	uint8_t _iv[64];
+	union {
+		uint8_t _rijndael[16];
+		aesni_iv _aesni;
+	} _iv;
 };
 
 typedef int (
@@ -29,7 +33,7 @@ struct crypto_cipher {
 	    int keysize_in_bits);
 
 	int (*setkey)(struct crypto_cipher_context *ctx,
-	    const uint8_t *keydata, int keylen);
+	    const uint8_t *keydata, int keylen_in_bytes);
 
 	crypto_cipher_blockfn_t encrypt;
 	crypto_cipher_blockfn_t decrypt;
