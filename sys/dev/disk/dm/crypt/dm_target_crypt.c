@@ -330,6 +330,8 @@ essiv_ivgen(dm_target_crypt_config_t *priv, u_int8_t *iv,
 			&iv2
 			);
 
+	explicit_bzero(&iv2, sizeof(iv2));
+
 	if (error)
 		kprintf("dm_target_crypt: essiv_ivgen, error = %d\n", error);
 }
@@ -664,6 +666,7 @@ dmtc_bio_encdec(dm_target_crypt_config_t *priv, uint8_t *data_buf, int bytes, of
 	struct crypto_cipher_iv iv;
 	int sectors = bytes / DEV_BSIZE;	/* Number of sectors */
 	off_t isector = offset / DEV_BSIZE;	/* ivgen salt base? */
+	int error = 0;
 
 	KKASSERT((sectors * DEV_BSIZE) == bytes);
 
@@ -680,16 +683,18 @@ dmtc_bio_encdec(dm_target_crypt_config_t *priv, uint8_t *data_buf, int bytes, of
 				sizeof(iv),
 				isector + i);
 
-		int error = blockfn(&priv->crypto_context,
+		error = blockfn(&priv->crypto_context,
 				data_buf + i * DEV_BSIZE,
 				DEV_BSIZE, &iv);
 
 		if (error) {
-			return (error);
+			break;
 		}
 	}
 
-	return (0);
+	explicit_bzero(&iv, sizeof(iv));
+
+	return (error);
 }
 
 static void
