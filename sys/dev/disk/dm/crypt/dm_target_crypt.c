@@ -38,7 +38,6 @@
 #include <sys/endian.h>
 
 #include <sys/bio.h>
-#include <sys/globaldata.h>
 #include <sys/kerneldump.h>
 #include <sys/malloc.h>
 #include <sys/mpipe.h>
@@ -47,11 +46,8 @@
 #include <crypto/sha2/sha2.h>
 #include <crypto/rmd160/rmd160.h>
 #include <crypto/krypt.h>
-#include <machine/cpufunc.h>
-#include <cpu/atomic.h>
 
 #include <sys/ktr.h>
-#include <sys/spinlock2.h>
 
 #include <dev/disk/dm/dm.h>
 MALLOC_DEFINE(M_DMCRYPT, "dm_crypt", "Device Mapper Target Crypt");
