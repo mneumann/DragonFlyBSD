@@ -681,43 +681,6 @@ dmtc_bio_read_done(struct bio *bio)
 	}
 }
 
-static int
-dmtc_bio_encdec(dm_target_crypt_config_t *priv, uint8_t *data_buf, int bytes, off_t offset,
-		crypto_cipher_blockfn_t blockfn)
-{
-	struct crypto_cipher_iv iv;
-	int sectors = bytes / DEV_BSIZE;	/* Number of sectors */
-	off_t isector = offset / DEV_BSIZE;	/* ivgen salt base? */
-	int error = 0;
-
-	KKASSERT((sectors * DEV_BSIZE) == bytes);
-
-	for (int i = 0; i < sectors; i++) {
-		/*
-		 * Note: last argument is used to generate salt(?) and is
-		 *	 a 64 bit value, but the original code passed an
-		 *	 int.  Changing it now will break pre-existing
-		 *	 crypt volumes.
-		 */
-		priv->ivgen->gen_iv(
-				priv,
-				(uint8_t*)&iv,
-				sizeof(iv),
-				isector + i);
-
-		error = blockfn(&priv->crypto_context,
-				data_buf + i * DEV_BSIZE,
-				DEV_BSIZE, &iv);
-
-		if (error) {
-			break;
-		}
-	}
-
-	explicit_bzero(&iv, sizeof(iv));
-
-	return (error);
-}
 
 static void
 dmtc_bio_read_decrypt(dm_target_crypt_config_t *priv, struct bio *bio)
@@ -855,7 +818,43 @@ dmtc_bio_write_done(struct bio *bio)
 
 /* END OF STRATEGY WRITE SECTION */
 
+static int
+dmtc_bio_encdec(dm_target_crypt_config_t *priv, uint8_t *data_buf, int bytes, off_t offset,
+		crypto_cipher_blockfn_t blockfn)
+{
+	struct crypto_cipher_iv iv;
+	int sectors = bytes / DEV_BSIZE;	/* Number of sectors */
+	off_t isector = offset / DEV_BSIZE;	/* ivgen salt base? */
+	int error = 0;
 
+	KKASSERT((sectors * DEV_BSIZE) == bytes);
+
+	for (int i = 0; i < sectors; i++) {
+		/*
+		 * Note: last argument is used to generate salt(?) and is
+		 *	 a 64 bit value, but the original code passed an
+		 *	 int.  Changing it now will break pre-existing
+		 *	 crypt volumes.
+		 */
+		priv->ivgen->gen_iv(
+				priv,
+				(uint8_t*)&iv,
+				sizeof(iv),
+				isector + i);
+
+		error = blockfn(&priv->crypto_context,
+				data_buf + i * DEV_BSIZE,
+				DEV_BSIZE, &iv);
+
+		if (error) {
+			break;
+		}
+	}
+
+	explicit_bzero(&iv, sizeof(iv));
+
+	return (error);
+}
 
 /* DUMPING MAGIC */
 
