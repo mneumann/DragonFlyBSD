@@ -87,7 +87,7 @@ static int
 workqueue_submit_job(struct workqueue *wq, workqueue_job_callback *wqj_cb, void *wqj_arg1, void *wqj_arg2);
 
 static void
-workqueue_start(struct workqueue *wq, void *ctx);
+workqueue_start(struct workqueue *wq, int cpu, void *ctx);
 
 static void
 workqueue_stop(struct workqueue *wq);
@@ -304,7 +304,7 @@ workqueue_worker(void *wq_arg)
 }
 
 static void
-workqueue_start(struct workqueue *wq, void *ctx)
+workqueue_start(struct workqueue *wq, int cpu, void *ctx)
 {
 	bzero(wq, sizeof(*wq));
 
@@ -318,9 +318,10 @@ workqueue_start(struct workqueue *wq, void *ctx)
 	wq->wq_is_closing = false;
 	wq->wq_ctx = ctx;
 
-    	kthread_create(workqueue_worker,
+    	kthread_create_cpu(workqueue_worker,
 			wq,
 			&wq->wq_worker,
+			cpu,
 			"dm_target_crypt: crypto worker");
 	kprintf("workqueue started\n");
 }
@@ -678,7 +679,12 @@ dm_target_crypt_init(dm_table_entry_t *table_en, int argc, char **argv)
 		priv->crypto_worker_context[cpu].data_buf = kmalloc(DMTC_BUF_SIZE, M_DMCRYPT, M_WAITOK);
 		priv->crypto_worker_context[cpu].data_buf_size = DMTC_BUF_SIZE;
 		priv->crypto_worker_context[cpu].data_buf_busy = false;
-		workqueue_start(&priv->crypto_workqueue[cpu], &priv->crypto_worker_context[cpu]);
+	}
+
+	for (int cpu = 0; cpu < ncpus; ++cpu)
+	{
+		workqueue_start(&priv->crypto_workqueue[cpu], cpu, &priv->crypto_worker_context[cpu]);
+		workqueue_start(&priv->crypto_workqueue[cpu+ncpus], cpu, &priv->crypto_worker_context[cpu]);
 	}
 
 	priv->crypto_workqueue_write_schedule = 0;
