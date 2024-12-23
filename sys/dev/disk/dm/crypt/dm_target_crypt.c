@@ -145,15 +145,23 @@ typedef struct target_crypt_config {
 
 	/**
 	 * per-CPU work queues and worker contexts [0..ncpus)
+	 *
+	 * We use separate workqueues for read and write requests.
+	 * Read requests do not cause long stalls, as they are synchronous
+	 * operations from userspace, but writes can cause long stalls
+	 * due to write buffering.
 	 */
-	struct workqueue	*crypto_workqueues;
-	struct worker_context  	*crypto_worker_contexts;
+	struct workqueue	*crypto_read_workqueues;
+	struct worker_context  	*crypto_read_worker_contexts;
+	struct workqueue	*crypto_write_workqueues;
+	struct worker_context  	*crypto_write_worker_contexts;
 
 	/**
 	 * Atomic counter used to distribute requests
 	 * to the crypto work queues using round robin.
 	 */
-	int next_crypto_workqueue_rr;
+	int crypto_read_workqueue_next_rr;
+	int crypto_write_workqueue_next_rr;
 
 } dm_target_crypt_config_t;
 
@@ -674,18 +682,26 @@ dm_target_crypt_init(dm_table_entry_t *table_en, int argc, char **argv)
 	/**
 	 * Allocate and start work queues / workers.
 	 */
-	priv->crypto_worker_contexts = kmalloc(sizeof(struct worker_context)*ncpus, M_DMCRYPT, M_WAITOK | M_ZERO);
-	priv->crypto_workqueues = kmalloc(sizeof(struct workqueue)*ncpus, M_DMCRYPT, M_WAITOK | M_ZERO);
+	priv->crypto_read_worker_contexts = kmalloc(sizeof(struct worker_context)*ncpus, M_DMCRYPT, M_WAITOK | M_ZERO);
+	priv->crypto_write_worker_contexts = kmalloc(sizeof(struct worker_context)*ncpus, M_DMCRYPT, M_WAITOK | M_ZERO);
+	priv->crypto_read_workqueues = kmalloc(sizeof(struct workqueue)*ncpus, M_DMCRYPT, M_WAITOK | M_ZERO);
+	priv->crypto_write_workqueues = kmalloc(sizeof(struct workqueue)*ncpus, M_DMCRYPT, M_WAITOK | M_ZERO);
 
 	for (int cpu = 0; cpu < ncpus; ++cpu)
 	{
-		priv->crypto_worker_contexts[cpu].data_buf = kmalloc(DMTC_BUF_SIZE, M_DMCRYPT, M_WAITOK);
-		priv->crypto_worker_contexts[cpu].data_buf_size = DMTC_BUF_SIZE;
-		priv->crypto_worker_contexts[cpu].data_buf_busy = false;
-		workqueue_start(&priv->crypto_workqueues[cpu], cpu, &priv->crypto_worker_contexts[cpu]);
+		priv->crypto_read_worker_contexts[cpu].data_buf = kmalloc(DMTC_BUF_SIZE, M_DMCRYPT, M_WAITOK);
+		priv->crypto_read_worker_contexts[cpu].data_buf_size = DMTC_BUF_SIZE;
+		priv->crypto_read_worker_contexts[cpu].data_buf_busy = false;
+		workqueue_start(&priv->crypto_read_workqueues[cpu], cpu, &priv->crypto_read_worker_contexts[cpu]);
+
+		priv->crypto_write_worker_contexts[cpu].data_buf = kmalloc(DMTC_BUF_SIZE, M_DMCRYPT, M_WAITOK);
+		priv->crypto_write_worker_contexts[cpu].data_buf_size = DMTC_BUF_SIZE;
+		priv->crypto_write_worker_contexts[cpu].data_buf_busy = false;
+		workqueue_start(&priv->crypto_write_workqueues[cpu], cpu, &priv->crypto_write_worker_contexts[cpu]);
 	}
 
-	priv->next_crypto_workqueue_rr = 0;
+	priv->crypto_read_workqueue_next_rr = 0;
+	priv->crypto_write_workqueue_next_rr = 0;
 
 	return 0;
 
@@ -736,12 +752,19 @@ dm_target_crypt_destroy(dm_table_entry_t *table_en)
 
 	for (int cpu = 0; cpu < ncpus; cpu++)
 	{
-		kprintf("Stopping work queue %d\n", cpu);
-		workqueue_stop(&priv->crypto_workqueues[cpu]);
-		kfree(priv->crypto_worker_contexts[cpu].data_buf, M_DMCRYPT);
+		kprintf("Stopping read work queue %d\n", cpu);
+		workqueue_stop(&priv->crypto_read_workqueues[cpu]);
+		kfree(priv->crypto_read_worker_contexts[cpu].data_buf, M_DMCRYPT);
+
+		kprintf("Stopping write work queue %d\n", cpu);
+		workqueue_stop(&priv->crypto_write_workqueues[cpu]);
+		kfree(priv->crypto_write_worker_contexts[cpu].data_buf, M_DMCRYPT);
 	}
-	kfree(priv->crypto_worker_contexts, M_DMCRYPT);
-	kfree(priv->crypto_workqueues, M_DMCRYPT);
+	kfree(priv->crypto_read_worker_contexts, M_DMCRYPT);
+	kfree(priv->crypto_read_workqueues, M_DMCRYPT);
+
+	kfree(priv->crypto_write_worker_contexts, M_DMCRYPT);
+	kfree(priv->crypto_write_workqueues, M_DMCRYPT);
 
 	/*
 	 * Clean up the crypt config
@@ -827,9 +850,14 @@ dm_target_crypt_strategy(dm_table_entry_t *table_en, struct buf *bp)
 	return 0;
 }
 
-__inline static int select_workqueue_index(dm_target_crypt_config_t *priv)
+__inline static int select_read_workqueue_index(dm_target_crypt_config_t *priv)
 {
-	return atomic_fetchadd_int(&priv->next_crypto_workqueue_rr, 1) % ncpus;
+	return atomic_fetchadd_int(&priv->crypto_read_workqueue_next_rr, 1) % ncpus;
+}
+
+__inline static int select_write_workqueue_index(dm_target_crypt_config_t *priv)
+{
+	return atomic_fetchadd_int(&priv->crypto_write_workqueue_next_rr, 1) % ncpus;
 }
 
 /*
@@ -912,7 +940,7 @@ dmtc_bio_read_decrypt_job_do(dm_target_crypt_config_t *priv, struct bio *bio, st
 static void
 dmtc_bio_read_decrypt(dm_target_crypt_config_t *priv, struct bio *bio)
 {
-	int error = workqueue_submit_job(&priv->crypto_workqueues[select_workqueue_index(priv)],
+	int error = workqueue_submit_job(&priv->crypto_read_workqueues[select_read_workqueue_index(priv)],
 			dmtc_bio_read_decrypt_job, (void*)priv, (void*)bio);
 	if (error) {
 		bio->bio_buf->b_error = error;
@@ -1006,7 +1034,7 @@ dmtc_bio_write_done(struct bio *bio)
 static void
 dmtc_bio_write_encrypt(dm_target_crypt_config_t *priv, struct bio *bio)
 {
-	int error = workqueue_submit_job(&priv->crypto_workqueues[select_workqueue_index(priv)],
+	int error = workqueue_submit_job(&priv->crypto_write_workqueues[select_write_workqueue_index(priv)],
 			dmtc_bio_write_encrypt_job, (void*)priv, (void*)bio);
 	if (error) {
 		bio->bio_buf->b_error = error;
