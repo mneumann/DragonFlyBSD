@@ -353,13 +353,18 @@ const struct crypto_cipher cipher_aes_xts = {
  *
  */
 
-const struct crypto_cipher *crypto_ciphers[5] = { &cipher_null,
+const struct crypto_cipher *crypto_ciphers[6] = {
+
+	&cipher_null,
+
 	/* first probe AESNI, then fallback to software AES */
-	&cipher_aesni_cbc, &cipher_aes_cbc,
+	&cipher_aesni_cbc, &cipher_aesni_xts,
 
-	&cipher_aes_xts,
+	/* AES in software */
+	&cipher_aes_cbc, &cipher_aes_xts,
 
-	NULL };
+	NULL
+};
 
 /**
  * --------------------------------------

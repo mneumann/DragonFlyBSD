@@ -92,6 +92,9 @@ aesni_encrypt_cbc(int rounds, const void *key_schedule, size_t len,
 #define AESNI_ALIGNED_DEC_SCHEDULE(ctx, CONST) \
 	(AESNI_ALIGNED_KEY_SCHEDULES(ctx, CONST)->dec_schedule)
 
+#define AESNI_ALIGNED_XTS_SCHEDULE(ctx, CONST) \
+	(AESNI_ALIGNED_KEY_SCHEDULES(ctx, CONST)->xts_schedule)
+
 #define KKASSERT_AESNI_ALIGNED(ptr) \
 	KKASSERT((((uintptr_t)(const uint8_t *)ptr) % AESNI_ALIGN) == 0)
 
@@ -192,7 +195,10 @@ const struct crypto_cipher cipher_aesni_cbc = {
 	cipher_aesni_cbc_decrypt,
 };
 
-#if 0
+/**
+ * AES-XTS
+ */
+
 #define AES_XTS_BLOCKSIZE 16
 #define AES_XTS_IVSIZE	  8
 #define AES_XTS_ALPHA	  0x87 /* GF(2^128) generator polynomial */
@@ -260,111 +266,120 @@ aesni_crypt_xts(int rounds, const void *data_schedule,
 	bzero(tweak, sizeof(tweak));
 }
 
-static void
+static inline void
 aesni_encrypt_xts(int rounds, const void *data_schedule,
     const void *tweak_schedule, size_t len, const uint8_t *from, uint8_t *to,
     const uint8_t iv[AES_BLOCK_LEN])
 {
-
 	aesni_crypt_xts(rounds, data_schedule, tweak_schedule, len, from, to,
 	    iv, 1);
 }
 
-static void
+static inline void
 aesni_decrypt_xts(int rounds, const void *data_schedule,
     const void *tweak_schedule, size_t len, const uint8_t *from, uint8_t *to,
     const uint8_t iv[AES_BLOCK_LEN])
 {
-
 	aesni_crypt_xts(rounds, data_schedule, tweak_schedule, len, from, to,
 	    iv, 0);
 }
-#endif
 
-#if 0
 static int
-aesni_cipher_setup_common(struct aesni_session *ses, const uint8_t *key,
-    int keylen)
+cipher_aesni_xts_probe(const char *algo_name, const char *mode_name,
+    int keysize_in_bits)
 {
+	if (aesni_disable)
+		return (-1);
 
-	switch (ses->algo) {
-	case CRYPTO_AES_CBC:
-		switch (keylen) {
-		case 128:
-			ses->rounds = AES128_ROUNDS;
-			break;
-		case 192:
-			ses->rounds = AES192_ROUNDS;
-			break;
-		case 256:
-			ses->rounds = AES256_ROUNDS;
-			break;
-		default:
-			return (EINVAL);
-		}
+	if ((cpu_feature2 & CPUID2_AESNI) == 0)
+		return (EINVAL);
+
+	if ((strcmp(algo_name, "aes") == 0) &&
+	    (strcmp(mode_name, "xts") == 0) &&
+	    (keysize_in_bits == 256 || keysize_in_bits == 512))
+		return (0);
+
+	return (-1);
+}
+
+static int
+cipher_aesni_xts_setkey(struct crypto_cipher_context *ctx,
+    const uint8_t *keydata, int keylen_in_bytes)
+{
+	bzero(ctx, sizeof(*ctx));
+	int rounds;
+
+	switch (keylen_in_bytes * 8) {
+	case 256:
+		rounds = AES128_ROUNDS;
 		break;
-	case CRYPTO_AES_XTS:
-		switch (keylen) {
-		case 256:
-			ses->rounds = AES128_ROUNDS;
-			break;
-		case 512:
-			ses->rounds = AES256_ROUNDS;
-			break;
-		default:
-			return (EINVAL);
-		}
+	case 512:
+		rounds = AES256_ROUNDS;
 		break;
 	default:
 		return (EINVAL);
 	}
 
-	aesni_set_enckey(key, ses->enc_schedule, ses->rounds);
-	aesni_set_deckey(ses->enc_schedule, ses->dec_schedule, ses->rounds);
-	if (ses->algo == CRYPTO_AES_CBC)
-		karc4random_buf(ses->iv, sizeof(ses->iv));
-	else /* if (ses->algo == CRYPTO_AES_XTS) */ {
-		aesni_set_enckey(key + keylen / 16, ses->xts_schedule,
-		    ses->rounds);
-	}
+	uint8_t *enc_schedule = AESNI_ALIGNED_ENC_SCHEDULE(ctx, );
+	uint8_t *dec_schedule = AESNI_ALIGNED_DEC_SCHEDULE(ctx, );
+	uint8_t *xts_schedule = AESNI_ALIGNED_XTS_SCHEDULE(ctx, );
+
+	AESNI_CTX(ctx).rounds = rounds;
+
+	aesni_set_enckey(keydata, enc_schedule, rounds);
+	aesni_set_deckey(enc_schedule, dec_schedule, rounds);
+	aesni_set_enckey(keydata + (keylen_in_bytes / 16), xts_schedule,
+	    rounds);
 
 	return (0);
 }
-#endif
 
-#if 0
-int
-aesni_cipher_process(struct aesni_session *ses, struct cryptodesc *enccrd,
-    struct cryptop *crp)
+static int
+cipher_aesni_xts_encrypt(const struct crypto_cipher_context *ctx, uint8_t *data,
+    int datalen, struct crypto_cipher_iv *iv)
 {
-	uint8_t *buf = (uint8_t*)crp->crp_buf;
-	int error = 0;
+	if ((datalen % AES_BLOCK_LEN) != 0)
+		return (EINVAL);
 
-	if ((enccrd->crd_flags & CRD_F_ENCRYPT) != 0) {
-		bcopy(enccrd->crd_iv, ses->iv, AES_BLOCK_LEN);
-		if (ses->algo == CRYPTO_AES_CBC) {
-			aesni_encrypt_cbc(ses->rounds, ses->enc_schedule,
-			    enccrd->crd_len, buf, buf, ses->iv);
-		} else /* if (ses->algo == CRYPTO_AES_XTS) */ {
-			aesni_encrypt_xts(ses->rounds, ses->enc_schedule,
-			    ses->xts_schedule, enccrd->crd_len, buf, buf,
-			    ses->iv);
-		}
-	} else {
-		bcopy(enccrd->crd_iv, ses->iv, AES_BLOCK_LEN);
-		if (ses->algo == CRYPTO_AES_CBC) {
-			aesni_decrypt_cbc(ses->rounds, ses->dec_schedule,
-			    enccrd->crd_len, buf, ses->iv);
-		} else /* if (ses->algo == CRYPTO_AES_XTS) */ {
-			aesni_decrypt_xts(ses->rounds, ses->dec_schedule,
-			    ses->xts_schedule, enccrd->crd_len, buf, buf,
-			    ses->iv);
-		}
-	}
-	if ((enccrd->crd_flags & CRD_F_ENCRYPT) != 0)
-		bcopy(crp->crp_buf + (enccrd->crd_len - AES_BLOCK_LEN),
-		    ses->iv, AES_BLOCK_LEN);
+	const uint8_t *enc_schedule = AESNI_ALIGNED_ENC_SCHEDULE(ctx, const);
+	const uint8_t *xts_schedule = AESNI_ALIGNED_XTS_SCHEDULE(ctx, const);
 
-	return (error);
+	KKASSERT_AESNI_ALIGNED(enc_schedule);
+	KKASSERT_AESNI_ALIGNED(xts_schedule);
+
+	aesni_encrypt_xts(AESNI_CTX(ctx).rounds, enc_schedule, xts_schedule,
+	    datalen, data, data, AESNI_IV(iv));
+
+	return (0);
 }
-#endif
+
+static int
+cipher_aesni_xts_decrypt(const struct crypto_cipher_context *ctx, uint8_t *data,
+    int datalen, struct crypto_cipher_iv *iv)
+{
+	if ((datalen % AES_BLOCK_LEN) != 0)
+		return (EINVAL);
+
+	const uint8_t *dec_schedule = AESNI_ALIGNED_DEC_SCHEDULE(ctx, const);
+	const uint8_t *xts_schedule = AESNI_ALIGNED_XTS_SCHEDULE(ctx, const);
+
+	KKASSERT_AESNI_ALIGNED(dec_schedule);
+	KKASSERT_AESNI_ALIGNED(xts_schedule);
+
+	aesni_decrypt_xts(AESNI_CTX(ctx).rounds, dec_schedule, xts_schedule,
+	    datalen, data, data, AESNI_IV(iv));
+
+	return (0);
+}
+
+const struct crypto_cipher cipher_aesni_xts = {
+	"aesni-xts",
+	"AES-XTS w/ CPU AESNI instruction",
+	AES_BLOCK_LEN,
+	AES_BLOCK_LEN,
+	sizeof(aesni_ctx),
+	cipher_aesni_xts_probe,
+	cipher_aesni_xts_setkey,
+	cipher_aesni_xts_encrypt,
+	cipher_aesni_xts_decrypt,
+};

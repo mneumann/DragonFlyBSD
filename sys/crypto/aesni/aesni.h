@@ -66,5 +66,6 @@ typedef struct {
 } aesni_ctx;
 
 extern const struct crypto_cipher cipher_aesni_cbc;
+extern const struct crypto_cipher cipher_aesni_xts;
 
 #endif
