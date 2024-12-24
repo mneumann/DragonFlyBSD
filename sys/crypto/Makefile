@@ -45,6 +45,6 @@ SRCS+=	aeskeys_${MACHINE_ARCH}.S
 SUBDIR=	rc4
 
 format:
-	clang-format14 -i crypto_cipher.c crypto_cipher.h crypto_mod.c aesni/aesni2.c
+	clang-format14 -i crypto_cipher.c crypto_cipher.h crypto_mod.c aesni/aesni.c aesni/aesni.h
 
 .include <bsd.kmod.mk>

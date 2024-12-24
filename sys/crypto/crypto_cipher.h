@@ -18,8 +18,7 @@ struct crypto_cipher_iv {
 	} _iv;
 };
 
-typedef int (
-    *crypto_cipher_blockfn_t)(const struct crypto_cipher_context *ctx,
+typedef int (*crypto_cipher_blockfn_t)(const struct crypto_cipher_context *ctx,
     uint8_t *data, int datalen, struct crypto_cipher_iv *iv);
 
 struct crypto_cipher {
@@ -32,8 +31,8 @@ struct crypto_cipher {
 	int (*probe)(const char *algo_name, const char *mode_name,
 	    int keysize_in_bits);
 
-	int (*setkey)(struct crypto_cipher_context *ctx,
-	    const uint8_t *keydata, int keylen_in_bytes);
+	int (*setkey)(struct crypto_cipher_context *ctx, const uint8_t *keydata,
+	    int keylen_in_bytes);
 
 	crypto_cipher_blockfn_t encrypt;
 	crypto_cipher_blockfn_t decrypt;

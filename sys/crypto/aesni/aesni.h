@@ -38,12 +38,12 @@
 
 #define AES_BLOCK_LEN 16
 
-#define AESNI_ALIGN	16
+#define AESNI_ALIGN   16
 
-#define	AES128_ROUNDS	10
-#define	AES192_ROUNDS	12
-#define	AES256_ROUNDS	14
-#define	AES_SCHED_LEN	((AES256_ROUNDS + 1) * AES_BLOCK_LEN)
+#define AES128_ROUNDS 10
+#define AES192_ROUNDS 12
+#define AES256_ROUNDS 14
+#define AES_SCHED_LEN ((AES256_ROUNDS + 1) * AES_BLOCK_LEN)
 
 typedef struct {
 	uint8_t iv[AES_BLOCK_LEN];

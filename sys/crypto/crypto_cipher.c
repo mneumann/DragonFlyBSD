@@ -56,18 +56,16 @@ xor_block(uint8_t *dst, const uint8_t *src, int blocksize)
 		dst[i] ^= src[i];
 }
 
-typedef void (
-    *block_fn_t)(const void *ctx, uint8_t *data, uint8_t *data2);
+typedef void (*block_fn_t)(const void *ctx, uint8_t *data, uint8_t *data2);
 
 /*
  * XOR with the IV/previous block, as appropriate.
  */
-#define ENCRYPT_DATA_CBC(block_fn, ctx, data, datalen, blocksize, iv) \
-	for (int i = 0; i < datalen; i += blocksize) {                \
-		xor_block(data + i,                                   \
-		    (i == 0) ? iv : (data + i - blocksize),           \
-		    blocksize);                                       \
-		block_fn(ctx, data + i, data + i);                    \
+#define ENCRYPT_DATA_CBC(block_fn, ctx, data, datalen, blocksize, iv)       \
+	for (int i = 0; i < datalen; i += blocksize) {                      \
+		xor_block(data + i, (i == 0) ? iv : (data + i - blocksize), \
+		    blocksize);                                             \
+		block_fn(ctx, data + i, data + i);                          \
 	}
 
 /*
@@ -76,12 +74,11 @@ typedef void (
  *
  * XOR with the IV/previous block, as appropriate
  */
-#define DECRYPT_DATA_CBC(block_fn, ctx, data, datalen, blocksize, iv) \
-	for (int i = datalen - blocksize; i >= 0; i -= blocksize) {   \
-		block_fn(ctx, data + i, data + i);                    \
-		xor_block(data + i,                                   \
-		    (i == 0) ? iv : (data + i - blocksize),           \
-		    blocksize);                                       \
+#define DECRYPT_DATA_CBC(block_fn, ctx, data, datalen, blocksize, iv)       \
+	for (int i = datalen - blocksize; i >= 0; i -= blocksize) {         \
+		block_fn(ctx, data + i, data + i);                          \
+		xor_block(data + i, (i == 0) ? iv : (data + i - blocksize), \
+		    blocksize);                                             \
 	}
 
 /**
@@ -142,8 +139,7 @@ const struct crypto_cipher cipher_null = {
 #define AES_BLOCK_LEN 16
 
 static int
-aes_cbc_probe(const char *algo_name, const char *mode_name,
-    int keysize_in_bits)
+aes_cbc_probe(const char *algo_name, const char *mode_name, int keysize_in_bits)
 {
 	if ((strcmp(algo_name, "aes") == 0) &&
 	    (strcmp(mode_name, "cbc") == 0) &&
@@ -155,15 +151,14 @@ aes_cbc_probe(const char *algo_name, const char *mode_name,
 }
 
 static int
-aes_cbc_setkey(struct crypto_cipher_context *ctx,
-    const uint8_t *keydata, int keylen_in_bytes)
+aes_cbc_setkey(struct crypto_cipher_context *ctx, const uint8_t *keydata,
+    int keylen_in_bytes)
 {
 	switch (keylen_in_bytes * 8) {
 	case 128:
 	case 192:
 	case 256:
-		rijndael_set_key((void *)ctx, keydata,
-		    keylen_in_bytes * 8);
+		rijndael_set_key((void *)ctx, keydata, keylen_in_bytes * 8);
 		return (0);
 
 	default:
@@ -178,8 +173,8 @@ aes_cbc_encrypt(const struct crypto_cipher_context *ctx, uint8_t *data,
 	if ((datalen % AES_BLOCK_LEN) != 0)
 		return EINVAL;
 
-	ENCRYPT_DATA_CBC(rijndael_encrypt, (const void *)ctx, data,
-	    datalen, AES_BLOCK_LEN, (uint8_t *)iv);
+	ENCRYPT_DATA_CBC(rijndael_encrypt, (const void *)ctx, data, datalen,
+	    AES_BLOCK_LEN, (uint8_t *)iv);
 
 	return (0);
 }
@@ -191,8 +186,8 @@ aes_cbc_decrypt(const struct crypto_cipher_context *ctx, uint8_t *data,
 	if ((datalen % AES_BLOCK_LEN) != 0)
 		return EINVAL;
 
-	DECRYPT_DATA_CBC(rijndael_decrypt, (const void *)ctx, data,
-	    datalen, AES_BLOCK_LEN, (uint8_t *)iv);
+	DECRYPT_DATA_CBC(rijndael_decrypt, (const void *)ctx, data, datalen,
+	    AES_BLOCK_LEN, (uint8_t *)iv);
 
 	return (0);
 }
@@ -352,11 +347,11 @@ const struct crypto_cipher *
 crypto_cipher_find(const char *algo_name, const char *mode_name,
     int keysize_in_bits)
 {
-	for (const struct crypto_cipher **cipherpp = crypto_ciphers;
-	     *cipherpp; ++cipherpp) {
+	for (const struct crypto_cipher **cipherpp = crypto_ciphers; *cipherpp;
+	     ++cipherpp) {
 		const struct crypto_cipher *cipherp = *cipherpp;
-		if ((*cipherp->probe)(algo_name, mode_name,
-			keysize_in_bits) == 0) {
+		if ((*cipherp->probe)(algo_name, mode_name, keysize_in_bits) ==
+		    0) {
 			return cipherp;
 		}
 	}

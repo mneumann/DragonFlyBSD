@@ -39,7 +39,8 @@
 
 static int aesni_disable = 0;
 // TUNABLE_INT("hw.aesni_disable", &aesni_disable);
-SYSCTL_INT(_hw, OID_AUTO, aesni_disable, CTLFLAG_RW, &aesni_disable, 0, "Disable AESNI");
+SYSCTL_INT(_hw, OID_AUTO, aesni_disable, CTLFLAG_RW, &aesni_disable, 0,
+    "Disable AESNI");
 
 /*
  * Internal functions, implemented in assembler.
@@ -146,37 +147,35 @@ cipher_aesni_cbc_setkey(struct crypto_cipher_context *ctx,
 }
 
 static int
-cipher_aesni_cbc_encrypt(const struct crypto_cipher_context *ctx,
-    uint8_t *data, int datalen, struct crypto_cipher_iv *iv)
+cipher_aesni_cbc_encrypt(const struct crypto_cipher_context *ctx, uint8_t *data,
+    int datalen, struct crypto_cipher_iv *iv)
 {
 	if ((datalen % AES_BLOCK_LEN) != 0)
 		return (EINVAL);
 
-	const uint8_t *enc_schedule = AESNI_ALIGNED_ENC_SCHEDULE(ctx,
-	    const);
+	const uint8_t *enc_schedule = AESNI_ALIGNED_ENC_SCHEDULE(ctx, const);
 
 	KKASSERT_AESNI_ALIGNED(enc_schedule);
 
-	aesni_encrypt_cbc(AESNI_CTX(ctx).rounds, enc_schedule, datalen,
-	    data, data, AESNI_IV(iv));
+	aesni_encrypt_cbc(AESNI_CTX(ctx).rounds, enc_schedule, datalen, data,
+	    data, AESNI_IV(iv));
 
 	return (0);
 }
 
 static int
-cipher_aesni_cbc_decrypt(const struct crypto_cipher_context *ctx,
-    uint8_t *data, int datalen, struct crypto_cipher_iv *iv)
+cipher_aesni_cbc_decrypt(const struct crypto_cipher_context *ctx, uint8_t *data,
+    int datalen, struct crypto_cipher_iv *iv)
 {
 	if ((datalen % AES_BLOCK_LEN) != 0)
 		return (EINVAL);
 
-	const uint8_t *dec_schedule = AESNI_ALIGNED_DEC_SCHEDULE(ctx,
-	    const);
+	const uint8_t *dec_schedule = AESNI_ALIGNED_DEC_SCHEDULE(ctx, const);
 
 	KKASSERT_AESNI_ALIGNED(dec_schedule);
 
-	aesni_decrypt_cbc(AESNI_CTX(ctx).rounds, dec_schedule, datalen,
-	    data, AESNI_IV(iv));
+	aesni_decrypt_cbc(AESNI_CTX(ctx).rounds, dec_schedule, datalen, data,
+	    AESNI_IV(iv));
 
 	return (0);
 }
