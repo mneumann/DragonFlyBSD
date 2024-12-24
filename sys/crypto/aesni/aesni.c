@@ -328,8 +328,7 @@ cipher_aesni_xts_setkey(struct crypto_cipher_context *ctx,
 
 	aesni_set_enckey(keydata, enc_schedule, rounds);
 	aesni_set_deckey(enc_schedule, dec_schedule, rounds);
-	aesni_set_enckey(keydata + (keylen_in_bytes / 16), xts_schedule,
-	    rounds);
+	aesni_set_enckey(keydata + (keylen_in_bytes / 2), xts_schedule, rounds);
 
 	return (0);
 }
