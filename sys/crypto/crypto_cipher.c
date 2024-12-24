@@ -204,7 +204,6 @@ const struct crypto_cipher cipher_aes_cbc = {
 	aes_cbc_decrypt,
 };
 
-#if 0
 /**
  * --------------------------------------
  * AES-XTS
@@ -214,16 +213,10 @@ const struct crypto_cipher cipher_aes_cbc = {
 #define AES_XTS_BLOCK_LEN 16
 #define AES_XTS_IV_LEN	  8
 #define AES_XTS_ALPHA	  0x87 /* GF(2^128) generator polynomial */
-#define AES_XTS_IV_LEN	  8
-
-struct aes_xts_ctx {
-	rijndael_ctx key1;
-	rijndael_ctx key2;
-};
 
 static void
-aes_xts_crypt_block(const struct aes_xts_ctx *ctx, uint8_t *data,
-    uint8_t *iv, bool do_encrypt)
+aes_xts_crypt_block(const struct aes_xts_ctx *ctx, uint8_t *data, uint8_t *iv,
+    bool do_encrypt)
 {
 	uint8_t block[AES_XTS_BLOCK_LEN];
 	u_int i, carry_in, carry_out;
@@ -254,13 +247,22 @@ aes_xts_crypt_block(const struct aes_xts_ctx *ctx, uint8_t *data,
 static bool
 aes_xts_valid_keysize_in_bits(int keysize_in_bits)
 {
-	return (keysize_in_bits == 256 || keysize_in_bits == 512);
+	switch (keysize_in_bits) {
+	case 256:
+	case 512:
+		return true;
+	default:
+		return false;
+	}
 }
 
 static int
-aes_xts_probe(const char *name, int keysize_in_bits)
+aes_xts_probe(const char *algo_name, const char *mode_name, int keysize_in_bits)
 {
-	if (strcmp(name, "aes-xts") != 0)
+	if (strcmp(algo_name, "aes") != 0)
+		return (-1);
+
+	if (strcmp(mode_name, "xts") != 0)
 		return (-1);
 
 	if (aes_xts_valid_keysize_in_bits(keysize_in_bits))
@@ -270,15 +272,15 @@ aes_xts_probe(const char *name, int keysize_in_bits)
 }
 
 static int
-aes_xts_setkey(void *ctx, const uint8_t *keydata, int keylen)
+aes_xts_setkey(struct crypto_cipher_context *ctx, const uint8_t *keydata,
+    int keylen)
 {
 	if (!aes_xts_valid_keysize_in_bits(keylen * 8))
 		return (EINVAL);
 
-	rijndael_set_key(&((struct aes_xts_ctx *)ctx)->key1, keydata,
+	rijndael_set_key(&ctx->_ctx._aes_xts.key1, keydata, keylen * 4);
+	rijndael_set_key(&ctx->_ctx._aes_xts.key2, keydata + (keylen / 2),
 	    keylen * 4);
-	rijndael_set_key(&((struct aes_xts_ctx *)ctx)->key2,
-	    keydata + (keylen / 2), keylen * 4);
 
 	return (0);
 }
@@ -299,44 +301,65 @@ aes_xts_reinit(const struct aes_xts_ctx *ctx, u_int8_t *iv)
 	rijndael_encrypt(&ctx->key2, iv, iv);
 }
 
-static void
-aes_xts_encrypt(const void *ctx, uint8_t *data, int datalen,
-    uint8_t *iv)
+static int
+aes_xts_encrypt(const struct crypto_cipher_context *_ctx, uint8_t *data,
+    int datalen, struct crypto_cipher_iv *_iv)
 {
+	uint8_t *iv = _iv->_iv._aes_xts;
+	const struct aes_xts_ctx *ctx = &_ctx->_ctx._aes_xts;
+
+	if ((datalen % AES_XTS_BLOCK_LEN) != 0)
+		return EINVAL;
+
 	aes_xts_reinit(ctx, iv);
 	for (int i = 0; i < datalen; i += AES_XTS_BLOCK_LEN) {
 		aes_xts_crypt_block(ctx, data + i, iv, true);
 	}
+
+	return (0);
 }
 
-static void
-aes_xts_decrypt(const void *ctx, uint8_t *data, int datalen,
-    uint8_t *iv)
+static int
+aes_xts_decrypt(const struct crypto_cipher_context *_ctx, uint8_t *data,
+    int datalen, struct crypto_cipher_iv *_iv)
 {
+	uint8_t *iv = _iv->_iv._aes_xts;
+	const struct aes_xts_ctx *ctx = &_ctx->_ctx._aes_xts;
+
+	if ((datalen % AES_XTS_BLOCK_LEN) != 0)
+		return EINVAL;
+
 	aes_xts_reinit(ctx, iv);
 	for (int i = 0; i < datalen; i += AES_XTS_BLOCK_LEN) {
 		aes_xts_crypt_block(ctx, data + i, iv, false);
 	}
+
+	return (0);
 }
+
+const struct crypto_cipher cipher_aes_xts = {
+	"aes-xts",
+	"AES-XTS (in software)",
+	AES_XTS_BLOCK_LEN,
+	16,
+	sizeof(struct aes_xts_ctx),
+	aes_xts_probe,
+	aes_xts_setkey,
+	aes_xts_encrypt,
+	aes_xts_decrypt,
+};
 
 /**
  *
  */
-#endif
 
-const struct crypto_cipher *crypto_ciphers[4] = {
-	&cipher_null,
+const struct crypto_cipher *crypto_ciphers[5] = { &cipher_null,
 	/* first probe AESNI, then fallback to software AES */
-	&cipher_aesni_cbc,
-	&cipher_aes_cbc,
+	&cipher_aesni_cbc, &cipher_aes_cbc,
 
-#if 0
-	{ "aes-xts", AES_XTS_BLOCK_LEN, AES_XTS_IV_LEN,
-	    sizeof(struct aes_xts_ctx), aes_xts_probe, aes_xts_setkey,
-	    aes_xts_encrypt, aes_xts_decrypt },
-#endif
-	NULL,
-};
+	&cipher_aes_xts,
+
+	NULL };
 
 /**
  * --------------------------------------

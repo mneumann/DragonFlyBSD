@@ -4,10 +4,16 @@
 #include <crypto/aesni/aesni.h>
 #include <crypto/rijndael/rijndael.h>
 
+struct aes_xts_ctx {
+	rijndael_ctx key1;
+	rijndael_ctx key2;
+};
+
 struct crypto_cipher_context {
 	union {
 		rijndael_ctx _rijndael;
 		aesni_ctx _aesni;
+		struct aes_xts_ctx _aes_xts;
 	} _ctx;
 };
 
@@ -15,6 +21,8 @@ struct crypto_cipher_iv {
 	union {
 		uint8_t _rijndael[16];
 		aesni_iv _aesni;
+		uint8_t _aes_xts[16]; /* 16 bytes are used, but the last 8 bytes
+					 are zero */
 	} _iv;
 };
 
