@@ -67,41 +67,56 @@ MALLOC_DEFINE(M_DMCRYPT, "dm_crypt", "Device Mapper Target Crypt");
 
 typedef void workqueue_job_callback(void *arg1, void *arg2, void *ctx);
 
-struct workqueue_job {
-	workqueue_job_callback *wqj_cb;
-	void *wqj_arg1;
-	void *wqj_arg2;
+struct workqueue_job
+{
+	workqueue_job_callback	*wqj_cb;
+	void			*wqj_arg1;
+	void			*wqj_arg2;
+	bool			 wqj_is_free;
 	STAILQ_ENTRY(workqueue_job) wqj_next;
 };
 
-struct workqueue {
-	struct lock wq_lock;
+struct workqueue
+{
+	struct lock		wq_lock;
+	bool			wq_is_closing;
+	void			*wq_ctx;
+	struct thread		*wq_worker;
+
 	STAILQ_HEAD(, workqueue_job) wq_jobs;
-	bool wq_is_closing;
-	void *wq_ctx;
-	struct thread *wq_worker;
-	// TODO: free pool
+
+	/**
+	 * We use a preallocated list of free `struct workqueue_job`s,
+	 * so in case of low-memory situations, we can still
+	 * submit a fixed number of requests to the queue before
+	 * we block (or retry).
+	 *
+	 * In the case of dm_target_crypt, wherer we distribute
+	 * jobs to multiple queues, that's probably not required
+	 * and a bounded queue of size 1 would suffice.
+	 */
+	STAILQ_HEAD(, workqueue_job) wq_free_jobs;
 };
 
 static int
 workqueue_submit_job(struct workqueue *wq, workqueue_job_callback *wqj_cb, void *wqj_arg1, void *wqj_arg2);
 
 static void
-workqueue_start(struct workqueue *wq, int cpu, void *ctx);
+workqueue_start(struct workqueue *wq, int cpu, void *ctx, int bounded_size);
 
 static void
 workqueue_stop(struct workqueue *wq);
 
-static struct workqueue_job*
-workqueue_dequeue_job(struct workqueue *wq);
+static int
+workqueue_dequeue_job_into(struct workqueue *wq, struct workqueue_job *job_copy);
 
 /**
  * Each worker "owns" it's own memory, so there is no need
- * to allocate memory from mpipe.
+ * to allocate the "data_buf" memory from a mpipe.
  */
 struct worker_context {
-	uint8_t *data_buf;
-	size_t 	data_buf_size;
+	uint8_t		*data_buf;
+	size_t		data_buf_size;
 	volatile bool	data_buf_busy;
 };
 
@@ -214,69 +229,94 @@ workqueue_stop(struct workqueue *wq)
 	lockmgr(&wq->wq_lock, LK_RELEASE);
 
 	while (true) {
-		kprintf("Shutting down workqueue...\n");
 		wakeup(&wq->wq_jobs);
 		if (tsleep(wq, 0, "shutdown workqueue", 500) == 0)
 			break;
 	}
-	kprintf("Shutdown of workqueue complete\n");
 }
 
 static int
 workqueue_submit_job(struct workqueue *wq, workqueue_job_callback *wqj_cb, void *wqj_arg1, void *wqj_arg2)
 {
 	struct workqueue_job *job = NULL;
-	int error = 0;
 
-	if (wq->wq_is_closing) {
-		error = EPIPE;
-		goto out;
+	if (wq->wq_is_closing)
+	{
+		return (EPIPE);
 	}
-
-	job = kmalloc(sizeof(struct workqueue_job), M_DMCRYPT, M_ZERO | M_WAITOK);
-
-	if (!job) {
-		error = ENOMEM;
-		goto out;
-	}
-
-	job->wqj_cb = wqj_cb;
-	job->wqj_arg1 = wqj_arg1;
-	job->wqj_arg2 = wqj_arg2;
 
 	lockmgr(&wq->wq_lock, LK_EXCLUSIVE);
-	if (wq->wq_is_closing) {
-		lockmgr(&wq->wq_lock, LK_RELEASE);
-		error = EPIPE;
-		goto out;
-	} else {
-		STAILQ_INSERT_TAIL(&wq->wq_jobs, job, wqj_next);
-		lockmgr(&wq->wq_lock, LK_RELEASE);
-		wakeup_one(&wq->wq_jobs);
-		error = 0;
-		goto out;
+
+	while (!wq->wq_is_closing)
+	{
+		job = STAILQ_FIRST(&wq->wq_free_jobs);
+		if (job) {
+			KKASSERT(job->wqj_is_free);
+
+			STAILQ_REMOVE_HEAD(&wq->wq_free_jobs, wqj_next);
+			job->wqj_cb = wqj_cb;
+			job->wqj_arg1 = wqj_arg1;
+			job->wqj_arg2 = wqj_arg2;
+
+			STAILQ_INSERT_TAIL(&wq->wq_jobs, job, wqj_next);
+			lockmgr(&wq->wq_lock, LK_RELEASE);
+			wakeup_one(&wq->wq_jobs);
+
+			return (0);
+		}
+		else
+		{
+			/**
+			 * Wait until the worker has put back an item to the free list.
+			 */
+			lksleep(&wq->wq_free_jobs,
+				&wq->wq_lock,
+				0,
+				"dm_target_crypt: wq free list empty",
+				0);
+		}
 	}
 
-out:
-	if (error && job) {
-		kfree(job, M_DMCRYPT);
-	}
-	return (error);
+	lockmgr(&wq->wq_lock, LK_RELEASE);
+
+	return (EPIPE);
+
 }
 
-static struct workqueue_job*
-workqueue_dequeue_job(struct workqueue *wq)
+static int
+workqueue_dequeue_job_into(struct workqueue *wq, struct workqueue_job *job_copy)
 {
-	struct workqueue_job *job;
 	lockmgr(&wq->wq_lock, LK_EXCLUSIVE);
-	while (true) {
-		job = STAILQ_FIRST(&wq->wq_jobs);
+
+	bzero(job_copy, sizeof(struct workqueue_job));
+
+	/*
+	 * In case the queue is closing, no further jobs can be submitted, but
+	 * dequeue will drain the queue until empty.
+	 */
+
+	while (true)
+	{
+		struct workqueue_job *job = STAILQ_FIRST(&wq->wq_jobs);
 		if (job) {
 			STAILQ_REMOVE_HEAD(&wq->wq_jobs, wqj_next);
-			break;
+
+			/*
+			 * Copy the job definition to the caller-passed pointer
+			 * and then put back the job to the free-list.
+			 */
+			memcpy(job_copy, job, sizeof(struct workqueue_job));
+
+			job->wqj_is_free = true;
+			STAILQ_INSERT_TAIL(&wq->wq_free_jobs, job, wqj_next);
+
+			lockmgr(&wq->wq_lock, LK_RELEASE);
+			wakeup(&wq->wq_free_jobs);
+			return (0);
+
 		} else if (wq->wq_is_closing) {
-			job = NULL;
-			break;
+			lockmgr(&wq->wq_lock, LK_RELEASE);
+			return (EPIPE);
 		} else {
 			lksleep(&wq->wq_jobs,
 				&wq->wq_lock,
@@ -285,8 +325,6 @@ workqueue_dequeue_job(struct workqueue *wq)
 				0);
 		}
 	}
-	lockmgr(&wq->wq_lock, LK_RELEASE);
-	return job;
 }
 
 
@@ -294,28 +332,17 @@ static void
 workqueue_worker(void *wq_arg)
 {
 	struct workqueue *wq = wq_arg;
-	struct workqueue_job *job;
-	workqueue_job_callback *wqj_cb;
-	void *wqj_arg1, *wqj_arg2;
+	struct workqueue_job job;
 
-	kprintf("workqueue_worker starting\n");
-
-	while ((job = workqueue_dequeue_job(wq)) != NULL) {
-		wqj_cb = job->wqj_cb;
-		wqj_arg1 = job->wqj_arg1;
-		wqj_arg2 = job->wqj_arg2;
-		kfree(job, M_DMCRYPT);
-
-		wqj_cb(wqj_arg1, wqj_arg2, wq->wq_ctx);
+	while (workqueue_dequeue_job_into(wq, &job) == 0) {
+		job.wqj_cb(job.wqj_arg1, job.wqj_arg2, wq->wq_ctx);
 	}
-
-	kprintf("workqueue_worker shutting down\n");
 
 	wakeup(wq);
 }
 
 static void
-workqueue_start(struct workqueue *wq, int cpu, void *ctx)
+workqueue_start(struct workqueue *wq, int cpu, void *ctx, int bounded_size)
 {
 	bzero(wq, sizeof(*wq));
 
@@ -325,16 +352,26 @@ workqueue_start(struct workqueue *wq, int cpu, void *ctx)
 			LK_CANRECURSE);
 
 	STAILQ_INIT(&wq->wq_jobs);
+	STAILQ_INIT(&wq->wq_free_jobs);
 
 	wq->wq_is_closing = false;
 	wq->wq_ctx = ctx;
+
+	/**
+	 * Initialize free-list
+	 */
+	for (int i = 0; i < bounded_size; ++i)
+	{
+		struct workqueue_job *free_job = kmalloc(sizeof(struct workqueue_job), M_DMCRYPT, M_ZERO | M_WAITOK);
+		free_job->wqj_is_free = true;
+		STAILQ_INSERT_TAIL(&wq->wq_free_jobs, free_job, wqj_next);
+	}
 
     	kthread_create_cpu(workqueue_worker,
 			wq,
 			&wq->wq_worker,
 			cpu,
 			"dm_target_crypt: crypto worker");
-	kprintf("workqueue started\n");
 }
 
 
@@ -692,12 +729,12 @@ dm_target_crypt_init(dm_table_entry_t *table_en, int argc, char **argv)
 		priv->crypto_read_worker_contexts[cpu].data_buf = kmalloc(DMTC_BUF_SIZE, M_DMCRYPT, M_WAITOK);
 		priv->crypto_read_worker_contexts[cpu].data_buf_size = DMTC_BUF_SIZE;
 		priv->crypto_read_worker_contexts[cpu].data_buf_busy = false;
-		workqueue_start(&priv->crypto_read_workqueues[cpu], cpu, &priv->crypto_read_worker_contexts[cpu]);
+		workqueue_start(&priv->crypto_read_workqueues[cpu], cpu, &priv->crypto_read_worker_contexts[cpu], 10);
 
 		priv->crypto_write_worker_contexts[cpu].data_buf = kmalloc(DMTC_BUF_SIZE, M_DMCRYPT, M_WAITOK);
 		priv->crypto_write_worker_contexts[cpu].data_buf_size = DMTC_BUF_SIZE;
 		priv->crypto_write_worker_contexts[cpu].data_buf_busy = false;
-		workqueue_start(&priv->crypto_write_workqueues[cpu], cpu, &priv->crypto_write_worker_contexts[cpu]);
+		workqueue_start(&priv->crypto_write_workqueues[cpu], cpu, &priv->crypto_write_worker_contexts[cpu], 5);
 	}
 
 	priv->crypto_read_workqueue_next_rr = 0;
