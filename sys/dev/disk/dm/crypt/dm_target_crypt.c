@@ -795,9 +795,6 @@ dm_target_crypt_destroy(dm_table_entry_t *table_en)
 {
 	dm_target_crypt_config_t *priv;
 
-	kprintf("dm_target_crypt: destroy\n");
-
-
 	/*
 	 * Disconnect the crypt config before unbusying the target.
 	 */
@@ -811,12 +808,10 @@ dm_target_crypt_destroy(dm_table_entry_t *table_en)
 	 */
 
 	for (int cpu = 0; cpu < ncpus; cpu++) {
-		kprintf("Stopping read work queue %d\n", cpu);
 		workqueue_stop(&priv->crypto_read_workqueues[cpu]);
 		kfree(priv->crypto_read_worker_contexts[cpu].data_buf,
 		    M_DMCRYPT);
 
-		kprintf("Stopping write work queue %d\n", cpu);
 		workqueue_stop(&priv->crypto_write_workqueues[cpu]);
 		kfree(priv->crypto_write_worker_contexts[cpu].data_buf,
 		    M_DMCRYPT);
