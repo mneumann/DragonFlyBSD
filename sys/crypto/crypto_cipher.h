@@ -21,6 +21,12 @@ struct crypto_cipher_iv {
 typedef int (*crypto_cipher_blockfn_t)(const struct crypto_cipher_context *ctx,
     uint8_t *data, int datalen, struct crypto_cipher_iv *iv);
 
+typedef int (*crypto_cipher_probe_t)(const char *algo_name,
+    const char *mode_name, int keysize_in_bits);
+
+typedef int (*crypto_cipher_setkey_t)(struct crypto_cipher_context *ctx,
+    const uint8_t *keydata, int keylen_in_bytes);
+
 struct crypto_cipher {
 	const char *shortname;
 	const char *description;
@@ -28,12 +34,8 @@ struct crypto_cipher {
 	uint16_t ivsize;
 	uint16_t ctxsize;
 
-	int (*probe)(const char *algo_name, const char *mode_name,
-	    int keysize_in_bits);
-
-	int (*setkey)(struct crypto_cipher_context *ctx, const uint8_t *keydata,
-	    int keylen_in_bytes);
-
+	crypto_cipher_probe_t probe;
+	crypto_cipher_setkey_t setkey;
 	crypto_cipher_blockfn_t encrypt;
 	crypto_cipher_blockfn_t decrypt;
 };
