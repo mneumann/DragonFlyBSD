@@ -273,14 +273,15 @@ aes_xts_probe(const char *algo_name, const char *mode_name, int keysize_in_bits)
 
 static int
 aes_xts_setkey(struct crypto_cipher_context *ctx, const uint8_t *keydata,
-    int keylen)
+    int keylen_in_bytes)
 {
-	if (!aes_xts_valid_keysize_in_bits(keylen * 8))
+	if (!aes_xts_valid_keysize_in_bits(keylen_in_bytes * 8))
 		return (EINVAL);
 
-	rijndael_set_key(&ctx->_ctx._aes_xts.key1, keydata, keylen * 4);
-	rijndael_set_key(&ctx->_ctx._aes_xts.key2, keydata + (keylen / 2),
-	    keylen * 4);
+	rijndael_set_key(&ctx->_ctx._aes_xts.key1, keydata,
+	    (keylen_in_bytes / 2) * 8);
+	rijndael_set_key(&ctx->_ctx._aes_xts.key2,
+	    keydata + (keylen_in_bytes / 2), (keylen_in_bytes / 2) * 8);
 
 	return (0);
 }
