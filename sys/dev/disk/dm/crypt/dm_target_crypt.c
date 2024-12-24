@@ -233,6 +233,25 @@ workqueue_stop(struct workqueue *wq)
 		if (tsleep(wq, 0, "shutdown workqueue", 500) == 0)
 			break;
 	}
+
+	lockmgr(&wq->wq_lock, LK_EXCLUSIVE);
+
+	KKASSERT(STAILQ_FIRST(&wq->wq_jobs) == NULL);
+
+	/**
+	 * Free pre-allocated jobs.
+	 */
+	struct workqueue_job *free_job;
+	while ((free_job = STAILQ_FIRST(&wq->wq_free_jobs)) != NULL)
+	{
+		KKASSERT(free_job->wqj_is_free);
+		STAILQ_REMOVE_HEAD(&wq->wq_free_jobs, wqj_next);
+		kfree(free_job, M_DMCRYPT);
+	}
+	KKASSERT(STAILQ_FIRST(&wq->wq_free_jobs) == NULL);
+
+	lockmgr(&wq->wq_lock, LK_RELEASE);
+	lockuninit(&wq->wq_lock);
 }
 
 static int
