@@ -67,17 +67,21 @@ MALLOC_DEFINE(M_DMCRYPT, "dm_crypt", "Device Mapper Target Crypt");
 
 typedef void workqueue_job_callback(void *arg1, void *arg2, void *ctx);
 
+#define WQJ_FLAGS_IS_FREE          0x01
+#define WQJ_FLAGS_WAS_PREALLOCATED 0x02
+
 struct workqueue_job {
 	workqueue_job_callback *wqj_cb;
 	void *wqj_arg1;
 	void *wqj_arg2;
-	bool wqj_is_free;
+	int wqj_flags;
 	STAILQ_ENTRY(workqueue_job) wqj_next;
 };
 
 struct workqueue {
 	struct lock wq_lock;
 	bool wq_is_closing;
+	int wq_load;
 	void *wq_ctx;
 	struct thread *wq_worker;
 
@@ -85,13 +89,10 @@ struct workqueue {
 
 	/**
 	 * We use a preallocated list of free `struct workqueue_job`s,
-	 * so in case of low-memory situations, we can still
-	 * submit a fixed number of requests to the queue before
-	 * we block (or retry).
-	 *
-	 * In the case of dm_target_crypt, wherer we distribute
-	 * jobs to multiple queues, that's probably not required
-	 * and a bounded queue of size 1 would suffice.
+	 * so we don't need to kmalloc as long as there are free
+	 * entries on the list. If the wq_free_jobs list is full,
+	 * we resort to kmalloc(), as we don't want to block the
+	 * read/write BIO path.
 	 */
 	STAILQ_HEAD(, workqueue_job) wq_free_jobs;
 };
@@ -176,8 +177,8 @@ typedef struct target_crypt_config {
 	 * Atomic counter used to distribute requests
 	 * to the crypto work queues using round robin.
 	 */
-	int crypto_read_workqueue_next_rr;
-	int crypto_write_workqueue_next_rr;
+	int crypto_read_workqueues_rr;
+	int crypto_write_workqueues_rr;
 
 } dm_target_crypt_config_t;
 
@@ -250,7 +251,7 @@ workqueue_stop(struct workqueue *wq)
 	 */
 	struct workqueue_job *free_job;
 	while ((free_job = STAILQ_FIRST(&wq->wq_free_jobs)) != NULL) {
-		KKASSERT(free_job->wqj_is_free);
+		KKASSERT(free_job->wqj_flags & WQJ_FLAGS_IS_FREE);
 		STAILQ_REMOVE_HEAD(&wq->wq_free_jobs, wqj_next);
 		kfree(free_job, M_DMCRYPT);
 	}
@@ -271,30 +272,30 @@ workqueue_submit_job(struct workqueue *wq, workqueue_job_callback *wqj_cb,
 	}
 
 	lockmgr(&wq->wq_lock, LK_EXCLUSIVE);
+	wq->wq_load++;
 
 	while (!wq->wq_is_closing) {
 		job = STAILQ_FIRST(&wq->wq_free_jobs);
 		if (job) {
-			KKASSERT(job->wqj_is_free);
+			KKASSERT(job->wqj_flags & WQJ_FLAGS_IS_FREE);
+			KKASSERT(job->wqj_flags & WQJ_FLAGS_WAS_PREALLOCATED);
 
 			STAILQ_REMOVE_HEAD(&wq->wq_free_jobs, wqj_next);
-			job->wqj_cb = wqj_cb;
-			job->wqj_arg1 = wqj_arg1;
-			job->wqj_arg2 = wqj_arg2;
-
-			STAILQ_INSERT_TAIL(&wq->wq_jobs, job, wqj_next);
-			lockmgr(&wq->wq_lock, LK_RELEASE);
-			wakeup_one(&wq->wq_jobs);
-
-			return (0);
 		} else {
-			/**
-			 * Wait until the worker has put back an item to the
-			 * free list.
-			 */
-			lksleep(&wq->wq_free_jobs, &wq->wq_lock, 0,
-			    "dm_target_crypt: wq free list empty", 0);
+			kprintf("WARN: dmtc: Preallocated queue full\n");
+			job = kmalloc(sizeof(struct workqueue_job), M_DMCRYPT, M_ZERO | M_WAITOK);
+			job->wqj_flags = WQJ_FLAGS_IS_FREE; /* but NOT WQJ_FLAGS_WAS_PREALLOCATED */
 		}
+
+		job->wqj_cb = wqj_cb;
+		job->wqj_arg1 = wqj_arg1;
+		job->wqj_arg2 = wqj_arg2;
+
+		STAILQ_INSERT_TAIL(&wq->wq_jobs, job, wqj_next);
+		lockmgr(&wq->wq_lock, LK_RELEASE);
+		wakeup_one(&wq->wq_jobs);
+
+		return (0);
 	}
 
 	lockmgr(&wq->wq_lock, LK_RELEASE);
@@ -325,11 +326,23 @@ workqueue_dequeue_job_into(struct workqueue *wq, struct workqueue_job *job_copy)
 			 */
 			memcpy(job_copy, job, sizeof(struct workqueue_job));
 
-			job->wqj_is_free = true;
-			STAILQ_INSERT_TAIL(&wq->wq_free_jobs, job, wqj_next);
+			job->wqj_flags |= WQJ_FLAGS_IS_FREE;
+			if (job->wqj_flags & WQJ_FLAGS_WAS_PREALLOCATED)
+			{	
+				STAILQ_INSERT_TAIL(&wq->wq_free_jobs, job, wqj_next);
+				lockmgr(&wq->wq_lock, LK_RELEASE);
+			}
+			else
+			{
+				lockmgr(&wq->wq_lock, LK_RELEASE);
 
-			lockmgr(&wq->wq_lock, LK_RELEASE);
-			wakeup(&wq->wq_free_jobs);
+				/*
+				 * This is an excess item, which wasn't preallocated.
+				 * Give it back to the system memory pool.
+				 */
+				kfree(job, M_DMCRYPT);
+			}
+
 			return (0);
 
 		} else if (wq->wq_is_closing) {
@@ -350,7 +363,10 @@ workqueue_worker(void *wq_arg)
 
 	while (workqueue_dequeue_job_into(wq, &job) == 0) {
 		job.wqj_cb(job.wqj_arg1, job.wqj_arg2, wq->wq_ctx);
+		lwkt_yield();
 	}
+
+	--wq->wq_load;
 
 	wakeup(wq);
 }
@@ -366,15 +382,16 @@ workqueue_start(struct workqueue *wq, int cpu, void *ctx, int bounded_size)
 	STAILQ_INIT(&wq->wq_free_jobs);
 
 	wq->wq_is_closing = false;
+	wq->wq_load = 0;
 	wq->wq_ctx = ctx;
 
 	/**
-	 * Initialize free-list
+	 * Preallocate free-list
 	 */
 	for (int i = 0; i < bounded_size; ++i) {
 		struct workqueue_job *free_job = kmalloc(
 		    sizeof(struct workqueue_job), M_DMCRYPT, M_ZERO | M_WAITOK);
-		free_job->wqj_is_free = true;
+		free_job->wqj_flags = WQJ_FLAGS_IS_FREE | WQJ_FLAGS_WAS_PREALLOCATED;
 		STAILQ_INSERT_TAIL(&wq->wq_free_jobs, free_job, wqj_next);
 	}
 
@@ -751,7 +768,7 @@ dm_target_crypt_init(dm_table_entry_t *table_en, int argc, char **argv)
 		    DMTC_BUF_SIZE;
 		priv->crypto_read_worker_contexts[cpu].data_buf_busy = false;
 		workqueue_start(&priv->crypto_read_workqueues[cpu], cpu,
-		    &priv->crypto_read_worker_contexts[cpu], 10);
+		    &priv->crypto_read_worker_contexts[cpu], 100);
 
 		priv->crypto_write_worker_contexts[cpu].data_buf =
 		    kmalloc(DMTC_BUF_SIZE, M_DMCRYPT, M_WAITOK);
@@ -759,11 +776,11 @@ dm_target_crypt_init(dm_table_entry_t *table_en, int argc, char **argv)
 		    DMTC_BUF_SIZE;
 		priv->crypto_write_worker_contexts[cpu].data_buf_busy = false;
 		workqueue_start(&priv->crypto_write_workqueues[cpu], cpu,
-		    &priv->crypto_write_worker_contexts[cpu], 5);
+		    &priv->crypto_write_worker_contexts[cpu], 100);
 	}
 
-	priv->crypto_read_workqueue_next_rr = 0;
-	priv->crypto_write_workqueue_next_rr = 0;
+	priv->crypto_read_workqueues_rr = 0;
+	priv->crypto_write_workqueues_rr = 0;
 
 	return 0;
 
@@ -909,20 +926,26 @@ dm_target_crypt_strategy(dm_table_entry_t *table_en, struct buf *bp)
 	return 0;
 }
 
-__inline static int
-select_read_workqueue_index(dm_target_crypt_config_t *priv)
+static void
+dmtc_submit_bio_job(dm_target_crypt_config_t *priv, struct bio *bio,
+    struct workqueue *workqueues, int *wq_rr, workqueue_job_callback *job_cb)
 {
-	return atomic_fetchadd_int(&priv->crypto_read_workqueue_next_rr,
-		   1) %
-	    ncpus;
-}
+	/**
+	 * TODO: we could select the queue based on it's load.
+	 */
+	int best_idx = atomic_fetchadd_int(wq_rr, 1) % ncpus;
 
-__inline static int
-select_write_workqueue_index(dm_target_crypt_config_t *priv)
-{
-	return atomic_fetchadd_int(
-		   &priv->crypto_write_workqueue_next_rr, 1) %
-	    ncpus;
+	int error = workqueue_submit_job(&workqueues[best_idx],
+	    job_cb, (void *)priv, (void *)bio);
+	if (error) {
+		kprintf(
+		    "dm_target_crypt: failed to submit bio to workqueue with error = %d\n",
+		    error);
+		bio->bio_buf->b_error = error;
+		bio->bio_buf->b_flags |= B_ERROR;
+		struct bio *obio = pop_bio(bio);
+		biodone(obio);
+	}
 }
 
 /*
@@ -1006,20 +1029,8 @@ dmtc_bio_read_decrypt_job_do(dm_target_crypt_config_t *priv,
 static void
 dmtc_bio_read_decrypt(dm_target_crypt_config_t *priv, struct bio *bio)
 {
-	int error = workqueue_submit_job(
-	    &priv->crypto_read_workqueues[select_read_workqueue_index(
-		priv)],
-	    dmtc_bio_read_decrypt_job, (void *)priv, (void *)bio);
-	if (error) {
-		bio->bio_buf->b_error = error;
-		kprintf(
-		    "dm_target_crypt: dmtc_bio_read_decrypt error = %d\n",
-		    bio->bio_buf->b_error);
-
-		bio->bio_buf->b_flags |= B_ERROR;
-		struct bio *obio = pop_bio(bio);
-		biodone(obio);
-	}
+	dmtc_submit_bio_job(priv, bio, priv->crypto_read_workqueues,
+	   &priv->crypto_read_workqueues_rr, dmtc_bio_read_decrypt_job);
 }
 
 /* END OF STRATEGY READ SECTION */
@@ -1097,7 +1108,7 @@ dmtc_bio_write_done(struct bio *bio)
 	struct worker_context *ctx = bio->bio_caller_info3.ptr;
 
 	ctx->data_buf_busy = false;
-	wakeup(ctx);
+	wakeup_one(ctx);
 
 	// Restore original bio buffer
 	bio->bio_buf->b_data = bio->bio_caller_info2.ptr;
@@ -1109,20 +1120,8 @@ dmtc_bio_write_done(struct bio *bio)
 static void
 dmtc_bio_write_encrypt(dm_target_crypt_config_t *priv, struct bio *bio)
 {
-	int error = workqueue_submit_job(
-	    &priv->crypto_write_workqueues[select_write_workqueue_index(
-		priv)],
-	    dmtc_bio_write_encrypt_job, (void *)priv, (void *)bio);
-	if (error) {
-		bio->bio_buf->b_error = error;
-		kprintf(
-		    "dm_target_crypt: dmtc_bio_write_encrypt error = %d\n",
-		    bio->bio_buf->b_error);
-
-		bio->bio_buf->b_flags |= B_ERROR;
-		struct bio *obio = pop_bio(bio);
-		biodone(obio);
-	}
+	dmtc_submit_bio_job(priv, bio, priv->crypto_write_workqueues,
+	   &priv->crypto_write_workqueues_rr, dmtc_bio_write_encrypt_job);
 }
 
 /* END OF STRATEGY WRITE SECTION */
