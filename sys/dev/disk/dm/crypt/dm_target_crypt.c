@@ -54,6 +54,7 @@
 #include <sys/queue.h>
 #include <sys/proc.h>
 #include <sys/types.h>
+#include <sys/mpipe.h>
 #include <cpu/atomic.h>
 
 MALLOC_DEFINE(M_DMCRYPT, "dm_crypt", "Device Mapper Target Crypt");
@@ -65,7 +66,7 @@ MALLOC_DEFINE(M_DMCRYPT, "dm_crypt", "Device Mapper Target Crypt");
  * is served by exactly one worker thread.
  */
 
-typedef void workqueue_job_callback(void *arg1, void *arg2, void *ctx);
+typedef void workqueue_job_callback(void *arg1, void *arg2);
 
 #define WQJ_FLAGS_IS_FREE          0x01
 #define WQJ_FLAGS_WAS_PREALLOCATED 0x02
@@ -82,7 +83,6 @@ struct workqueue {
 	struct lock wq_lock;
 	bool wq_is_closing;
 	int wq_load;
-	void *wq_ctx;
 	struct thread *wq_worker;
 
 	STAILQ_HEAD(, workqueue_job) wq_jobs;
@@ -100,23 +100,12 @@ struct workqueue {
 static int workqueue_submit_job(struct workqueue *wq,
     workqueue_job_callback *wqj_cb, void *wqj_arg1, void *wqj_arg2);
 
-static void workqueue_start(struct workqueue *wq, int cpu, void *ctx,
-    int bounded_size);
+static void workqueue_start(struct workqueue *wq, int cpu, int initial_queue_size);
 
 static void workqueue_stop(struct workqueue *wq);
 
 static int workqueue_dequeue_job_into(struct workqueue *wq,
     struct workqueue_job *job_copy);
-
-/**
- * Each worker "owns" it's own memory, so there is no need
- * to allocate the "data_buf" memory from a mpipe.
- */
-struct worker_context {
-	uint8_t *data_buf;
-	size_t data_buf_size;
-	volatile bool data_buf_busy;
-};
 
 /**
  * End of MPSC queue
@@ -160,8 +149,11 @@ typedef struct target_crypt_config {
 	struct iv_generator	*ivgen;
 	void	*ivgen_priv;
 
+	struct malloc_pipe	read_mpipe;
+	struct malloc_pipe	write_mpipe;
+
 	/**
-	 * per-CPU work queues and worker contexts [0..ncpus)
+	 * per-CPU work queues [0..ncpus)
 	 *
 	 * We use separate workqueues for read and write requests.
 	 * Read requests do not cause long stalls, as they are synchronous
@@ -169,9 +161,7 @@ typedef struct target_crypt_config {
 	 * due to write buffering.
 	 */
 	struct workqueue	*crypto_read_workqueues;
-	struct worker_context  	*crypto_read_worker_contexts;
 	struct workqueue	*crypto_write_workqueues;
-	struct worker_context  	*crypto_write_worker_contexts;
 
 	/**
 	 * Atomic counter used to distribute requests
@@ -190,6 +180,9 @@ struct dmtc_dump_helper {
 
 	u_char space[65536];
 };
+
+static void dmtc_init_mpipe(struct target_crypt_config *priv);
+static void dmtc_destroy_mpipe(struct target_crypt_config *priv);
 
 static const struct crypto_cipher *
 dmtc_find_crypto_cipher(const char *crypto_alg, const char *crypto_mode,
@@ -362,7 +355,7 @@ workqueue_worker(void *wq_arg)
 	struct workqueue_job job;
 
 	while (workqueue_dequeue_job_into(wq, &job) == 0) {
-		job.wqj_cb(job.wqj_arg1, job.wqj_arg2, wq->wq_ctx);
+		job.wqj_cb(job.wqj_arg1, job.wqj_arg2);
 		lwkt_yield();
 	}
 
@@ -372,7 +365,7 @@ workqueue_worker(void *wq_arg)
 }
 
 static void
-workqueue_start(struct workqueue *wq, int cpu, void *ctx, int bounded_size)
+workqueue_start(struct workqueue *wq, int cpu, int initial_queue_size)
 {
 	bzero(wq, sizeof(*wq));
 
@@ -383,12 +376,11 @@ workqueue_start(struct workqueue *wq, int cpu, void *ctx, int bounded_size)
 
 	wq->wq_is_closing = false;
 	wq->wq_load = 0;
-	wq->wq_ctx = ctx;
 
 	/**
 	 * Preallocate free-list
 	 */
-	for (int i = 0; i < bounded_size; ++i) {
+	for (int i = 0; i < initial_queue_size; ++i) {
 		struct workqueue_job *free_job = kmalloc(
 		    sizeof(struct workqueue_job), M_DMCRYPT, M_ZERO | M_WAITOK);
 		free_job->wqj_flags = WQJ_FLAGS_IS_FREE | WQJ_FLAGS_WAS_PREALLOCATED;
@@ -402,6 +394,37 @@ workqueue_start(struct workqueue *wq, int cpu, void *ctx, int bounded_size)
 /**
  * End of MPSC queue implementation
  */
+
+static __inline int
+dmtc_get_nmax(void)
+{
+	int nmax;
+	nmax = (physmem * 2 / 1000 * PAGE_SIZE) /
+		(2 * DMTC_BUF_SIZE) + 1;
+	if (nmax < 2)
+		nmax = 2;
+	if (nmax > 8 + ncpus * 2)
+		nmax = 8 + ncpus * 2;
+	return nmax;
+}
+
+static void
+dmtc_init_mpipe(struct target_crypt_config *priv)
+{
+	int nmax = dmtc_get_nmax();
+	kprintf("dm_target_crypt: Setting %d mpipe buffers\n", nmax);
+	mpipe_init(&priv->write_mpipe, M_DMCRYPT, DMTC_BUF_SIZE,
+		nmax, nmax, MPF_NOZERO | MPF_CALLBACK, NULL, NULL, NULL);
+	mpipe_init(&priv->read_mpipe, M_DMCRYPT, DMTC_BUF_SIZE,
+		nmax, nmax, MPF_NOZERO | MPF_CALLBACK, NULL, NULL, NULL);
+}
+
+static void
+dmtc_destroy_mpipe(struct target_crypt_config *priv)
+{
+	mpipe_done(&priv->write_mpipe);
+	mpipe_done(&priv->read_mpipe);
+}
 
 /*
  * Overwrite private information (in buf) to avoid leaking it
@@ -746,15 +769,12 @@ dm_target_crypt_init(dm_table_entry_t *table_en, int argc, char **argv)
 	}
 	priv->status_str = status_str;
 
+	/* Initialize mpipes */
+	dmtc_init_mpipe(priv);
+
 	/**
 	 * Allocate and start work queues / workers.
 	 */
-	priv->crypto_read_worker_contexts =
-	    kmalloc(sizeof(struct worker_context) * ncpus, M_DMCRYPT,
-		M_WAITOK | M_ZERO);
-	priv->crypto_write_worker_contexts =
-	    kmalloc(sizeof(struct worker_context) * ncpus, M_DMCRYPT,
-		M_WAITOK | M_ZERO);
 	priv->crypto_read_workqueues = kmalloc(sizeof(struct workqueue) * ncpus,
 	    M_DMCRYPT, M_WAITOK | M_ZERO);
 	priv->crypto_write_workqueues = kmalloc(sizeof(struct workqueue) *
@@ -762,21 +782,8 @@ dm_target_crypt_init(dm_table_entry_t *table_en, int argc, char **argv)
 	    M_DMCRYPT, M_WAITOK | M_ZERO);
 
 	for (int cpu = 0; cpu < ncpus; ++cpu) {
-		priv->crypto_read_worker_contexts[cpu].data_buf =
-		    kmalloc(DMTC_BUF_SIZE, M_DMCRYPT, M_WAITOK);
-		priv->crypto_read_worker_contexts[cpu].data_buf_size =
-		    DMTC_BUF_SIZE;
-		priv->crypto_read_worker_contexts[cpu].data_buf_busy = false;
-		workqueue_start(&priv->crypto_read_workqueues[cpu], cpu,
-		    &priv->crypto_read_worker_contexts[cpu], 100);
-
-		priv->crypto_write_worker_contexts[cpu].data_buf =
-		    kmalloc(DMTC_BUF_SIZE, M_DMCRYPT, M_WAITOK);
-		priv->crypto_write_worker_contexts[cpu].data_buf_size =
-		    DMTC_BUF_SIZE;
-		priv->crypto_write_worker_contexts[cpu].data_buf_busy = false;
-		workqueue_start(&priv->crypto_write_workqueues[cpu], cpu,
-		    &priv->crypto_write_worker_contexts[cpu], 100);
+		workqueue_start(&priv->crypto_read_workqueues[cpu], cpu, 100);
+		workqueue_start(&priv->crypto_write_workqueues[cpu], cpu, 100);
 	}
 
 	priv->crypto_read_workqueues_rr = 0;
@@ -826,18 +833,12 @@ dm_target_crypt_destroy(dm_table_entry_t *table_en)
 
 	for (int cpu = 0; cpu < ncpus; cpu++) {
 		workqueue_stop(&priv->crypto_read_workqueues[cpu]);
-		kfree(priv->crypto_read_worker_contexts[cpu].data_buf,
-		    M_DMCRYPT);
-
 		workqueue_stop(&priv->crypto_write_workqueues[cpu]);
-		kfree(priv->crypto_write_worker_contexts[cpu].data_buf,
-		    M_DMCRYPT);
 	}
-	kfree(priv->crypto_read_worker_contexts, M_DMCRYPT);
 	kfree(priv->crypto_read_workqueues, M_DMCRYPT);
-
-	kfree(priv->crypto_write_worker_contexts, M_DMCRYPT);
 	kfree(priv->crypto_write_workqueues, M_DMCRYPT);
+
+	dmtc_destroy_mpipe(priv);
 
 	/*
 	 * Clean up the crypt config
@@ -973,28 +974,26 @@ dmtc_bio_read_done(struct bio *bio)
 }
 
 __inline static void
-dmtc_bio_read_decrypt_job_do(dm_target_crypt_config_t *priv,
-    struct bio *bio, struct worker_context *ctx);
+dmtc_bio_read_decrypt_job_do(dm_target_crypt_config_t *priv, struct bio *bio);
 
 static void
-dmtc_bio_read_decrypt_job(void *arg1, void *arg2, void *ctx)
+dmtc_bio_read_decrypt_job(void *arg1, void *arg2)
 {
-	dmtc_bio_read_decrypt_job_do(arg1, arg2, ctx);
+	dmtc_bio_read_decrypt_job_do(arg1, arg2);
 }
 
 __inline static void
-dmtc_bio_read_decrypt_job_do(dm_target_crypt_config_t *priv,
-    struct bio *bio, struct worker_context *ctx)
+dmtc_bio_read_decrypt_job_do(dm_target_crypt_config_t *priv, struct bio *bio)
 {
-	uint8_t *data_buf = ctx->data_buf;
-
-	KKASSERT(ctx->data_buf_busy == false);
+	uint8_t *data_buf = mpipe_alloc_waitok(&priv->read_mpipe);
 
 	/*
 	 * Note: b_resid no good after read I/O, it will be 0, use
 	 *	 b_bcount.
 	 */
 	int bytes = bio->bio_buf->b_bcount;
+
+	KKASSERT(bytes <= DMTC_BUF_SIZE);
 
 	/*
 	 * Unconditionally copy in data. Never decrypt in place!
@@ -1022,6 +1021,9 @@ dmtc_bio_read_decrypt_job_do(dm_target_crypt_config_t *priv,
 		       bio->bio_buf->b_bcount);
 	}
 #endif
+
+	mpipe_free(&priv->read_mpipe, data_buf);
+
 	struct bio *obio = pop_bio(bio);
 	biodone(obio);
 }
@@ -1040,31 +1042,26 @@ dmtc_bio_read_decrypt(dm_target_crypt_config_t *priv, struct bio *bio)
  */
 
 __inline static void
-dmtc_bio_write_encrypt_job_do(dm_target_crypt_config_t *priv,
-    struct bio *bio, struct worker_context *ctx);
+dmtc_bio_write_encrypt_job_do(dm_target_crypt_config_t *priv, struct bio *bio);
 
 static void
-dmtc_bio_write_encrypt_job(void *arg1, void *arg2, void *ctx)
+dmtc_bio_write_encrypt_job(void *arg1, void *arg2)
 {
-	dmtc_bio_write_encrypt_job_do(arg1, arg2, ctx);
+	dmtc_bio_write_encrypt_job_do(arg1, arg2);
 }
 
 __inline static void
 dmtc_bio_write_encrypt_job_do(dm_target_crypt_config_t *priv,
-    struct bio *bio, struct worker_context *ctx)
+    struct bio *bio)
 {
-	uint8_t *data_buf = ctx->data_buf;
-
-	KKASSERT(ctx->data_buf_busy == false);
-
-	ctx->data_buf_busy = true;
+	uint8_t *data_buf = mpipe_alloc_waitok(&priv->write_mpipe);
 
 	/*
 	 * Use b_bcount for consistency
 	 */
 	int bytes = bio->bio_buf->b_bcount;
 
-	KKASSERT(bytes <= ctx->data_buf_size);
+	KKASSERT(bytes <= DMTC_BUF_SIZE);
 
 	memcpy(data_buf, bio->bio_buf->b_data, bytes);
 
@@ -1076,13 +1073,13 @@ dmtc_bio_write_encrypt_job_do(dm_target_crypt_config_t *priv,
 		    "dm_target_crypt: dmtc_bio_write_encrypt error = %d\n",
 		    bio->bio_buf->b_error);
 
+		mpipe_free(&priv->write_mpipe, data_buf);
 		bio->bio_buf->b_flags |= B_ERROR;
 		struct bio *obio = pop_bio(bio);
 		biodone(obio);
 	} else {
 		bio->bio_caller_info2.ptr =
 		    bio->bio_buf->b_data; /* orig_buf */
-		bio->bio_caller_info3.ptr = ctx;
 		bio->bio_buf->b_data = data_buf;
 		bio->bio_done = dmtc_bio_write_done;
 
@@ -1093,22 +1090,19 @@ dmtc_bio_write_encrypt_job_do(dm_target_crypt_config_t *priv,
 		 * own local allocated memory?
 		 */
 		vn_strategy(priv->pdev->pdev_vnode, bio);
-
-		while (ctx->data_buf_busy) {
-			tsleep(ctx, 0,
-			    "wait for dmtc_bio_write_done to complete",
-			    100);
-		}
 	}
 }
 
 static void
 dmtc_bio_write_done(struct bio *bio)
 {
-	struct worker_context *ctx = bio->bio_caller_info3.ptr;
+	dm_target_crypt_config_t *priv;
+	uint8_t *data_buf;
 
-	ctx->data_buf_busy = false;
-	wakeup_one(ctx);
+	priv = bio->bio_caller_info1.ptr;
+	data_buf = bio->bio_buf->b_data;
+
+	mpipe_free(&priv->write_mpipe, data_buf);
 
 	// Restore original bio buffer
 	bio->bio_buf->b_data = bio->bio_caller_info2.ptr;
