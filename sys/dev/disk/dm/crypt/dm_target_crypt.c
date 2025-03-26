@@ -167,8 +167,8 @@ typedef struct target_crypt_config {
 	 * Atomic counter used to distribute requests
 	 * to the crypto work queues using round robin.
 	 */
-	int crypto_read_workqueues_rr;
-	int crypto_write_workqueues_rr;
+	int crypto_read_wq_next;
+	int crypto_write_wq_next;
 
 } dm_target_crypt_config_t;
 
@@ -265,7 +265,6 @@ workqueue_submit_job(struct workqueue *wq, workqueue_job_callback *wqj_cb,
 	}
 
 	lockmgr(&wq->wq_lock, LK_EXCLUSIVE);
-	wq->wq_load++;
 
 	while (!wq->wq_is_closing) {
 		job = STAILQ_FIRST(&wq->wq_free_jobs);
@@ -299,13 +298,15 @@ workqueue_submit_job(struct workqueue *wq, workqueue_job_callback *wqj_cb,
 static int
 workqueue_dequeue_job_into(struct workqueue *wq, struct workqueue_job *job_copy)
 {
+	KKASSERT(job_copy != NULL);
+
 	lockmgr(&wq->wq_lock, LK_EXCLUSIVE);
 
 	bzero(job_copy, sizeof(struct workqueue_job));
 
 	/*
-	 * In case the queue is closing, no further jobs can be submitted, but
-	 * dequeue will drain the queue until empty.
+	 * In case the queue is closing, no further jobs can be submitted but
+	 * dequeue() will still drain the queue until empty.
 	 */
 
 	while (true) {
@@ -330,7 +331,7 @@ workqueue_dequeue_job_into(struct workqueue *wq, struct workqueue_job *job_copy)
 				lockmgr(&wq->wq_lock, LK_RELEASE);
 
 				/*
-				 * This is an excess item, which wasn't preallocated.
+				 * This is an excess item which wasn't preallocated.
 				 * Give it back to the system memory pool.
 				 */
 				kfree(job, M_DMCRYPT);
@@ -356,10 +357,9 @@ workqueue_worker(void *wq_arg)
 
 	while (workqueue_dequeue_job_into(wq, &job) == 0) {
 		job.wqj_cb(job.wqj_arg1, job.wqj_arg2);
+		atomic_add_int(&wq->wq_load, -1);
 		lwkt_yield();
 	}
-
-	--wq->wq_load;
 
 	wakeup(wq);
 }
@@ -786,8 +786,8 @@ dm_target_crypt_init(dm_table_entry_t *table_en, int argc, char **argv)
 		workqueue_start(&priv->crypto_write_workqueues[cpu], cpu, 100);
 	}
 
-	priv->crypto_read_workqueues_rr = 0;
-	priv->crypto_write_workqueues_rr = 0;
+	priv->crypto_read_wq_next = 0;
+	priv->crypto_write_wq_next = 0;
 
 	return 0;
 
@@ -927,16 +927,19 @@ dm_target_crypt_strategy(dm_table_entry_t *table_en, struct buf *bp)
 	return 0;
 }
 
+/**
+ * Submits `job_cb` into one of the work queues.
+ */
 static void
 dmtc_submit_bio_job(dm_target_crypt_config_t *priv, struct bio *bio,
-    struct workqueue *workqueues, int *wq_rr, workqueue_job_callback *job_cb)
+    struct workqueue *workqueues, int *wq_next, workqueue_job_callback *job_cb)
 {
 	/**
 	 * TODO: we could select the queue based on it's load.
 	 */
-	int best_idx = atomic_fetchadd_int(wq_rr, 1) % ncpus;
+	int wq_idx = atomic_fetchadd_int(wq_next, 1) % ncpus;
 
-	int error = workqueue_submit_job(&workqueues[best_idx],
+	int error = workqueue_submit_job(&workqueues[wq_idx],
 	    job_cb, (void *)priv, (void *)bio);
 	if (error) {
 		kprintf(
@@ -946,7 +949,9 @@ dmtc_submit_bio_job(dm_target_crypt_config_t *priv, struct bio *bio,
 		bio->bio_buf->b_flags |= B_ERROR;
 		struct bio *obio = pop_bio(bio);
 		biodone(obio);
+		return;
 	}
+	atomic_add_int(&workqueues[wq_idx].wq_load, 1);
 }
 
 /*
@@ -1032,7 +1037,7 @@ static void
 dmtc_bio_read_decrypt(dm_target_crypt_config_t *priv, struct bio *bio)
 {
 	dmtc_submit_bio_job(priv, bio, priv->crypto_read_workqueues,
-	   &priv->crypto_read_workqueues_rr, dmtc_bio_read_decrypt_job);
+	   &priv->crypto_read_wq_next, dmtc_bio_read_decrypt_job);
 }
 
 /* END OF STRATEGY READ SECTION */
@@ -1115,7 +1120,7 @@ static void
 dmtc_bio_write_encrypt(dm_target_crypt_config_t *priv, struct bio *bio)
 {
 	dmtc_submit_bio_job(priv, bio, priv->crypto_write_workqueues,
-	   &priv->crypto_write_workqueues_rr, dmtc_bio_write_encrypt_job);
+	   &priv->crypto_write_wq_next, dmtc_bio_write_encrypt_job);
 }
 
 /* END OF STRATEGY WRITE SECTION */
