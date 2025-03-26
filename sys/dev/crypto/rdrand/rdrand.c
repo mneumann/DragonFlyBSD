@@ -208,4 +208,4 @@ static devclass_t rdrand_devclass;
 
 DRIVER_MODULE(rdrand, nexus, rdrand_driver, rdrand_devclass, NULL, NULL);
 MODULE_VERSION(rdrand, 1);
-MODULE_DEPEND(rdrand, crypto, 1, 1, 1);
+MODULE_DEPEND(rdrand, crypto, 2, 2, 2);
