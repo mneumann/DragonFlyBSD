@@ -56,8 +56,24 @@
 #include <sys/types.h>
 #include <sys/mpipe.h>
 #include <cpu/atomic.h>
+#include <sys/sysctl.h>
 
 MALLOC_DEFINE(M_DMCRYPT, "dm_crypt", "Device Mapper Target Crypt");
+
+static int dmtc_writebuf_count = 0;
+static int dmtc_readbuf_count = 0;
+static int dmtc_writequeue_depth = 100;
+static int dmtc_readqueue_depth = 100;
+
+SYSCTL_NODE(_dev, OID_AUTO, dm_crypt, CTLFLAG_RW, 0, "Device Mapper Target Crypt args");
+SYSCTL_INT(_dev_dm_crypt, OID_AUTO, writebuf_count,
+    CTLFLAG_RW, &dmtc_writebuf_count, 0, "Number of write buffers (0 = auto)");
+SYSCTL_INT(_dev_dm_crypt, OID_AUTO, readbuf_count,
+    CTLFLAG_RW, &dmtc_readbuf_count, 0, "Number of read buffers (0 = auto)");
+SYSCTL_INT(_dev_dm_crypt, OID_AUTO, writequeue_depth,
+    CTLFLAG_RW, &dmtc_writequeue_depth, 100, "Preallocated per-worker write queue depth");
+SYSCTL_INT(_dev_dm_crypt, OID_AUTO, readqueue_depth,
+    CTLFLAG_RW, &dmtc_readqueue_depth, 100, "Preallocated per-worker read queue depth");
 
 /**
  * A Multi Producer Single Consumer queue.
@@ -412,11 +428,18 @@ static void
 dmtc_init_mpipe(struct target_crypt_config *priv)
 {
 	int nmax = dmtc_get_nmax();
-	kprintf("dm_target_crypt: Setting %d mpipe buffers\n", nmax);
+	int writebuf_count = (dmtc_writebuf_count <= 0) ? nmax : dmtc_writebuf_count;
+	int readbuf_count = (dmtc_readbuf_count <= 0) ? nmax : dmtc_readbuf_count;
+
+	kprintf("dm_target_crypt: Setting %d mpipe write buffers\n", writebuf_count);
 	mpipe_init(&priv->write_mpipe, M_DMCRYPT, DMTC_BUF_SIZE,
-		nmax, nmax, MPF_NOZERO | MPF_CALLBACK, NULL, NULL, NULL);
+		writebuf_count, writebuf_count, MPF_NOZERO | MPF_CALLBACK,
+		NULL, NULL, NULL);
+
+	kprintf("dm_target_crypt: Setting %d mpipe read buffers\n", readbuf_count);
 	mpipe_init(&priv->read_mpipe, M_DMCRYPT, DMTC_BUF_SIZE,
-		nmax, nmax, MPF_NOZERO | MPF_CALLBACK, NULL, NULL, NULL);
+		readbuf_count, readbuf_count, MPF_NOZERO | MPF_CALLBACK,
+		NULL, NULL, NULL);
 }
 
 static void
@@ -777,13 +800,17 @@ dm_target_crypt_init(dm_table_entry_t *table_en, int argc, char **argv)
 	 */
 	priv->crypto_read_workqueues = kmalloc(sizeof(struct workqueue) * ncpus,
 	    M_DMCRYPT, M_WAITOK | M_ZERO);
-	priv->crypto_write_workqueues = kmalloc(sizeof(struct workqueue) *
-		ncpus,
+	priv->crypto_write_workqueues = kmalloc(sizeof(struct workqueue) * ncpus,
 	    M_DMCRYPT, M_WAITOK | M_ZERO);
 
+	int writequeue_depth = (dmtc_writequeue_depth > 0) ? dmtc_writequeue_depth : 1;
+	int readqueue_depth = (dmtc_readqueue_depth > 0) ? dmtc_readqueue_depth : 1;
+
 	for (int cpu = 0; cpu < ncpus; ++cpu) {
-		workqueue_start(&priv->crypto_read_workqueues[cpu], cpu, 100);
-		workqueue_start(&priv->crypto_write_workqueues[cpu], cpu, 100);
+		workqueue_start(&priv->crypto_write_workqueues[cpu], cpu,
+				writequeue_depth);
+		workqueue_start(&priv->crypto_read_workqueues[cpu], cpu,
+				readqueue_depth);
 	}
 
 	priv->crypto_read_wq_next = 0;
