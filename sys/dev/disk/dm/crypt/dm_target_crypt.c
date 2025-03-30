@@ -341,7 +341,7 @@ worker_pool_init(
 		int num_workers,
 		void *contexts[],
 		worker_job_handler *job_handler,
-		int preallocated_free_jobs);
+		int per_worker_preallocated_free_jobs);
 
 
 /**
@@ -410,7 +410,7 @@ worker_pool_init(
 		int num_workers,
 		void *contexts[],
 		worker_job_handler *job_handler,
-		int preallocated_free_jobs)
+		int per_worker_preallocated_free_jobs)
 {
 	bzero(pool, sizeof(*pool));
 	pool->wp_num_workers = num_workers;
@@ -432,7 +432,7 @@ worker_pool_init(
 		/**
 		 * Preallocate per-worker free list
 		 */
-		for (int k = 0; k < preallocated_free_jobs; ++k) {
+		for (int k = 0; k < per_worker_preallocated_free_jobs; ++k) {
 			struct worker_job *free_job = kmalloc(
 			    sizeof(struct worker_job), M_DMCRYPT, M_ZERO | M_WAITOK);
 			free_job->wj_flags = WORKER_JOB_FLAG_FREE | WORKER_JOB_FLAG_PREALLOC;
@@ -527,12 +527,12 @@ typedef struct target_crypt_config {
 	 * operations from userspace, but writes can cause long stalls
 	 * due to write buffering.
 	 */
-	struct worker_pool	crypto_read_workers;
+	struct worker_pool	crypto_read_worker_pool;
 
 	/**
 	 * Pool of workers that process BIO write requests (encrypt).
 	 */
-	struct worker_pool	crypto_write_workers;
+	struct worker_pool	crypto_write_worker_pool;
 
 } dm_target_crypt_config_t;
 
@@ -979,7 +979,7 @@ dm_target_crypt_init(dm_table_entry_t *table_en, int argc, char **argv)
 	 * Initialize the crypto read worker pool.
 	 */
 	worker_pool_init(
-			&priv->crypto_read_workers,
+			&priv->crypto_read_worker_pool,
 			ncpus,
 			NULL /* contexts */,
 			dmtc_bio_read_decrypt_job_handler,
@@ -989,7 +989,7 @@ dm_target_crypt_init(dm_table_entry_t *table_en, int argc, char **argv)
 	 * Initialize the crypto write worker pool.
 	 */
 	worker_pool_init(
-			&priv->crypto_write_workers,
+			&priv->crypto_write_worker_pool,
 			ncpus,
 			NULL /* contexts */,
 			dmtc_bio_write_encrypt_job_handler,
@@ -999,8 +999,8 @@ dm_target_crypt_init(dm_table_entry_t *table_en, int argc, char **argv)
 	/**
 	 * Start the crypto read/write worker pools.
 	 */
-	worker_pool_start(&priv->crypto_read_workers, 0);
-	worker_pool_start(&priv->crypto_write_workers, 0);
+	worker_pool_start(&priv->crypto_read_worker_pool, 0);
+	worker_pool_start(&priv->crypto_write_worker_pool, 0);
 
 	return 0;
 
@@ -1043,14 +1043,14 @@ dm_target_crypt_destroy(dm_table_entry_t *table_en)
 	/**
 	 * Stop and free worker pools.
 	 */
-	worker_pool_stop(&priv->crypto_read_workers);
-	worker_pool_stop(&priv->crypto_write_workers);
+	worker_pool_stop(&priv->crypto_read_worker_pool);
+	worker_pool_stop(&priv->crypto_write_worker_pool);
 
 	// TODO: wait until all requests are completed.
 	// write requests might still be pending.
 
-	worker_pool_free(&priv->crypto_read_workers);
-	worker_pool_free(&priv->crypto_write_workers);
+	worker_pool_free(&priv->crypto_read_worker_pool);
+	worker_pool_free(&priv->crypto_write_worker_pool);
 
 	dmtc_destroy_mpipe(priv);
 
@@ -1132,7 +1132,7 @@ dm_target_crypt_strategy(dm_table_entry_t *table_en, struct buf *bp)
 		bio->bio_offset = bp->b_bio1.bio_offset +
 		    priv->block_offset * DEV_BSIZE;
 		bio->bio_caller_info1.ptr = priv;
-		dmtc_submit_bio_job(priv, bio, &priv->crypto_write_workers);
+		dmtc_submit_bio_job(priv, bio, &priv->crypto_write_worker_pool);
 		break;
 	default:
 		vn_strategy(priv->pdev->pdev_vnode, &bp->b_bio1);
@@ -1183,7 +1183,7 @@ dmtc_bio_read_done(struct bio *bio)
 		biodone(obio);
 	} else {
 		priv = bio->bio_caller_info1.ptr;
-		dmtc_submit_bio_job(priv, bio, &priv->crypto_read_workers);
+		dmtc_submit_bio_job(priv, bio, &priv->crypto_read_worker_pool);
 	}
 }
 
