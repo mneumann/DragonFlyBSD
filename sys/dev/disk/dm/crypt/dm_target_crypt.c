@@ -61,15 +61,12 @@
 MALLOC_DEFINE(M_DMCRYPT, "dm_crypt", "Device Mapper Target Crypt");
 
 static int dmtc_writebuf_count = 0;
-static int dmtc_readbuf_count = 0;
 static int dmtc_writequeue_depth = 100;
 static int dmtc_readqueue_depth = 100;
 
 SYSCTL_NODE(_dev, OID_AUTO, dm_crypt, CTLFLAG_RW, 0, "Device Mapper Target Crypt args");
 SYSCTL_INT(_dev_dm_crypt, OID_AUTO, writebuf_count,
     CTLFLAG_RW, &dmtc_writebuf_count, 0, "Number of write buffers (0 = auto)");
-SYSCTL_INT(_dev_dm_crypt, OID_AUTO, readbuf_count,
-    CTLFLAG_RW, &dmtc_readbuf_count, 0, "Number of read buffers (0 = auto)");
 SYSCTL_INT(_dev_dm_crypt, OID_AUTO, writequeue_depth,
     CTLFLAG_RW, &dmtc_writequeue_depth, 100, "Preallocated per-worker write queue depth");
 SYSCTL_INT(_dev_dm_crypt, OID_AUTO, readqueue_depth,
@@ -119,6 +116,11 @@ struct worker {
 	 * Private data usable from within the worker.
 	 */
 	void *w_context;
+
+	/**
+	 * The size of the w_context buffer.
+	 */
+	int w_context_size;
 
 	/**
 	 * Protects the remaining fields of the struct.
@@ -339,9 +341,9 @@ static void
 worker_pool_init(
 		struct worker_pool *pool,
 		int num_workers,
-		void *contexts[],
-		worker_job_handler *job_handler,
-		int per_worker_preallocated_free_jobs);
+		int per_worker_local_memory,
+		int per_worker_preallocated_free_jobs,
+		worker_job_handler *job_handler);
 
 
 /**
@@ -408,9 +410,9 @@ void
 worker_pool_init(
 		struct worker_pool *pool,
 		int num_workers,
-		void *contexts[],
-		worker_job_handler *job_handler,
-		int per_worker_preallocated_free_jobs)
+		int per_worker_local_memory,
+		int per_worker_preallocated_free_jobs,
+		worker_job_handler *job_handler)
 {
 	bzero(pool, sizeof(*pool));
 	pool->wp_num_workers = num_workers;
@@ -422,7 +424,9 @@ worker_pool_init(
 	for (int i = 0; i < num_workers; ++i) {
 		pool->wp_workers[i].w_thread = NULL;
 		pool->wp_workers[i].w_job_handler = job_handler;
-		pool->wp_workers[i].w_context = contexts ? contexts[i] : NULL;
+		pool->wp_workers[i].w_context_size = per_worker_local_memory;
+		pool->wp_workers[i].w_context = (per_worker_local_memory > 0) ?
+			kmalloc(per_worker_local_memory, M_DMCRYPT, M_WAITOK) : NULL;
 		lockinit(&pool->wp_workers[i].w_lock,
 				"dm_target_crypt: worker", 0, LK_CANRECURSE);
 		pool->wp_workers[i].w_is_closing = false;
@@ -461,6 +465,12 @@ worker_pool_free_worker(struct worker *worker)
 
 	lockmgr(&worker->w_lock, LK_RELEASE);
 	lockuninit(&worker->w_lock);
+
+	if (worker->w_context) {
+		explicit_bzero(worker->w_context, worker->w_context_size);
+		kfree(worker->w_context, M_DMCRYPT);
+	}
+	bzero(worker, sizeof(*worker));
 }
 
 /**
@@ -516,7 +526,6 @@ typedef struct target_crypt_config {
 	struct iv_generator	*ivgen;
 	void	*ivgen_priv;
 
-	struct malloc_pipe	read_mpipe;
 	struct malloc_pipe	write_mpipe;
 	
 	/**
@@ -600,16 +609,10 @@ dmtc_init_mpipe(struct target_crypt_config *priv)
 {
 	int nmax = dmtc_get_nmax();
 	int writebuf_count = (dmtc_writebuf_count <= 0) ? nmax : dmtc_writebuf_count;
-	int readbuf_count = (dmtc_readbuf_count <= 0) ? nmax : dmtc_readbuf_count;
 
 	kprintf("dm_target_crypt: Setting %d mpipe write buffers\n", writebuf_count);
 	mpipe_init(&priv->write_mpipe, M_DMCRYPT, DMTC_BUF_SIZE,
 		writebuf_count, writebuf_count, MPF_NOZERO | MPF_CALLBACK,
-		NULL, NULL, NULL);
-
-	kprintf("dm_target_crypt: Setting %d mpipe read buffers\n", readbuf_count);
-	mpipe_init(&priv->read_mpipe, M_DMCRYPT, DMTC_BUF_SIZE,
-		readbuf_count, readbuf_count, MPF_NOZERO | MPF_CALLBACK,
 		NULL, NULL, NULL);
 }
 
@@ -617,7 +620,6 @@ static void
 dmtc_destroy_mpipe(struct target_crypt_config *priv)
 {
 	mpipe_done(&priv->write_mpipe);
-	mpipe_done(&priv->read_mpipe);
 }
 
 /*
@@ -981,9 +983,9 @@ dm_target_crypt_init(dm_table_entry_t *table_en, int argc, char **argv)
 	worker_pool_init(
 			&priv->crypto_read_worker_pool,
 			ncpus,
-			NULL /* contexts */,
-			dmtc_bio_read_decrypt_job_handler,
-			readqueue_depth);
+			DMTC_BUF_SIZE,
+			readqueue_depth,
+			dmtc_bio_read_decrypt_job_handler);
 
 	/**
 	 * Initialize the crypto write worker pool.
@@ -991,9 +993,9 @@ dm_target_crypt_init(dm_table_entry_t *table_en, int argc, char **argv)
 	worker_pool_init(
 			&priv->crypto_write_worker_pool,
 			ncpus,
-			NULL /* contexts */,
-			dmtc_bio_write_encrypt_job_handler,
-			writequeue_depth);
+			0,
+			writequeue_depth,
+			dmtc_bio_write_encrypt_job_handler);
 
 
 	/**
@@ -1192,8 +1194,7 @@ dmtc_bio_read_decrypt_job_handler(void *user_arg1, void *user_arg2, void *worker
 {
 	dm_target_crypt_config_t *priv = user_arg1;
 	struct bio *bio = user_arg2;
-
-	uint8_t *data_buf = mpipe_alloc_waitok(&priv->read_mpipe);
+	uint8_t *data_buf = worker_context;
 
 	/*
 	 * Note: b_resid no good after read I/O, it will be 0, use
@@ -1229,8 +1230,6 @@ dmtc_bio_read_decrypt_job_handler(void *user_arg1, void *user_arg2, void *worker
 		       bio->bio_buf->b_bcount);
 	}
 #endif
-
-	mpipe_free(&priv->read_mpipe, data_buf);
 
 	struct bio *obio = pop_bio(bio);
 	biodone(obio);
