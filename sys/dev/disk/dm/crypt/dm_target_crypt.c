@@ -206,11 +206,11 @@ worker_pool_submit_job(
 			KKASSERT(job->wj_flags & WORKER_JOB_FLAG_PREALLOC);
 
 			STAILQ_REMOVE_HEAD(&worker->w_free_jobs, wj_next);
+			job->wj_flags = WORKER_JOB_FLAG_PREALLOC;
 		} else {
 			kprintf("WARN: dmtc: Preallocated jobs exhausted. Falling back to kmalloc\n");
 			job = kmalloc(sizeof(struct worker_job), M_DMCRYPT, M_ZERO | M_WAITOK);
-			/* but not WORKER_JOB_FLAG_PREALLOC! */
-			job->wj_flags = WORKER_JOB_FLAG_FREE;
+			job->wj_flags = 0; /* no WORKER_JOB_FLAG_PREALLOC! */
 		}
 
 		job->wj_user_arg1 = job_user_arg1;
@@ -250,7 +250,7 @@ worker_take_job(
 	while (true) {
 		struct worker_job *job = STAILQ_FIRST(&worker->w_jobs);
 		if (job) {
-			KKASSERT(!(job->wj_flags & WORKER_JOB_FLAG_FREE));
+			KKASSERT((job->wj_flags & WORKER_JOB_FLAG_FREE) == 0);
 
 			STAILQ_REMOVE_HEAD(&worker->w_jobs, wj_next);
 
