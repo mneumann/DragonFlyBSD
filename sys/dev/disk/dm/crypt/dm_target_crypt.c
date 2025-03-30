@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024 The DragonFly Project.  All rights reserved.
+ * Copyright (c) 2010, 2024, 2025 The DragonFly Project.  All rights reserved.
  *
  * This code is derived from software contributed to The DragonFly Project
  * by Alex Hornung <ahornung@gmail.com> and
@@ -76,57 +76,408 @@ SYSCTL_INT(_dev_dm_crypt, OID_AUTO, readqueue_depth,
     CTLFLAG_RW, &dmtc_readqueue_depth, 100, "Preallocated per-worker read queue depth");
 
 /**
- * A Multi Producer Single Consumer queue.
+ * A work pool implementation.
  *
- * Multiple threads can submit "jobs" to queues. Each queue
- * is served by exactly one worker thread.
+ * Use one queue per worker.
  */
 
-typedef void workqueue_job_callback(void *arg1, void *arg2);
+#define WORKER_JOB_FLAG_FREE		0x01
+#define WORKER_JOB_FLAG_PREALLOC	0x02
 
-#define WQJ_FLAGS_IS_FREE          0x01
-#define WQJ_FLAGS_WAS_PREALLOCATED 0x02
-
-struct workqueue_job {
-	workqueue_job_callback *wqj_cb;
-	void *wqj_arg1;
-	void *wqj_arg2;
-	int wqj_flags;
-	STAILQ_ENTRY(workqueue_job) wqj_next;
+struct worker_job {
+	void *wj_user_arg1;
+	void *wj_user_arg2;
+	int wj_flags;
+	STAILQ_ENTRY(worker_job) wj_next;
 };
-
-struct workqueue {
-	struct lock wq_lock;
-	bool wq_is_closing;
-	int wq_load;
-	struct thread *wq_worker;
-
-	STAILQ_HEAD(, workqueue_job) wq_jobs;
-
-	/**
-	 * We use a preallocated list of free `struct workqueue_job`s,
-	 * so we don't need to kmalloc as long as there are free
-	 * entries on the list. If the wq_free_jobs list is full,
-	 * we resort to kmalloc(), as we don't want to block the
-	 * read/write BIO path.
-	 */
-	STAILQ_HEAD(, workqueue_job) wq_free_jobs;
-};
-
-static int workqueue_submit_job(struct workqueue *wq,
-    workqueue_job_callback *wqj_cb, void *wqj_arg1, void *wqj_arg2);
-
-static void workqueue_start(struct workqueue *wq, int cpu, int initial_queue_size);
-
-static void workqueue_stop(struct workqueue *wq);
-
-static int workqueue_dequeue_job_into(struct workqueue *wq,
-    struct workqueue_job *job_copy);
 
 /**
- * End of MPSC queue
+ * The function that processes a job.
  */
- 
+typedef void
+worker_job_handler(void *user_arg1, void *user_arg2, void *worker_context);
+
+struct worker_pool;
+
+/**
+ * Represents a worker.
+ *
+ * Each worker is bound to a CPU and associated with it's own job queue.
+ */
+struct worker {
+	/**
+	 * Points to the thread that runs the worker.
+	 */
+	struct thread *w_thread;
+
+	/**
+	 * Points to the job handler function.
+	 */
+	worker_job_handler *w_job_handler;
+
+	/**
+	 * Private data usable from within the worker.
+	 */
+	void *w_context;
+
+	/**
+	 * Protects the remaining fields of the struct.
+	 */
+	struct lock w_lock;
+
+	/**
+	 * Set to true if the worker is shutting down, in which
+	 * case no further jobs can be submitted to the queue,
+	 * but already submitted jobs are still processed.
+	 */
+	bool w_is_closing;
+
+	/**
+	 * Per-worker "job" queue.
+	 */
+	STAILQ_HEAD(, worker_job) w_jobs;
+
+	/**
+	 * Free-list for "job"s.
+	 *
+	 * We use a preallocated list of free `struct worker_job`s,
+	 * so we don't need to kmalloc as long as there are free
+	 * entries on this list. If the `w_free_jobs` list is
+	 * exhausted, we resort to kmalloc() as we don't want to
+	 * block the read/write BIO path.
+	 */
+	STAILQ_HEAD(, worker_job) w_free_jobs;
+};
+
+struct worker_pool {
+	/*
+	 * number of workers
+	 */
+	int wp_num_workers;
+
+	/**
+	 * Atomic counter used to distribute jobs
+	 * to a worker using round robin.
+	 */
+	int wp_next_worker_idx;
+
+	/*
+	 * List of workers.
+	 */
+	struct worker *wp_workers;
+};
+
+static void
+worker_main(void *worker_arg);
+
+
+int
+worker_pool_submit_job(
+		struct worker_pool *pool,
+		void *job_user_arg1,
+		void *job_user_arg2);
+
+
+// TODO: retry if kmalloc fails?
+// krateprintf
+int
+worker_pool_submit_job(
+		struct worker_pool *pool,
+		void *job_user_arg1,
+		void *job_user_arg2)
+{
+	struct worker_job *job = NULL;
+	struct worker *worker;
+	int worker_idx;
+
+	worker_idx = atomic_fetchadd_int(&pool->wp_next_worker_idx, 1) % pool->wp_num_workers;
+	worker = &pool->wp_workers[worker_idx];
+
+	if (worker->w_is_closing) {
+		return (EPIPE);
+	}
+
+	lockmgr(&worker->w_lock, LK_EXCLUSIVE);
+
+	while (!worker->w_is_closing) {
+		job = STAILQ_FIRST(&worker->w_free_jobs);
+		if (job) {
+			KKASSERT(job->wj_flags & WORKER_JOB_FLAG_FREE);
+			KKASSERT(job->wj_flags & WORKER_JOB_FLAG_PREALLOC);
+
+			STAILQ_REMOVE_HEAD(&worker->w_free_jobs, wj_next);
+		} else {
+			kprintf("WARN: dmtc: Preallocated jobs exhausted. Falling back to kmalloc\n");
+			job = kmalloc(sizeof(struct worker_job), M_DMCRYPT, M_ZERO | M_WAITOK);
+			/* but not WORKER_JOB_FLAG_PREALLOC! */
+			job->wj_flags = WORKER_JOB_FLAG_FREE;
+		}
+
+		job->wj_user_arg1 = job_user_arg1;
+		job->wj_user_arg2 = job_user_arg2;
+
+		STAILQ_INSERT_TAIL(&worker->w_jobs, job, wj_next);
+		lockmgr(&worker->w_lock, LK_RELEASE);
+		wakeup_one(&worker->w_jobs);
+
+		return (0);
+	}
+
+	lockmgr(&worker->w_lock, LK_RELEASE);
+
+	return (EPIPE);
+}
+
+static int
+worker_take_job(
+		struct worker *worker,
+		void **return_user_arg1,
+		void **return_user_arg2);
+
+int
+worker_take_job(
+		struct worker *worker,
+		void **return_user_arg1,
+		void **return_user_arg2)
+{
+	lockmgr(&worker->w_lock, LK_EXCLUSIVE);
+
+	/*
+	 * In case the queue is closing no further jobs can be submitted.
+	 * But this function will still drain the queue until it is empty.
+	 */
+
+	while (true) {
+		struct worker_job *job = STAILQ_FIRST(&worker->w_jobs);
+		if (job) {
+			KKASSERT(!(job->wj_flags & WORKER_JOB_FLAG_FREE));
+
+			STAILQ_REMOVE_HEAD(&worker->w_jobs, wj_next);
+
+			/*
+			 * Copy the job out to the caller-passed pointers
+			 * and then immediately put back the job to the free-list.
+			 */
+			*return_user_arg1 = job->wj_user_arg1;
+			*return_user_arg2 = job->wj_user_arg2;
+
+			job->wj_flags |= WORKER_JOB_FLAG_FREE;
+			if (job->wj_flags & WORKER_JOB_FLAG_PREALLOC)
+			{	
+				/**
+				 * If job was preallocated, put it back to
+				 * the free-list.
+				 */
+				STAILQ_INSERT_TAIL(&worker->w_free_jobs, job, wj_next);
+				lockmgr(&worker->w_lock, LK_RELEASE);
+			}
+			else
+			{
+				/**
+				 * The job is an excess item, which wasn't preallocated
+				 * but kmalloc'ed. Give it back to the system memory pool.
+				 */
+				lockmgr(&worker->w_lock, LK_RELEASE);
+				kfree(job, M_DMCRYPT);
+			}
+
+			return (0);
+
+		} else {
+			/**
+			 * queue is empty
+			 */
+
+			if (worker->w_is_closing) {
+				/**
+				 * queue is fully drained.
+				 */
+				lockmgr(&worker->w_lock, LK_RELEASE);
+				return (EPIPE);
+			} else {
+				/**
+				 * wait for next job.
+				 *
+				 * wakeup every 1000ms. this is not required
+				 * and the code works without the timeout.
+				 */
+				lksleep(&worker->w_jobs, &worker->w_lock, 0,
+			    		"dm_target_crypt: worker queue empty", 1000);
+			}
+		}
+	}
+}
+
+void
+worker_main(void *worker_arg)
+{
+	struct worker *worker = worker_arg;
+	void *job_user_arg1;
+	void *job_user_arg2;
+	int error;
+
+	while (true) {
+		job_user_arg1 = NULL;
+		job_user_arg2 = NULL;
+		error = worker_take_job(worker, &job_user_arg1, &job_user_arg2);
+		if (error)
+			break;
+		worker->w_job_handler(job_user_arg1, job_user_arg2, worker->w_context);
+		lwkt_yield();
+	}
+
+	/**
+	 * This notifies worker_pool_stop() that the worker has been terminated.
+	 */
+	wakeup(worker);
+}
+
+/**
+ * Initialize the worker pool and allocate memory.
+ */
+static void
+worker_pool_init(
+		struct worker_pool *pool,
+		int num_workers,
+		void *contexts[],
+		worker_job_handler *job_handler,
+		int preallocated_free_jobs);
+
+
+/**
+ * Start the worker pool.
+ */
+static void
+worker_pool_start(
+		struct worker_pool *pool,
+		int cpu_offset);
+
+/**
+ * Stop the worker pool.
+ */ 
+static void
+worker_pool_stop(struct worker_pool *pool);
+
+/**
+ * Free the worker pool.
+ */
+static void
+worker_pool_free(struct worker_pool *pool);
+
+void
+worker_pool_start(
+		struct worker_pool *pool,
+		int cpu_offset)
+{
+	for (int i = 0; i < pool->wp_num_workers; ++i) {
+		kthread_create_cpu(worker_main,
+				&pool->wp_workers[i],
+				&pool->wp_workers[i].w_thread,
+				(cpu_offset + i) % ncpus,
+	    			"dm_target_crypt: crypto worker");
+
+	}
+
+}
+
+static void
+worker_pool_stop_worker(struct worker *worker)
+{
+	lockmgr(&worker->w_lock, LK_EXCLUSIVE);
+	worker->w_is_closing = true;
+	lockmgr(&worker->w_lock, LK_RELEASE);
+
+	while (true) {
+		wakeup(&worker->w_jobs);
+		if (tsleep(worker, 0, "shutdown workqueue", 500) == 0)
+			break;
+	}
+}
+
+
+void
+worker_pool_stop(struct worker_pool *pool)
+{
+	for (int i = 0; i < pool->wp_num_workers; ++i) {
+		worker_pool_stop_worker(&pool->wp_workers[i]);
+	}
+}
+
+
+void
+worker_pool_init(
+		struct worker_pool *pool,
+		int num_workers,
+		void *contexts[],
+		worker_job_handler *job_handler,
+		int preallocated_free_jobs)
+{
+	bzero(pool, sizeof(*pool));
+	pool->wp_num_workers = num_workers;
+	pool->wp_next_worker_idx = 0;
+	pool->wp_workers = kmalloc(
+			sizeof(struct worker) * num_workers,
+	    		M_DMCRYPT, M_WAITOK | M_ZERO);
+
+	for (int i = 0; i < num_workers; ++i) {
+		pool->wp_workers[i].w_thread = NULL;
+		pool->wp_workers[i].w_job_handler = job_handler;
+		pool->wp_workers[i].w_context = contexts ? contexts[i] : NULL;
+		lockinit(&pool->wp_workers[i].w_lock,
+				"dm_target_crypt: worker", 0, LK_CANRECURSE);
+		pool->wp_workers[i].w_is_closing = false;
+		STAILQ_INIT(&pool->wp_workers[i].w_jobs);
+		STAILQ_INIT(&pool->wp_workers[i].w_free_jobs);
+
+		/**
+		 * Preallocate per-worker free list
+		 */
+		for (int k = 0; k < preallocated_free_jobs; ++k) {
+			struct worker_job *free_job = kmalloc(
+			    sizeof(struct worker_job), M_DMCRYPT, M_ZERO | M_WAITOK);
+			free_job->wj_flags = WORKER_JOB_FLAG_FREE | WORKER_JOB_FLAG_PREALLOC;
+			STAILQ_INSERT_TAIL(&pool->wp_workers[i].w_free_jobs, free_job, wj_next);
+		}
+	}
+}
+
+static void
+worker_pool_free_worker(struct worker *worker)
+{
+	lockmgr(&worker->w_lock, LK_EXCLUSIVE);
+
+	KKASSERT(STAILQ_FIRST(&worker->w_jobs) == NULL);
+
+	/**
+	 * Free pre-allocated jobs.
+	 */
+	struct worker_job *free_job;
+	while ((free_job = STAILQ_FIRST(&worker->w_free_jobs)) != NULL) {
+		KKASSERT(free_job->wj_flags & WORKER_JOB_FLAG_FREE);
+		STAILQ_REMOVE_HEAD(&worker->w_free_jobs, wj_next);
+		kfree(free_job, M_DMCRYPT);
+	}
+	KKASSERT(STAILQ_FIRST(&worker->w_free_jobs) == NULL);
+
+	lockmgr(&worker->w_lock, LK_RELEASE);
+	lockuninit(&worker->w_lock);
+}
+
+/**
+ * Free the worker pool.
+ */
+void
+worker_pool_free(struct worker_pool *pool)
+{
+	for (int i = 0; i < pool->wp_num_workers; ++i) {
+		worker_pool_free_worker(&pool->wp_workers[i]);
+	}
+	kfree(pool->wp_workers, M_DMCRYPT);
+	bzero(pool, sizeof(*pool));
+}
+
+/* END of worker pool implementation */
+
 struct target_crypt_config;
 
 typedef void ivgen_t(struct target_crypt_config *, u_int8_t *, size_t, off_t);
@@ -167,24 +518,21 @@ typedef struct target_crypt_config {
 
 	struct malloc_pipe	read_mpipe;
 	struct malloc_pipe	write_mpipe;
-
+	
 	/**
-	 * per-CPU work queues [0..ncpus)
+	 * Pool of workers that process BIO read requests (decrypt).
 	 *
-	 * We use separate workqueues for read and write requests.
+	 * We use separate worker pools for read and write requests.
 	 * Read requests do not cause long stalls, as they are synchronous
 	 * operations from userspace, but writes can cause long stalls
 	 * due to write buffering.
 	 */
-	struct workqueue	*crypto_read_workqueues;
-	struct workqueue	*crypto_write_workqueues;
+	struct worker_pool	crypto_read_workers;
 
 	/**
-	 * Atomic counter used to distribute requests
-	 * to the crypto work queues using round robin.
+	 * Pool of workers that process BIO write requests (encrypt).
 	 */
-	int crypto_read_wq_next;
-	int crypto_write_wq_next;
+	struct worker_pool	crypto_write_workers;
 
 } dm_target_crypt_config_t;
 
@@ -212,12 +560,11 @@ static void dmtc_crypto_dump(dm_target_crypt_config_t *priv,
 static int dmtc_bio_encdec(dm_target_crypt_config_t *priv, uint8_t *data_buf,
     int bytes, off_t offset, crypto_cipher_blockfn_t blockfn);
 
-static void dmtc_bio_read_done(struct bio *bio);
-static void dmtc_bio_read_decrypt(dm_target_crypt_config_t *priv,
-    struct bio *bio);
+static void
+dmtc_submit_bio_job(dm_target_crypt_config_t *priv, struct bio *bio,
+		struct worker_pool *pool);
 
-static void dmtc_bio_write_encrypt(dm_target_crypt_config_t *priv,
-    struct bio *bio);
+static void dmtc_bio_read_done(struct bio *bio);
 static void dmtc_bio_write_done(struct bio *bio);
 
 static ivgen_ctor_t	essiv_ivgen_ctor;
@@ -234,182 +581,6 @@ static struct iv_generator ivgens[] = {
 	{ NULL, NULL, NULL, NULL }
 };
 
-/**
- * MPSC queue implementation
- */
-
-static void
-workqueue_stop(struct workqueue *wq)
-{
-	lockmgr(&wq->wq_lock, LK_EXCLUSIVE);
-	wq->wq_is_closing = true;
-	lockmgr(&wq->wq_lock, LK_RELEASE);
-
-	while (true) {
-		wakeup(&wq->wq_jobs);
-		if (tsleep(wq, 0, "shutdown workqueue", 500) == 0)
-			break;
-	}
-
-	lockmgr(&wq->wq_lock, LK_EXCLUSIVE);
-
-	KKASSERT(STAILQ_FIRST(&wq->wq_jobs) == NULL);
-
-	/**
-	 * Free pre-allocated jobs.
-	 */
-	struct workqueue_job *free_job;
-	while ((free_job = STAILQ_FIRST(&wq->wq_free_jobs)) != NULL) {
-		KKASSERT(free_job->wqj_flags & WQJ_FLAGS_IS_FREE);
-		STAILQ_REMOVE_HEAD(&wq->wq_free_jobs, wqj_next);
-		kfree(free_job, M_DMCRYPT);
-	}
-	KKASSERT(STAILQ_FIRST(&wq->wq_free_jobs) == NULL);
-
-	lockmgr(&wq->wq_lock, LK_RELEASE);
-	lockuninit(&wq->wq_lock);
-}
-
-static int
-workqueue_submit_job(struct workqueue *wq, workqueue_job_callback *wqj_cb,
-    void *wqj_arg1, void *wqj_arg2)
-{
-	struct workqueue_job *job = NULL;
-
-	if (wq->wq_is_closing) {
-		return (EPIPE);
-	}
-
-	lockmgr(&wq->wq_lock, LK_EXCLUSIVE);
-
-	while (!wq->wq_is_closing) {
-		job = STAILQ_FIRST(&wq->wq_free_jobs);
-		if (job) {
-			KKASSERT(job->wqj_flags & WQJ_FLAGS_IS_FREE);
-			KKASSERT(job->wqj_flags & WQJ_FLAGS_WAS_PREALLOCATED);
-
-			STAILQ_REMOVE_HEAD(&wq->wq_free_jobs, wqj_next);
-		} else {
-			kprintf("WARN: dmtc: Preallocated queue full\n");
-			job = kmalloc(sizeof(struct workqueue_job), M_DMCRYPT, M_ZERO | M_WAITOK);
-			job->wqj_flags = WQJ_FLAGS_IS_FREE; /* but NOT WQJ_FLAGS_WAS_PREALLOCATED */
-		}
-
-		job->wqj_cb = wqj_cb;
-		job->wqj_arg1 = wqj_arg1;
-		job->wqj_arg2 = wqj_arg2;
-
-		STAILQ_INSERT_TAIL(&wq->wq_jobs, job, wqj_next);
-		lockmgr(&wq->wq_lock, LK_RELEASE);
-		wakeup_one(&wq->wq_jobs);
-
-		return (0);
-	}
-
-	lockmgr(&wq->wq_lock, LK_RELEASE);
-
-	return (EPIPE);
-}
-
-static int
-workqueue_dequeue_job_into(struct workqueue *wq, struct workqueue_job *job_copy)
-{
-	KKASSERT(job_copy != NULL);
-
-	lockmgr(&wq->wq_lock, LK_EXCLUSIVE);
-
-	bzero(job_copy, sizeof(struct workqueue_job));
-
-	/*
-	 * In case the queue is closing, no further jobs can be submitted but
-	 * dequeue() will still drain the queue until empty.
-	 */
-
-	while (true) {
-		struct workqueue_job *job = STAILQ_FIRST(&wq->wq_jobs);
-		if (job) {
-			STAILQ_REMOVE_HEAD(&wq->wq_jobs, wqj_next);
-
-			/*
-			 * Copy the job definition to the caller-passed pointer
-			 * and then put back the job to the free-list.
-			 */
-			memcpy(job_copy, job, sizeof(struct workqueue_job));
-
-			job->wqj_flags |= WQJ_FLAGS_IS_FREE;
-			if (job->wqj_flags & WQJ_FLAGS_WAS_PREALLOCATED)
-			{	
-				STAILQ_INSERT_TAIL(&wq->wq_free_jobs, job, wqj_next);
-				lockmgr(&wq->wq_lock, LK_RELEASE);
-			}
-			else
-			{
-				lockmgr(&wq->wq_lock, LK_RELEASE);
-
-				/*
-				 * This is an excess item which wasn't preallocated.
-				 * Give it back to the system memory pool.
-				 */
-				kfree(job, M_DMCRYPT);
-			}
-
-			return (0);
-
-		} else if (wq->wq_is_closing) {
-			lockmgr(&wq->wq_lock, LK_RELEASE);
-			return (EPIPE);
-		} else {
-			lksleep(&wq->wq_jobs, &wq->wq_lock, 0,
-			    "dm_target_crypt: wq empty", 0);
-		}
-	}
-}
-
-static void
-workqueue_worker(void *wq_arg)
-{
-	struct workqueue *wq = wq_arg;
-	struct workqueue_job job;
-
-	while (workqueue_dequeue_job_into(wq, &job) == 0) {
-		job.wqj_cb(job.wqj_arg1, job.wqj_arg2);
-		atomic_add_int(&wq->wq_load, -1);
-		lwkt_yield();
-	}
-
-	wakeup(wq);
-}
-
-static void
-workqueue_start(struct workqueue *wq, int cpu, int initial_queue_size)
-{
-	bzero(wq, sizeof(*wq));
-
-	lockinit(&wq->wq_lock, "dm_target_crypt: wq", 0, LK_CANRECURSE);
-
-	STAILQ_INIT(&wq->wq_jobs);
-	STAILQ_INIT(&wq->wq_free_jobs);
-
-	wq->wq_is_closing = false;
-	wq->wq_load = 0;
-
-	/**
-	 * Preallocate free-list
-	 */
-	for (int i = 0; i < initial_queue_size; ++i) {
-		struct workqueue_job *free_job = kmalloc(
-		    sizeof(struct workqueue_job), M_DMCRYPT, M_ZERO | M_WAITOK);
-		free_job->wqj_flags = WQJ_FLAGS_IS_FREE | WQJ_FLAGS_WAS_PREALLOCATED;
-		STAILQ_INSERT_TAIL(&wq->wq_free_jobs, free_job, wqj_next);
-	}
-
-	kthread_create_cpu(workqueue_worker, wq, &wq->wq_worker, cpu,
-	    "dm_target_crypt: crypto worker");
-}
-
-/**
- * End of MPSC queue implementation
- */
 
 static __inline int
 dmtc_get_nmax(void)
@@ -666,6 +837,11 @@ dmtc_find_crypto_cipher(const char *crypto_alg, const char *crypto_mode,
 	return NULL;
 }
 
+static void
+dmtc_bio_read_decrypt_job_handler(void *user_arg1, void *user_arg2, void *worker_context);
+static void
+dmtc_bio_write_encrypt_job_handler(void *user_arg1, void *user_arg2, void *worker_context);
+
 static int
 dm_target_crypt_init(dm_table_entry_t *table_en, int argc, char **argv)
 {
@@ -795,26 +971,36 @@ dm_target_crypt_init(dm_table_entry_t *table_en, int argc, char **argv)
 	/* Initialize mpipes */
 	dmtc_init_mpipe(priv);
 
-	/**
-	 * Allocate and start work queues / workers.
-	 */
-	priv->crypto_read_workqueues = kmalloc(sizeof(struct workqueue) * ncpus,
-	    M_DMCRYPT, M_WAITOK | M_ZERO);
-	priv->crypto_write_workqueues = kmalloc(sizeof(struct workqueue) * ncpus,
-	    M_DMCRYPT, M_WAITOK | M_ZERO);
 
 	int writequeue_depth = (dmtc_writequeue_depth > 0) ? dmtc_writequeue_depth : 1;
 	int readqueue_depth = (dmtc_readqueue_depth > 0) ? dmtc_readqueue_depth : 1;
 
-	for (int cpu = 0; cpu < ncpus; ++cpu) {
-		workqueue_start(&priv->crypto_write_workqueues[cpu], cpu,
-				writequeue_depth);
-		workqueue_start(&priv->crypto_read_workqueues[cpu], cpu,
-				readqueue_depth);
-	}
+	/**
+	 * Initialize the crypto read worker pool.
+	 */
+	worker_pool_init(
+			&priv->crypto_read_workers,
+			ncpus,
+			NULL /* contexts */,
+			dmtc_bio_read_decrypt_job_handler,
+			readqueue_depth);
 
-	priv->crypto_read_wq_next = 0;
-	priv->crypto_write_wq_next = 0;
+	/**
+	 * Initialize the crypto write worker pool.
+	 */
+	worker_pool_init(
+			&priv->crypto_write_workers,
+			ncpus,
+			NULL /* contexts */,
+			dmtc_bio_write_encrypt_job_handler,
+			writequeue_depth);
+
+
+	/**
+	 * Start the crypto read/write worker pools.
+	 */
+	worker_pool_start(&priv->crypto_read_workers, 0);
+	worker_pool_start(&priv->crypto_write_workers, 0);
 
 	return 0;
 
@@ -854,16 +1040,17 @@ dm_target_crypt_destroy(dm_table_entry_t *table_en)
 		return 0;
 	dm_pdev_decr(priv->pdev);
 
-	/*
-	 * Stop work queues / free allocated memory.
+	/**
+	 * Stop and free worker pools.
 	 */
+	worker_pool_stop(&priv->crypto_read_workers);
+	worker_pool_stop(&priv->crypto_write_workers);
 
-	for (int cpu = 0; cpu < ncpus; cpu++) {
-		workqueue_stop(&priv->crypto_read_workqueues[cpu]);
-		workqueue_stop(&priv->crypto_write_workqueues[cpu]);
-	}
-	kfree(priv->crypto_read_workqueues, M_DMCRYPT);
-	kfree(priv->crypto_write_workqueues, M_DMCRYPT);
+	// TODO: wait until all requests are completed.
+	// write requests might still be pending.
+
+	worker_pool_free(&priv->crypto_read_workers);
+	worker_pool_free(&priv->crypto_write_workers);
 
 	dmtc_destroy_mpipe(priv);
 
@@ -945,7 +1132,7 @@ dm_target_crypt_strategy(dm_table_entry_t *table_en, struct buf *bp)
 		bio->bio_offset = bp->b_bio1.bio_offset +
 		    priv->block_offset * DEV_BSIZE;
 		bio->bio_caller_info1.ptr = priv;
-		dmtc_bio_write_encrypt(priv, bio);
+		dmtc_submit_bio_job(priv, bio, &priv->crypto_write_workers);
 		break;
 	default:
 		vn_strategy(priv->pdev->pdev_vnode, &bp->b_bio1);
@@ -955,19 +1142,15 @@ dm_target_crypt_strategy(dm_table_entry_t *table_en, struct buf *bp)
 }
 
 /**
- * Submits `job_cb` into one of the work queues.
+ * Submits job to a worker pool.
  */
 static void
 dmtc_submit_bio_job(dm_target_crypt_config_t *priv, struct bio *bio,
-    struct workqueue *workqueues, int *wq_next, workqueue_job_callback *job_cb)
+		struct worker_pool *pool)
 {
-	/**
-	 * TODO: we could select the queue based on it's load.
-	 */
-	int wq_idx = atomic_fetchadd_int(wq_next, 1) % ncpus;
-
-	int error = workqueue_submit_job(&workqueues[wq_idx],
-	    job_cb, (void *)priv, (void *)bio);
+	int error;
+	
+	error = worker_pool_submit_job(pool, (void*)priv, (void*)bio); 
 	if (error) {
 		kprintf(
 		    "dm_target_crypt: failed to submit bio to workqueue with error = %d\n",
@@ -978,7 +1161,6 @@ dmtc_submit_bio_job(dm_target_crypt_config_t *priv, struct bio *bio,
 		biodone(obio);
 		return;
 	}
-	atomic_add_int(&workqueues[wq_idx].wq_load, 1);
 }
 
 /*
@@ -1001,22 +1183,16 @@ dmtc_bio_read_done(struct bio *bio)
 		biodone(obio);
 	} else {
 		priv = bio->bio_caller_info1.ptr;
-		dmtc_bio_read_decrypt(priv, bio);
+		dmtc_submit_bio_job(priv, bio, &priv->crypto_read_workers);
 	}
 }
 
-__inline static void
-dmtc_bio_read_decrypt_job_do(dm_target_crypt_config_t *priv, struct bio *bio);
-
-static void
-dmtc_bio_read_decrypt_job(void *arg1, void *arg2)
+void
+dmtc_bio_read_decrypt_job_handler(void *user_arg1, void *user_arg2, void *worker_context)
 {
-	dmtc_bio_read_decrypt_job_do(arg1, arg2);
-}
+	dm_target_crypt_config_t *priv = user_arg1;
+	struct bio *bio = user_arg2;
 
-__inline static void
-dmtc_bio_read_decrypt_job_do(dm_target_crypt_config_t *priv, struct bio *bio)
-{
 	uint8_t *data_buf = mpipe_alloc_waitok(&priv->read_mpipe);
 
 	/*
@@ -1060,32 +1236,17 @@ dmtc_bio_read_decrypt_job_do(dm_target_crypt_config_t *priv, struct bio *bio)
 	biodone(obio);
 }
 
-static void
-dmtc_bio_read_decrypt(dm_target_crypt_config_t *priv, struct bio *bio)
-{
-	dmtc_submit_bio_job(priv, bio, priv->crypto_read_workqueues,
-	   &priv->crypto_read_wq_next, dmtc_bio_read_decrypt_job);
-}
-
 /* END OF STRATEGY READ SECTION */
 
 /*
  * STRATEGY WRITE PATH
  */
 
-__inline static void
-dmtc_bio_write_encrypt_job_do(dm_target_crypt_config_t *priv, struct bio *bio);
-
-static void
-dmtc_bio_write_encrypt_job(void *arg1, void *arg2)
+void
+dmtc_bio_write_encrypt_job_handler(void *user_arg1, void *user_arg2, void *worker_context)
 {
-	dmtc_bio_write_encrypt_job_do(arg1, arg2);
-}
-
-__inline static void
-dmtc_bio_write_encrypt_job_do(dm_target_crypt_config_t *priv,
-    struct bio *bio)
-{
+	dm_target_crypt_config_t *priv = user_arg1;
+	struct bio *bio = user_arg2;
 	uint8_t *data_buf = mpipe_alloc_waitok(&priv->write_mpipe);
 
 	/*
@@ -1143,15 +1304,11 @@ dmtc_bio_write_done(struct bio *bio)
 	biodone(obio);
 }
 
-static void
-dmtc_bio_write_encrypt(dm_target_crypt_config_t *priv, struct bio *bio)
-{
-	dmtc_submit_bio_job(priv, bio, priv->crypto_write_workqueues,
-	   &priv->crypto_write_wq_next, dmtc_bio_write_encrypt_job);
-}
-
 /* END OF STRATEGY WRITE SECTION */
 
+/**
+ * Encrypts or decrypts `data_buf`.
+ */
 static int
 dmtc_bio_encdec(dm_target_crypt_config_t *priv, uint8_t *data_buf,
     int bytes, off_t offset, crypto_cipher_blockfn_t blockfn)
