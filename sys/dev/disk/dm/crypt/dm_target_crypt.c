@@ -65,17 +65,16 @@ SYSCTL_NODE(_dev, OID_AUTO, dm_crypt, CTLFLAG_RW, 0, "Device Mapper Target Crypt
 SYSCTL_INT(_dev_dm_crypt, OID_AUTO, writebuf_count,
     CTLFLAG_RW, &dmtc_writebuf_count, 0, "Number of write buffers (0 = auto)");
 
+static void
+dmtc_bio_read_decrypt_job_handler(struct bio* bio, void *worker_context);
+static void
+dmtc_bio_write_encrypt_job_handler(struct bio *bio, void *worker_context);
+
 /**
  * A work pool implementation.
  *
  * Uses one queue per worker.
  */
-
-/**
- * The function that processes a job.
- */
-typedef void
-worker_job_handler(struct bio *bio_request, void *worker_context);
 
 struct worker_pool;
 
@@ -134,11 +133,6 @@ struct worker {
 	struct thread *w_thread;
 
 	/**
-	 * Points to the job handler function.
-	 */
-	worker_job_handler *w_job_handler;
-
-	/**
 	 * Private data usable from within the worker.
 	 */
 	void *w_context;
@@ -161,9 +155,10 @@ struct worker {
 	bool w_is_closing;
 
 	/**
-	 * bio request queue (Singly-linked Tail queue)
+	 * bio rd/wr request queues (Singly-linked Tail queue)
 	 */
-	struct bio_request_queue w_bio_requests;
+	struct bio_request_queue w_bio_rd_requests;
+	struct bio_request_queue w_bio_wr_requests;
 };
 
 struct worker_pool {
@@ -187,17 +182,18 @@ struct worker_pool {
 static void
 worker_main(void *worker_arg);
 
-
 static int
 worker_pool_submit_bio_request(
 		struct worker_pool *pool,
-		struct bio *bio_request);
+		struct bio *bio_request,
+		int bio_cmd);
 
 
 int
 worker_pool_submit_bio_request(
 		struct worker_pool *pool,
-		struct bio *bio_request)
+		struct bio *bio_request,
+		int bio_cmd)
 {
 	struct worker *worker;
 	int worker_idx;
@@ -213,77 +209,65 @@ worker_pool_submit_bio_request(
 	}
 
 	/*
-	 * Enqueue bio request into singly linked tail queue
+	 * Enqueue bio request
 	 */
-	bio_request_queue_enq(&worker->w_bio_requests, bio_request);
+	switch (bio_cmd) {
+		case BUF_CMD_READ:
+			bio_request_queue_enq(&worker->w_bio_rd_requests, bio_request);
+			break;
 
-	wakeup_one(&worker->w_bio_requests);
+		case BUF_CMD_WRITE:
+			bio_request_queue_enq(&worker->w_bio_wr_requests, bio_request);
+			break;
+	}
+
+	wakeup_one(worker);
 	lockmgr(&worker->w_lock, LK_RELEASE);
 
 	return (0);
-}
-
-static struct bio *
-worker_take_bio_request(
-		struct worker *worker);
-
-struct bio *
-worker_take_bio_request(
-		struct worker *worker)
-{
-	struct bio *bio_request = NULL;
-
-	lockmgr(&worker->w_lock, LK_EXCLUSIVE);
-
-	/*
-	 * In case the queue is closing no further jobs can be submitted.
-	 * But this function will still drain the queue until it is empty.
-	 */
-	while (true) {
-		bio_request = bio_request_queue_deq(&worker->w_bio_requests);
-		if (bio_request)
-			break;
-
-		KKASSERT(bio_request == NULL);
-
-		/**
-		 * queue is empty and closing -> done.
-		 */
-		if (worker->w_is_closing)
-			/**
-			 * queue is fully drained.
-			 */
-			break;
-
-		/**
-		 * queue is empty but still open -> wait for next job.
-		 */
-		lksleep(&worker->w_bio_requests, &worker->w_lock, 0,
-			"dm_target_crypt: worker queue empty", 0);
-	}
-
-	lockmgr(&worker->w_lock, LK_RELEASE);
-	return (bio_request);
 }
 
 void
 worker_main(void *worker_arg)
 {
 	struct worker *worker = worker_arg;
-	struct bio *bio_request;
 
 	while (true) {
-		bio_request = worker_take_bio_request(worker);
-		if (!bio_request)
-			break;
-		worker->w_job_handler(bio_request, worker->w_context);
-		lwkt_yield();
+		lockmgr(&worker->w_lock, LK_EXCLUSIVE);
+
+		bool is_closing = worker->w_is_closing;
+		struct bio *bio_rd_request = bio_request_queue_deq(&worker->w_bio_rd_requests);
+		struct bio *bio_wr_request = bio_request_queue_deq(&worker->w_bio_wr_requests);
+
+		lockmgr(&worker->w_lock, LK_RELEASE);
+
+		if (bio_rd_request)
+			dmtc_bio_read_decrypt_job_handler(bio_rd_request, worker->w_context);
+
+		if (bio_wr_request)
+			dmtc_bio_write_encrypt_job_handler(bio_wr_request, worker->w_context);
+
+		bool both_queues_empty = (bio_rd_request == NULL) && (bio_wr_request == NULL);
+
+		if (both_queues_empty) {
+			if (is_closing)
+				break;
+			/*
+			 * Wait for work
+			 */
+			tsleep(worker, 0, "dm_target_crypt: worker queue empty", 0);
+		} else {
+			/*
+			 * Give other threads of the same priority a chance to run
+			 */
+			lwkt_yield();
+		}
 	}
 
 	/**
 	 * This notifies worker_pool_stop() that the worker has been terminated.
 	 */
-	wakeup(worker);
+	wakeup(&worker->w_is_closing);
 }
 
 /**
@@ -293,8 +277,7 @@ static void
 worker_pool_init(
 		struct worker_pool *pool,
 		int num_workers,
-		int per_worker_local_memory,
-		worker_job_handler *job_handler);
+		int per_worker_local_memory);
 
 
 /**
@@ -339,8 +322,8 @@ worker_pool_stop_worker(struct worker *worker)
 	worker->w_is_closing = true;
 
 	while (true) {
-		wakeup(&worker->w_bio_requests);
-		if (tsleep(worker, 0, "shutdown workqueue", 500) == 0)
+		wakeup(worker);
+		if (tsleep(&worker->w_is_closing, 0, "shutdown workqueue", 500) == 0)
 			break;
 	}
 }
@@ -359,8 +342,7 @@ void
 worker_pool_init(
 		struct worker_pool *pool,
 		int num_workers,
-		int per_worker_local_memory,
-		worker_job_handler *job_handler)
+		int per_worker_local_memory)
 {
 	bzero(pool, sizeof(*pool));
 	pool->wp_num_workers = num_workers;
@@ -371,21 +353,22 @@ worker_pool_init(
 
 	for (int i = 0; i < num_workers; ++i) {
 		pool->wp_workers[i].w_thread = NULL;
-		pool->wp_workers[i].w_job_handler = job_handler;
 		pool->wp_workers[i].w_context_size = per_worker_local_memory;
 		pool->wp_workers[i].w_context = (per_worker_local_memory > 0) ?
 			kmalloc(per_worker_local_memory, M_DMCRYPT, M_WAITOK) : NULL;
 		lockinit(&pool->wp_workers[i].w_lock,
 				"dm_target_crypt: worker", 0, LK_CANRECURSE);
 		pool->wp_workers[i].w_is_closing = false;
-		bio_request_queue_init(&pool->wp_workers[i].w_bio_requests);
+		bio_request_queue_init(&pool->wp_workers[i].w_bio_rd_requests);
+		bio_request_queue_init(&pool->wp_workers[i].w_bio_wr_requests);
 	}
 }
 
 static void
 worker_pool_free_worker(struct worker *worker)
 {
-	KKASSERT(bio_request_queue_is_empty(&worker->w_bio_requests));
+	KKASSERT(bio_request_queue_is_empty(&worker->w_bio_rd_requests));
+	KKASSERT(bio_request_queue_is_empty(&worker->w_bio_wr_requests));
 	lockuninit(&worker->w_lock);
 
 	if (worker->w_context) {
@@ -451,19 +434,14 @@ typedef struct target_crypt_config {
 	struct malloc_pipe	write_mpipe;
 	
 	/**
-	 * Pool of workers that process BIO read requests (decrypt).
+	 * Worker Pool of workers that process BIO read/write requests
+	 * and handle decryption and encryption.
 	 *
-	 * We use separate worker pools for read and write requests.
 	 * Read requests do not cause long stalls, as they are synchronous
 	 * operations from userspace, but writes can cause long stalls
 	 * due to write buffering.
 	 */
-	struct worker_pool	crypto_read_worker_pool;
-
-	/**
-	 * Pool of workers that process BIO write requests (encrypt).
-	 */
-	struct worker_pool	crypto_write_worker_pool;
+	struct worker_pool	crypto_worker_pool;
 
 } dm_target_crypt_config_t;
 
@@ -494,7 +472,7 @@ static int dmtc_bio_encdec(dm_target_crypt_config_t *priv, uint8_t *data_buf,
 
 static void
 dmtc_submit_bio_request(dm_target_crypt_config_t *priv, struct bio *bio,
-		struct worker_pool *pool);
+		struct worker_pool *pool, int bio_cmd);
 
 static void dmtc_bio_read_done(struct bio *bio);
 static void dmtc_bio_write_done(struct bio *bio);
@@ -762,11 +740,6 @@ dmtc_find_crypto_cipher(const char *crypto_alg, const char *crypto_mode,
 	return NULL;
 }
 
-static void
-dmtc_bio_read_decrypt_job_handler(struct bio* bio, void *worker_context);
-static void
-dmtc_bio_write_encrypt_job_handler(struct bio *bio, void *worker_context);
-
 static int
 dm_target_crypt_init(dm_table_entry_t *table_en, int argc, char **argv)
 {
@@ -898,29 +871,17 @@ dm_target_crypt_init(dm_table_entry_t *table_en, int argc, char **argv)
 
 
 	/**
-	 * Initialize the crypto read worker pool.
+	 * Initialize the crypto worker pool.
 	 */
 	worker_pool_init(
-			&priv->crypto_read_worker_pool,
+			&priv->crypto_worker_pool,
 			ncpus,
-			DMTC_BUF_SIZE,
-			dmtc_bio_read_decrypt_job_handler);
+			DMTC_BUF_SIZE);
 
 	/**
-	 * Initialize the crypto write worker pool.
+	 * Start the crypto read/write worker pool.
 	 */
-	worker_pool_init(
-			&priv->crypto_write_worker_pool,
-			ncpus,
-			0,
-			dmtc_bio_write_encrypt_job_handler);
-
-
-	/**
-	 * Start the crypto read/write worker pools.
-	 */
-	worker_pool_start(&priv->crypto_read_worker_pool, 0);
-	worker_pool_start(&priv->crypto_write_worker_pool, 0);
+	worker_pool_start(&priv->crypto_worker_pool, 0);
 
 	return 0;
 
@@ -963,14 +924,12 @@ dm_target_crypt_destroy(dm_table_entry_t *table_en)
 	/**
 	 * Stop and free worker pools.
 	 */
-	worker_pool_stop(&priv->crypto_read_worker_pool);
-	worker_pool_stop(&priv->crypto_write_worker_pool);
+	worker_pool_stop(&priv->crypto_worker_pool);
 
 	// TODO: wait until all requests are completed.
 	// write requests might still be pending.
 
-	worker_pool_free(&priv->crypto_read_worker_pool);
-	worker_pool_free(&priv->crypto_write_worker_pool);
+	worker_pool_free(&priv->crypto_worker_pool);
 
 	dmtc_destroy_mpipe(priv);
 
@@ -1053,7 +1012,7 @@ dm_target_crypt_strategy(dm_table_entry_t *table_en, struct buf *bp)
 		bio->bio_offset = bp->b_bio1.bio_offset +
 		    priv->block_offset * DEV_BSIZE;
 		bio->bio_caller_info1.ptr = priv;
-		dmtc_submit_bio_request(priv, bio, &priv->crypto_write_worker_pool);
+		dmtc_submit_bio_request(priv, bio, &priv->crypto_worker_pool, BUF_CMD_WRITE);
 		break;
 	default:
 		vn_strategy(priv->pdev->pdev_vnode, &bp->b_bio1);
@@ -1067,12 +1026,12 @@ dm_target_crypt_strategy(dm_table_entry_t *table_en, struct buf *bp)
  */
 static void
 dmtc_submit_bio_request(dm_target_crypt_config_t *priv, struct bio *bio,
-		struct worker_pool *pool)
+		struct worker_pool *pool, int bio_cmd)
 {
 	int error;
 	
 	(void)priv;
-	error = worker_pool_submit_bio_request(pool, bio); 
+	error = worker_pool_submit_bio_request(pool, bio, bio_cmd);
 	if (error) {
 		kprintf(
 		    "dm_target_crypt: failed to submit bio to workqueue with error = %d\n",
@@ -1105,7 +1064,7 @@ dmtc_bio_read_done(struct bio *bio)
 		biodone(obio);
 	} else {
 		priv = bio->bio_caller_info1.ptr;
-		dmtc_submit_bio_request(priv, bio, &priv->crypto_read_worker_pool);
+		dmtc_submit_bio_request(priv, bio, &priv->crypto_worker_pool, BUF_CMD_READ);
 	}
 }
 
