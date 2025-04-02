@@ -1354,10 +1354,13 @@ dmtc_bio_write_encrypt_job_handler(void *user_arg1, void *user_arg2, void *worke
 		bio->bio_done = dmtc_bio_write_done;
 
 		/*
-		 * TODO: @dillon can't we just copy back data_buf to
-		 * bio->bio_buf->b_data and then call vn_stategy with
-		 * it, or do we have to call vn_strategy pointing to our
-		 * own local allocated memory?
+		 * Note: We just copy back data_buf to bio->bio_buf->b_data
+		 * and then call vn_stategy() on it.
+		 *
+		 * We have to allocate our own buffer, copy bio->bio_buf->b_data
+		 * into it, modify the copy, rewire bio->bio_buf->b_data to our
+		 * own buffer, call vn_stategy() and once it finished with
+		 * dmtc_bio_write_done(), free our buffer.
 		 */
 		vn_strategy(priv->pdev->pdev_vnode, bio);
 	}
