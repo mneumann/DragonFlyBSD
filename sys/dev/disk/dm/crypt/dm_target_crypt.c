@@ -54,6 +54,7 @@
 #include <sys/queue.h>
 #include <sys/proc.h>
 #include <sys/types.h>
+#include <sys/mpipe.h>
 #include <cpu/atomic.h>
 #include <sys/sysctl.h>
 
@@ -70,105 +71,6 @@ SYSCTL_INT(_dev_dm_crypt, OID_AUTO, writequeue_depth,
     CTLFLAG_RW, &dmtc_writequeue_depth, 100, "Preallocated per-worker write queue depth");
 SYSCTL_INT(_dev_dm_crypt, OID_AUTO, readqueue_depth,
     CTLFLAG_RW, &dmtc_readqueue_depth, 100, "Preallocated per-worker read queue depth");
-
-struct buffer_pool {
-	/**
-	 * total number of allocated buffers.
-	 */
-	int total_count;
-
-	/**
-	 * Size of each buffer.
-	 */
-	int buffer_size;
-
-	/**
-	 * Protects the remaining fields of the struct.
-	 */
-	struct lock lock;
-
-	/**
-	 * Number of free buffers.
-	 *
-	 * Buffers [0..free_count) are free.
-	 */
-	int free_count;
-
-	/**
-	 * Array of `total_count` buffers.
-	 */
-	void **buffers;
-};
-
-static void
-buffer_pool_init(struct buffer_pool *bpool, int total_count, int buffer_size)
-{
-	bzero(bpool, sizeof(*bpool));
-	bpool->total_count = total_count;
-	bpool->buffer_size = buffer_size;
-	lockinit(&bpool->lock, "dm_target_crypt: buffer pool", 0, LK_CANRECURSE);
-	bpool->free_count = total_count;
-	bpool->buffers = kmalloc(sizeof(void*) * total_count, M_DMCRYPT, M_ZERO | M_WAITOK);
-	for (int i = 0; i < total_count; ++i) {
-		bpool->buffers[i] = kmalloc(buffer_size, M_DMCRYPT, M_WAITOK);
-	}
-}
-
-static void
-buffer_pool_free(struct buffer_pool *bpool)
-{
-	KKASSERT(bpool->total_count == bpool->free_count);
-	lockuninit(&bpool->lock);
-
-	for (int i = 0; i < bpool->total_count; ++i) {
-		explicit_bzero(bpool->buffers[i], bpool->buffer_size);
-		kfree(bpool->buffers[i], M_DMCRYPT);
-	}
-	kfree(bpool->buffers, M_DMCRYPT);
-	bzero(bpool, sizeof(*bpool));
-}
-
-static void *
-buffer_pool_get_buffer(struct buffer_pool *bpool)
-{
-	void *buf;
-
-	lockmgr(&bpool->lock, LK_EXCLUSIVE);
-
-	while (bpool->free_count == 0) {
-		kprintf("WARN: dmtc: Write buffer pool exhausted\n");
-		lksleep(bpool, &bpool->lock, 0, "dm_target_crypt: buffer pool", 1000);
-	}
-
-	KKASSERT(bpool->free_count > 0);
-	KKASSERT(bpool->free_count <= bpool->total_count);
-
-	--bpool->free_count;
-
-	buf = bpool->buffers[bpool->free_count];
-
-	lockmgr(&bpool->lock, LK_RELEASE);
-
-	return buf;
-}
-
-static void
-buffer_pool_release_buffer(struct buffer_pool *bpool, void *buffer)
-{
-	lockmgr(&bpool->lock, LK_EXCLUSIVE);
-
-	KKASSERT(bpool->free_count >= 0);
-	KKASSERT(bpool->free_count < bpool->total_count);
-
-	bpool->buffers[bpool->free_count] = buffer;
-	if (bpool->free_count == 0)
-		wakeup(bpool);
-
-	++bpool->free_count;
-
-	lockmgr(&bpool->lock, LK_RELEASE);
-}
-
 
 /**
  * A work pool implementation.
@@ -624,7 +526,7 @@ typedef struct target_crypt_config {
 	struct iv_generator	*ivgen;
 	void	*ivgen_priv;
 
-	struct buffer_pool	write_buffer_pool;
+	struct malloc_pipe	write_mpipe;
 	
 	/**
 	 * Pool of workers that process BIO read requests (decrypt).
@@ -651,6 +553,9 @@ struct dmtc_dump_helper {
 
 	u_char space[65536];
 };
+
+static void dmtc_init_mpipe(struct target_crypt_config *priv);
+static void dmtc_destroy_mpipe(struct target_crypt_config *priv);
 
 static const struct crypto_cipher *
 dmtc_find_crypto_cipher(const char *crypto_alg, const char *crypto_mode,
@@ -697,6 +602,31 @@ dmtc_get_nmax(void)
 	if (nmax > 8 + ncpus * 2)
 		nmax = 8 + ncpus * 2;
 	return nmax;
+}
+
+static void
+dmtc_deconstruct_write_mpipe_buf(void *buf, void *priv)
+{
+	(void)priv;
+	explicit_bzero(buf, DMTC_BUF_SIZE);
+}
+
+static void
+dmtc_init_mpipe(struct target_crypt_config *priv)
+{
+	int nmax = dmtc_get_nmax();
+	int writebuf_count = (dmtc_writebuf_count <= 0) ? nmax : dmtc_writebuf_count;
+
+	kprintf("dm_target_crypt: Setting %d mpipe write buffers\n", writebuf_count);
+	mpipe_init(&priv->write_mpipe, M_DMCRYPT, DMTC_BUF_SIZE,
+		writebuf_count, writebuf_count, MPF_NOZERO | MPF_CACHEDATA,
+		NULL, dmtc_deconstruct_write_mpipe_buf, NULL);
+}
+
+static void
+dmtc_destroy_mpipe(struct target_crypt_config *priv)
+{
+	mpipe_done(&priv->write_mpipe);
 }
 
 /*
@@ -1047,10 +977,9 @@ dm_target_crypt_init(dm_table_entry_t *table_en, int argc, char **argv)
 	}
 	priv->status_str = status_str;
 
-	/* Initialize write buffer pool */
-	int writebuf_count = (dmtc_writebuf_count <= 0) ? dmtc_get_nmax() : dmtc_writebuf_count;
-	kprintf("dm_target_crypt: Setting %d write buffers\n", writebuf_count);
-	buffer_pool_init(&priv->write_buffer_pool, writebuf_count, DMTC_BUF_SIZE); 
+	/* Initialize mpipes */
+	dmtc_init_mpipe(priv);
+
 
 	int writequeue_depth = (dmtc_writequeue_depth > 0) ? dmtc_writequeue_depth : 1;
 	int readqueue_depth = (dmtc_readqueue_depth > 0) ? dmtc_readqueue_depth : 1;
@@ -1132,7 +1061,7 @@ dm_target_crypt_destroy(dm_table_entry_t *table_en)
 	worker_pool_free(&priv->crypto_read_worker_pool);
 	worker_pool_free(&priv->crypto_write_worker_pool);
 
-	buffer_pool_free(&priv->write_buffer_pool);
+	dmtc_destroy_mpipe(priv);
 
 	/*
 	 * Clean up the crypt config
@@ -1324,7 +1253,7 @@ dmtc_bio_write_encrypt_job_handler(void *user_arg1, void *user_arg2, void *worke
 {
 	dm_target_crypt_config_t *priv = user_arg1;
 	struct bio *bio = user_arg2;
-	uint8_t *data_buf = buffer_pool_get_buffer(&priv->write_buffer_pool);
+	uint8_t *data_buf = mpipe_alloc_waitok(&priv->write_mpipe);
 
 	/*
 	 * Use b_bcount for consistency
@@ -1343,7 +1272,7 @@ dmtc_bio_write_encrypt_job_handler(void *user_arg1, void *user_arg2, void *worke
 		    "dm_target_crypt: dmtc_bio_write_encrypt error = %d\n",
 		    bio->bio_buf->b_error);
 
-		buffer_pool_release_buffer(&priv->write_buffer_pool, data_buf);
+		mpipe_free(&priv->write_mpipe, data_buf);
 		bio->bio_buf->b_flags |= B_ERROR;
 		struct bio *obio = pop_bio(bio);
 		biodone(obio);
@@ -1375,7 +1304,7 @@ dmtc_bio_write_done(struct bio *bio)
 	priv = bio->bio_caller_info1.ptr;
 	data_buf = bio->bio_buf->b_data;
 
-	buffer_pool_release_buffer(&priv->write_buffer_pool, data_buf);
+	mpipe_free(&priv->write_mpipe, data_buf);
 
 	// Restore original bio buffer
 	bio->bio_buf->b_data = bio->bio_caller_info2.ptr;
