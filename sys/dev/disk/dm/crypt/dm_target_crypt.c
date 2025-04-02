@@ -605,13 +605,6 @@ dmtc_get_nmax(void)
 }
 
 static void
-dmtc_deconstruct_write_mpipe_buf(void *buf, void *priv)
-{
-	(void)priv;
-	explicit_bzero(buf, DMTC_BUF_SIZE);
-}
-
-static void
 dmtc_init_mpipe(struct target_crypt_config *priv)
 {
 	int nmax = dmtc_get_nmax();
@@ -619,8 +612,8 @@ dmtc_init_mpipe(struct target_crypt_config *priv)
 
 	kprintf("dm_target_crypt: Setting %d mpipe write buffers\n", writebuf_count);
 	mpipe_init(&priv->write_mpipe, M_DMCRYPT, DMTC_BUF_SIZE,
-		writebuf_count, writebuf_count, MPF_NOZERO | MPF_CACHEDATA,
-		NULL, dmtc_deconstruct_write_mpipe_buf, NULL);
+		writebuf_count, writebuf_count, MPF_NOZERO | MPF_CALLBACK,
+		NULL, NULL, NULL);
 }
 
 static void
