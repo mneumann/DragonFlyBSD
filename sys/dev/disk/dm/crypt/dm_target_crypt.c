@@ -1097,7 +1097,6 @@ dm_target_crypt_destroy(dm_table_entry_t *table_en)
  *
  * bio_caller_info1: priv
  * bio_caller_info2: orig b_data pointer (WRITE PATH only)
- * bio_caller_info3: data_buf (WRITE PATH only)
  */
 
 /*
