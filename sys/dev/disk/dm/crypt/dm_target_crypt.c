@@ -86,20 +86,20 @@ struct bio_request_queue {
 	struct bio **last;
 };
 
-inline static void
+static __inline void
 bio_request_queue_init(struct bio_request_queue *queue)
 {
 	queue->first = NULL;
 	queue->last = &queue->first;
 }
 
-inline static bool
+static __inline bool
 bio_request_queue_is_empty(struct bio_request_queue *queue)
 {
 	return (queue->first == NULL);
 }
 
-inline static void
+static __inline void
 bio_request_queue_enq(struct bio_request_queue *queue, struct bio *bio_request)
 {
 	bio_request->bio_caller_info2.ptr = NULL;
@@ -107,7 +107,7 @@ bio_request_queue_enq(struct bio_request_queue *queue, struct bio *bio_request)
 	queue->last = (struct bio**)&bio_request->bio_caller_info2.ptr;
 }
 
-inline static struct bio *
+static __inline struct bio *
 bio_request_queue_deq(struct bio_request_queue *queue)
 {
 	struct bio *bio_request = queue->first;
@@ -451,7 +451,6 @@ struct dmtc_dump_helper {
 	size_t length;
 	off_t offset;
 
-	// TODO(mneumann): Shouldn't that be MAXPHYS? 
 	u_char space[65536];
 };
 
@@ -491,6 +490,15 @@ static struct iv_generator ivgens[] = {
 	{ NULL, NULL, NULL, NULL }
 };
 
+static __inline int
+clamp_value(int value, int min, int max)
+{
+	if (value < min)
+		return min;
+	if (value > max)
+		return max;
+	return value;
+}
 
 static __inline int
 dmtc_get_nmax(void)
@@ -498,11 +506,7 @@ dmtc_get_nmax(void)
 	int nmax;
 	nmax = (physmem * 2 / 1000 * PAGE_SIZE) /
 		(2 * DMTC_BUF_SIZE) + 1;
-	if (nmax < 2)
-		nmax = 2;
-	if (nmax > 8 + ncpus * 2)
-		nmax = 8 + ncpus * 2;
-	return nmax;
+	return clamp_value(nmax, 2, 8 + ncpus * 2);
 }
 
 static void
