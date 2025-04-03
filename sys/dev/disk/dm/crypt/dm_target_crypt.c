@@ -65,6 +65,9 @@ SYSCTL_NODE(_dev, OID_AUTO, dm_crypt, CTLFLAG_RW, 0, "Device Mapper Target Crypt
 SYSCTL_INT(_dev_dm_crypt, OID_AUTO, writebuf_count,
     CTLFLAG_RW, &dmtc_writebuf_count, 0, "Number of write buffers (0 = auto)");
 
+
+typedef void
+bio_request_job_handler(struct bio* bio, void *worker_context);
 static void
 dmtc_bio_read_decrypt_job_handler(struct bio* bio, void *worker_context);
 static void
@@ -79,12 +82,18 @@ dmtc_bio_write_encrypt_job_handler(struct bio *bio, void *worker_context);
 struct worker_pool;
 
 /**
- * bio request queue (Singly-linked Tail queue)
+ * bio request queue (FIFO, singly-linked tail queue)
  */
 struct bio_request_queue {
 	struct bio *first;
 	struct bio **last;
 };
+
+static __inline struct bio *
+bio_request_queue_next(struct bio *bio)
+{
+	return (struct bio*)bio->bio_caller_info3.ptr;
+}
 
 static __inline void
 bio_request_queue_init(struct bio_request_queue *queue)
@@ -100,25 +109,22 @@ bio_request_queue_is_empty(struct bio_request_queue *queue)
 }
 
 static __inline void
-bio_request_queue_enq(struct bio_request_queue *queue, struct bio *bio_request)
+bio_request_queue_push_back(struct bio_request_queue *queue, struct bio *bio_request)
 {
-	bio_request->bio_caller_info2.ptr = NULL;
+	bio_request->bio_caller_info3.ptr = NULL;
 	*(queue->last) = bio_request;
-	queue->last = (struct bio**)&bio_request->bio_caller_info2.ptr;
+	queue->last = (struct bio**)&bio_request->bio_caller_info3.ptr;
 }
 
 static __inline struct bio *
-bio_request_queue_deq(struct bio_request_queue *queue)
+bio_request_queue_take_all(struct bio_request_queue *queue)
 {
-	struct bio *bio_request = queue->first;
-	if (bio_request) {
-		queue->first = (struct bio*)bio_request->bio_caller_info2.ptr;
-		if (queue->first == NULL) {
-			/* empty: point at itself again */
-			queue->last = &queue->first;
-		}
+	struct bio *first = queue->first;
+	if (first) {
+		queue->first = NULL;
+		queue->last = &queue->first;
 	}
-	return bio_request;
+	return first;
 }
 
 /**
@@ -174,7 +180,7 @@ struct worker_pool {
 	int wp_next_worker_idx;
 
 	/*
-	 * List of workers.
+	 * Array of workers.
 	 */
 	struct worker *wp_workers;
 };
@@ -185,14 +191,7 @@ worker_main(void *worker_arg);
 static int
 worker_pool_submit_bio_request(
 		struct worker_pool *pool,
-		struct bio *bio_request,
-		int bio_cmd);
-
-
-int
-worker_pool_submit_bio_request(
-		struct worker_pool *pool,
-		struct bio *bio_request,
+		struct bio *bio,
 		int bio_cmd)
 {
 	struct worker *worker;
@@ -211,64 +210,158 @@ worker_pool_submit_bio_request(
 	/*
 	 * Enqueue bio request
 	 */
+	bool both_queues_were_empty =
+		bio_request_queue_is_empty(&worker->w_bio_rd_requests) &&
+		bio_request_queue_is_empty(&worker->w_bio_wr_requests);
+
 	switch (bio_cmd) {
 		case BUF_CMD_READ:
-			bio_request_queue_enq(&worker->w_bio_rd_requests, bio_request);
+			bio_request_queue_push_back(&worker->w_bio_rd_requests, bio);
 			break;
 
 		case BUF_CMD_WRITE:
-			bio_request_queue_enq(&worker->w_bio_wr_requests, bio_request);
+			bio_request_queue_push_back(&worker->w_bio_wr_requests, bio);
 			break;
+
+		default:
+			panic("Invalid bio_cmd");
 	}
 
-	wakeup_one(worker);
+	if (both_queues_were_empty)
+		wakeup_one(worker);
+
 	lockmgr(&worker->w_lock, LK_RELEASE);
 
 	return (0);
 }
 
+static void
+worker_drain_queue(struct worker *worker,
+		struct bio *rd_requests,
+		struct bio *wr_requests);
+
 void
 worker_main(void *worker_arg)
 {
 	struct worker *worker = worker_arg;
+	struct bio *rd_requests = NULL;
+	struct bio *wr_requests = NULL;
+	struct bio *bio = NULL;
 
-	while (true) {
-		lockmgr(&worker->w_lock, LK_EXCLUSIVE);
+	lockmgr(&worker->w_lock, LK_EXCLUSIVE);
 
-		bool is_closing = worker->w_is_closing;
-		struct bio *bio_rd_request = bio_request_queue_deq(&worker->w_bio_rd_requests);
-		struct bio *bio_wr_request = bio_request_queue_deq(&worker->w_bio_wr_requests);
+	while (true)
+	{
+		if (worker->w_is_closing) {
+			break;
+		}
 
+		/**
+		 * Take more bio requests if one of our rd/wr chains is empty
+		 */
+		if (rd_requests == NULL)
+			rd_requests = bio_request_queue_take_all(&worker->w_bio_rd_requests);
+		if (wr_requests == NULL)
+			wr_requests = bio_request_queue_take_all(&worker->w_bio_wr_requests);
+
+		if ((rd_requests == NULL) && (wr_requests == NULL)) {
+			lksleep(worker, &worker->w_lock, 0,
+					"dm_target_crypt: worker queue empty", 0);
+			continue;
+		}
+
+		/**
+		 * Release lock while processing the bios.
+		 */
 		lockmgr(&worker->w_lock, LK_RELEASE);
 
-		if (bio_rd_request)
-			dmtc_bio_read_decrypt_job_handler(bio_rd_request, worker->w_context);
+		/**
+		 * Process the rd/wr chains in lock step (rd -> wr -> rd -> wr)
+		 * until one of the chains runs empty.
+		 */
+		while (true)
+		{
+			bio = rd_requests;
+			if (bio) {
+				rd_requests = bio_request_queue_next(bio);
+				dmtc_bio_read_decrypt_job_handler(bio, worker->w_context);
+			}
 
-		if (bio_wr_request)
-			dmtc_bio_write_encrypt_job_handler(bio_wr_request, worker->w_context);
+			bio = wr_requests;
+			if (bio) {
+				wr_requests = bio_request_queue_next(bio);
+				dmtc_bio_write_encrypt_job_handler(bio, worker->w_context);
+			}
 
-		bool both_queues_empty = (bio_rd_request == NULL) && (bio_wr_request == NULL);
-
-		if (both_queues_empty) {
-			if (is_closing)
-				break;
 			/*
-			 * Wait for work
+			 * If any chain (rd/wr) is empty give up and
+			 * try to acquire new elements from the queues
+			 * in order to treat rd/wr requests fair.
 			 */
-			tsleep(worker, 0, "dm_target_crypt: worker queue empty", 0);
-		} else {
+			if (rd_requests == NULL)
+				break;
+			if (wr_requests == NULL)
+				break;
+
 			/*
-			 * Give other threads of the same priority a chance to run
+			 * Give other threads of the same priority a chance to run.
 			 */
 			lwkt_yield();
 		}
+
+		/**
+		 * Done with processing the bios -> acquire lock again
+		 */
+		lockmgr(&worker->w_lock, LK_EXCLUSIVE);
 	}
+
+	KKASSERT(worker->w_is_closing);
+	lockmgr(&worker->w_lock, LK_RELEASE);
+
+	worker_drain_queue(worker, rd_requests, wr_requests);
+
+	lockmgr(&worker->w_lock, LK_EXCLUSIVE);
+	rd_requests = bio_request_queue_take_all(&worker->w_bio_rd_requests);
+	wr_requests = bio_request_queue_take_all(&worker->w_bio_wr_requests);
+	lockmgr(&worker->w_lock, LK_RELEASE);
+
+	worker_drain_queue(worker, rd_requests, wr_requests);
 
 	/**
 	 * This notifies worker_pool_stop() that the worker has been terminated.
 	 */
 	wakeup(&worker->w_is_closing);
 }
+
+static __inline void
+worker_process_all_bio_requests(struct worker *worker, struct bio *chain,
+		bio_request_job_handler *handler)
+{
+	while (chain != NULL)
+	{
+		struct bio *bio = chain;
+		chain = bio_request_queue_next(chain);
+		handler(bio, worker->w_context);
+	}
+}
+
+
+static void
+worker_drain_queue(struct worker *worker,
+		struct bio *rd_requests,
+		struct bio *wr_requests)
+{
+	worker_process_all_bio_requests(
+			worker,
+			rd_requests,
+			&dmtc_bio_read_decrypt_job_handler);
+
+	worker_process_all_bio_requests(
+			worker,
+			wr_requests,
+			&dmtc_bio_write_encrypt_job_handler);
+}
+
 
 /**
  * Initialize the worker pool and allocate memory.
@@ -471,7 +564,7 @@ static int dmtc_bio_encdec(dm_target_crypt_config_t *priv, uint8_t *data_buf,
 
 static void
 dmtc_submit_bio_request(dm_target_crypt_config_t *priv, struct bio *bio,
-		struct worker_pool *pool, int bio_cmd);
+		int bio_cmd);
 
 static void dmtc_bio_read_done(struct bio *bio);
 static void dmtc_bio_write_done(struct bio *bio);
@@ -967,12 +1060,15 @@ dm_target_crypt_destroy(dm_table_entry_t *table_en)
  */
 
 /**
- * Use of bio_caller_infoX:
+ * Usage of the "struct bio" bio_caller_infoX fields:
  *
- * bio_caller_info1: priv
+ * bio_caller_info1:
+ * 	- always points to "priv"
  * bio_caller_info2:
- * 	 - in queue: pointer to next enqueued bio request  
- * 	 - in progress: orig b_data pointer (WRITE PATH only)
+ *	- orig b_data pointer (WRITE PATH only)
+ * bio_caller_info3:
+ * 	- used to chain bio requests. points to next enqueued bio request
+ * 	  (only within bio request queue)
  */
 
 /*
@@ -1016,7 +1112,7 @@ dm_target_crypt_strategy(dm_table_entry_t *table_en, struct buf *bp)
 		bio->bio_offset = bp->b_bio1.bio_offset +
 		    priv->block_offset * DEV_BSIZE;
 		bio->bio_caller_info1.ptr = priv;
-		dmtc_submit_bio_request(priv, bio, &priv->crypto_worker_pool, BUF_CMD_WRITE);
+		dmtc_submit_bio_request(priv, bio, BUF_CMD_WRITE);
 		break;
 	default:
 		vn_strategy(priv->pdev->pdev_vnode, &bp->b_bio1);
@@ -1029,13 +1125,11 @@ dm_target_crypt_strategy(dm_table_entry_t *table_en, struct buf *bp)
  * Submits bio request to run in a worker pool.
  */
 static void
-dmtc_submit_bio_request(dm_target_crypt_config_t *priv, struct bio *bio,
-		struct worker_pool *pool, int bio_cmd)
+dmtc_submit_bio_request(dm_target_crypt_config_t *priv, struct bio *bio, int bio_cmd)
 {
 	int error;
 	
-	(void)priv;
-	error = worker_pool_submit_bio_request(pool, bio, bio_cmd);
+	error = worker_pool_submit_bio_request(&priv->crypto_worker_pool, bio, bio_cmd);
 	if (error) {
 		kprintf(
 		    "dm_target_crypt: failed to submit bio to workqueue with error = %d\n",
@@ -1049,9 +1143,8 @@ dmtc_submit_bio_request(dm_target_crypt_config_t *priv, struct bio *bio,
 }
 
 /*
- * STRATEGY READ PATH (after read BIO completes)
+ * Called after read BIO completes
  */
-
 static void
 dmtc_bio_read_done(struct bio *bio)
 {
@@ -1068,10 +1161,13 @@ dmtc_bio_read_done(struct bio *bio)
 		biodone(obio);
 	} else {
 		priv = bio->bio_caller_info1.ptr;
-		dmtc_submit_bio_request(priv, bio, &priv->crypto_worker_pool, BUF_CMD_READ);
+		dmtc_submit_bio_request(priv, bio, BUF_CMD_READ);
 	}
 }
 
+/**
+ * Executes a bio BUF_CMD_READ request within the context of a worker.
+ */
 void
 dmtc_bio_read_decrypt_job_handler(struct bio *bio, void *worker_context)
 {
@@ -1117,12 +1213,9 @@ dmtc_bio_read_decrypt_job_handler(struct bio *bio, void *worker_context)
 	biodone(obio);
 }
 
-/* END OF STRATEGY READ SECTION */
-
-/*
- * STRATEGY WRITE PATH
+/**
+ * Executes a bio BUF_CMD_WRITE request within the context of a worker.
  */
-
 void
 dmtc_bio_write_encrypt_job_handler(struct bio *bio, void *worker_context)
 {
@@ -1186,8 +1279,6 @@ dmtc_bio_write_done(struct bio *bio)
 	struct bio *obio = pop_bio(bio);
 	biodone(obio);
 }
-
-/* END OF STRATEGY WRITE SECTION */
 
 /**
  * Encrypts or decrypts `data_buf`.
