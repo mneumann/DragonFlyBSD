@@ -2785,5 +2785,6 @@ static const STRUCT_USB_HOST_ID __used uvc_devs[] = {
 	 USB_IFACE_SUBCLASS(UISUBCLASS_CTRL),},
 };
 
-// TODO
-// USB_PNP_HOST_INFO(uvc_devs);
+#if 0
+USB_PNP_HOST_INFO(uvc_devs);
+#endif
