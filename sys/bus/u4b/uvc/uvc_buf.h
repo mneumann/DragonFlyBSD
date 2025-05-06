@@ -34,7 +34,7 @@
 #ifndef _DEV_USB_UVC_BUF_H
 #define _DEV_USB_UVC_BUF_H
 
-#include <sys/selinfo.h>
+#include <sys/event.h>
 
 #define	UVC_BUF_MAX_BUFFERS		8
 #define UVC_BUF_QUEUE_IS_RUNNING(bq)	(bq->buf_count != 0)
@@ -67,7 +67,7 @@ struct uvc_buf_queue {
 	struct cv	io_cv;
 	struct uvc_drv_video *video;
 
-	struct selinfo sel;
+	struct kqinfo	sel;
 
 	void		*mem;
 	uint64_t	status;
