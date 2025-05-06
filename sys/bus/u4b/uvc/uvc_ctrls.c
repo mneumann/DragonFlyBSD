@@ -36,7 +36,6 @@
 #include <sys/cdefs.h>
 #include <sys/param.h>
 #include <sys/kernel.h>
-#include <sys/sdt.h>
 #include <sys/systm.h>
 #include <sys/sysctl.h>
 #include <sys/proc.h>
@@ -46,7 +45,6 @@
 #include <sys/lock.h>
 #include <sys/condvar.h>
 #include <sys/malloc.h>
-#include <sys/priv.h>
 #include <sys/conf.h>
 #include <sys/fcntl.h>
 

@@ -58,6 +58,8 @@
 #ifndef __LINUX_VIDEODEV2_H
 #define __LINUX_VIDEODEV2_H
 
+#include <sys/ioccom.h>
+
 #ifdef __DragonFly__
 #define __user
 typedef uint64_t	__u64;

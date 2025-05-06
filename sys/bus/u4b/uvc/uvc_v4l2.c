@@ -36,7 +36,6 @@
 #include <sys/cdefs.h>
 #include <sys/param.h>
 #include <sys/kernel.h>
-#include <sys/sdt.h>
 #include <sys/systm.h>
 #include <sys/sysctl.h>
 #include <sys/proc.h>
@@ -46,9 +45,11 @@
 #include <sys/lock.h>
 #include <sys/condvar.h>
 #include <sys/malloc.h>
-#include <sys/priv.h>
 #include <sys/conf.h>
 #include <sys/fcntl.h>
+#include <sys/device.h>
+#include <sys/devfs.h>
+#include <sys/conf.h>
 
 #include <bus/u4b/usb.h>
 #define USB_DEBUG_VAR uvc_debug
@@ -65,7 +66,9 @@
 int v4l2_not_allowed;
 
 static SYSCTL_NODE(_hw_usb, OID_AUTO, v4l2, CTLFLAG_RW, 0, "USB v4l2");
-SYSCTL_INT(_hw_usb_v4l2, OID_AUTO, v4l2_not_allowed, CTLFLAG_RWTUN,
+
+TUNABLE_INT("hw.usb.v4l2.v4l2_not_allowed", &v4l2_not_allowed);
+SYSCTL_INT(_hw_usb_v4l2, OID_AUTO, v4l2_not_allowed, CTLFLAG_RW,
 		    &v4l2_not_allowed, 0, "V4L2 Permission");
 
 static int
@@ -160,7 +163,7 @@ uvc_v4l2_g_selection(struct uvc_drv_video *v, void *addr)
 	return ret;
 }
 
-static int
+__unused static int
 uvc_v4l2_enumstd(struct v4l2_standard *std)
 {
 	std->id = V4L2_STD_UNKNOWN;
@@ -361,9 +364,11 @@ uvc_v4l2_querymenu(struct uvc_drv_video *v, struct v4l2_querymenu *qm)
 	ret = uvc_query_v4l2_menu(v, qm);
 	return ret;
 }
+
 static int
-uvc_v4l2_open(struct cdev *dev, int flags, int fmt, struct thread *td)
+uvc_v4l2_open(struct dev_open_args *ap)
 {
+	cdev_t dev = ap->a_head.a_dev;
 	struct uvc_v4l2_cdev_priv *priv;
 	struct uvc_drv_video *v = dev->si_drv1;
 
@@ -395,18 +400,19 @@ uvc_v4l2_open(struct cdev *dev, int flags, int fmt, struct thread *td)
 	priv->work_pri = UVC_V4L2_PRI_PASSIVE;
 	priv->v = v;
 	priv->num = v->users;
-	(void)devfs_set_cdevpriv(priv, uvc_v4l2_dtor);
+	(void)devfs_set_cdevpriv(ap->a_fpp ? *ap->a_fpp : NULL, priv, uvc_v4l2_dtor);
 	return 0;
 }
 
 static int
-uvc_v4l2_close(struct cdev *dev, int flags, int fmt, struct thread *td)
+uvc_v4l2_close(struct dev_close_args *ap)
 {
+	cdev_t dev = ap->a_head.a_dev;
 	struct uvc_drv_video *v = dev->si_drv1;
 	struct uvc_v4l2_cdev_priv *priv;
 	int ret;
 
-	ret = devfs_get_cdevpriv((void **)&priv);
+	ret = devfs_get_cdevpriv(ap->a_fp, (void **)&priv);
 	if (ret != 0) {
 		DPRINTF("error===================================\n");
 		return (ret);
@@ -432,9 +438,12 @@ uvc_v4l2_close(struct cdev *dev, int flags, int fmt, struct thread *td)
 }
 
 static int
-uvc_v4l2_ioctl(struct cdev *dev, u_long cmd, caddr_t data, int fflag,
-	struct thread *td)
+uvc_v4l2_ioctl(struct dev_ioctl_args *ap)
 {
+	cdev_t dev = ap->a_head.a_dev;
+	u_long cmd = ap->a_cmd;
+	caddr_t data = ap->a_data;
+	int fflag = ap->a_fflag;
 	struct uvc_v4l2_cdev_priv *priv;
 	struct uvc_drv_video *v = dev->si_drv1;
 
@@ -450,7 +459,7 @@ uvc_v4l2_ioctl(struct cdev *dev, u_long cmd, caddr_t data, int fflag,
 	struct uvc_xu_control_query qry;
 	int ret = ENOTTY;
 
-	ret = devfs_get_cdevpriv((void **)&priv);
+	ret = devfs_get_cdevpriv(ap->a_fp, (void **)&priv);
 	if (ret != 0) {
 		DPRINTF("%s %d---------->err:%d\n", __func__, __LINE__, ret);
 		return (ret);
@@ -688,30 +697,33 @@ uvc_v4l2_ioctl(struct cdev *dev, u_long cmd, caddr_t data, int fflag,
 }
 
 static int
-uvc_v4l2_mmap(struct cdev *dev, vm_ooffset_t offset, vm_paddr_t *paddr,
-	int nprot, vm_memattr_t *memattr)
+uvc_v4l2_mmap(struct dev_mmap_args *ap)
 {
+	cdev_t dev = ap->a_head.a_dev;
+	vm_ooffset_t offset = ap->a_offset;
+	vm_paddr_t paddr;
 	struct uvc_drv_video *v = dev->si_drv1;
 
 	//DPRINTF("paddr:%p offset:%ld\n", paddr, offset);
-	uvc_buf_queue_mmap(&v->bq, paddr, offset);
+	uvc_buf_queue_mmap(&v->bq, &paddr, offset);
 	return 0;
 }
 
 static int
-uvc_v4l2_read(struct cdev *dev, struct uio *uio, int ioflag)
+uvc_v4l2_read(struct dev_read_args *ap __unused)
 {
 	DPRINTF("%s\n", __func__);
 	return EINVAL;
 }
 
 static int
-uvc_v4l2_write(struct cdev *dev, struct uio *uio, int ioflag)
+uvc_v4l2_write(struct dev_write_args *ap __unused)
 {
 	DPRINTF("%s\n", __func__);
 	return EINVAL;
 }
 
+#if 0
 static int
 uvc_v4l2_poll(struct cdev *dev, int events, struct thread *td)
 {
@@ -722,17 +734,22 @@ uvc_v4l2_poll(struct cdev *dev, int events, struct thread *td)
 
 	return ret;
 }
+#endif
 
-static struct cdevsw uvc_v4l2_cdevsw = {
+static struct dev_ops uvc_v4l2_cdevsw = {
+#if 0
 	.d_version =	D_VERSION,
+#endif
 	.d_open	=	uvc_v4l2_open,
 	.d_read	=	uvc_v4l2_read,
 	.d_write =	uvc_v4l2_write,
 	.d_close =	uvc_v4l2_close,
 	.d_ioctl =	uvc_v4l2_ioctl,
 	.d_mmap =	uvc_v4l2_mmap,
+#if 0
 	.d_poll =	uvc_v4l2_poll,
 	.d_name =	UVC_V4L2_DEVICE_NAME,
+#endif
 };
 
 void
@@ -755,7 +772,6 @@ int
 uvc_v4l2_reg(struct uvc_drv_video *v)
 {
 	struct cdev *cdev;
-	struct make_dev_args mda;
 	struct uvc_v4l2 *v4l2;
 	int ret;
 
@@ -764,18 +780,14 @@ uvc_v4l2_reg(struct uvc_drv_video *v)
 	if (!v4l2)
 		return ENOMEM;
 
-	make_dev_args_init(&mda);
-
-	mda.mda_devsw = &uvc_v4l2_cdevsw;
-	mda.mda_uid = UID_ROOT;
-	mda.mda_gid = GID_VIDEO;
-	mda.mda_mode = 0666;
-	mda.mda_si_drv1 = v;
-	ret = make_dev_s(&mda, &cdev, "%s%lu", UVC_V4L2_DEVICE_NAME, v->unit);
-	if (ret) {
-		DPRINTF("failed to create v4l2 char device: %d.\n", ret);
+	cdev = make_dev(&uvc_v4l2_cdevsw, v->unit,
+			UID_ROOT, GID_VIDEO, 0666,
+			"%s%lu", UVC_V4L2_DEVICE_NAME, v->unit);
+	if (cdev == NULL) {
+		DPRINTF("failed to create v4l2 char device.\n");
 		return ret;
 	}
+	cdev->si_drv1 = v;
 
 	make_dev_alias(cdev, "char/%u:%lu",
 		       LINUX_MAJAR, LINUX_MINOR + v->unit);

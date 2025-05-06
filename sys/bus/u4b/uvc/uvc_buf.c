@@ -33,7 +33,7 @@
 
 #include <sys/cdefs.h>
 #include <sys/stdint.h>
-#include <sys/stddef.h>
+#include <sys/cdefs.h>
 #include <sys/param.h>
 #include <sys/queue.h>
 #include <sys/types.h>
@@ -44,13 +44,10 @@
 #include <sys/lock.h>
 #include <sys/condvar.h>
 #include <sys/stat.h>
-#include <sys/syscallsubr.h>
 #include <sys/sysctl.h>
-#include <sys/sx.h>
 #include <sys/unistd.h>
 #include <sys/callout.h>
 #include <sys/malloc.h>
-#include <sys/priv.h>
 #include <sys/conf.h>
 #include <sys/fcntl.h>
 #include <sys/sbuf.h>
@@ -270,8 +267,7 @@ finished:
 				buf->status = UVC_BUF_STATE_DONE;
 				STAILQ_INSERT_TAIL(&bq->consumer, buf, link);
 				cv_broadcast(&bq->io_cv);
-				if (SEL_WAITING(&bq->sel))
-					selwakeup(&bq->sel);
+				KNOTE(&bq->sel.ki_note, 0);
 			}
 
 clean:
@@ -347,8 +343,7 @@ uvc_buf_sell_buf(struct uvc_buf_queue *bq,
 			buf->status = UVC_BUF_STATE_DONE;
 			STAILQ_INSERT_TAIL(&bq->consumer, buf, link);
 			cv_broadcast(&bq->io_cv);
-			if (SEL_WAITING(&bq->sel))
-				selwakeup(&bq->sel);
+			KNOTE(&bq->sel.ki_note, 0);
 		}
 	}
 
@@ -570,6 +565,8 @@ uvc_buf_queue_init_qbuf(struct uvc_buf *buf, int ind)
 	buf->status = UVC_BUF_STATE_IDLE;
 }
 
+// TODO: kqueue
+#if 0
 int
 uvc_buf_queue_poll(struct uvc_buf_queue *queue, int events, struct thread *td)
 {
@@ -603,6 +600,7 @@ uvc_buf_queue_poll(struct uvc_buf_queue *queue, int events, struct thread *td)
 
 	return ret;
 }
+#endif
 
 int
 uvc_buf_queue_disable(struct uvc_buf_queue *queue)
