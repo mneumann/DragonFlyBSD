@@ -27,15 +27,13 @@
 # SUCH DAMAGE.
 #
 
-S=     ${SRCTOP}/sys
-
-.PATH: $S/dev/usb/uvc
+.PATH:	${.CURDIR}
 
 CFLAGS+=-DUSB_DEBUG
 
 KMOD=	uvc
-SRCS=	opt_bus.h opt_usb.h fb_if.h device_if.h \
-	bus_if.h usb_if.h vnode_if.h usbdevs.h \
+SRCS=	opt_bus.h opt_usb.h device_if.h \
+	bus_if.h usb_if.h usbdevs.h \
 	uvc_drv.c \
 	uvc_buf.c \
 	uvc_v4l2.c \
