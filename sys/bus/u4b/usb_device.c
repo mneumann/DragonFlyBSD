@@ -1588,6 +1588,7 @@ usb_alloc_device(device_t parent_dev, struct usb_bus *bus,
 	lockinit(&udev->enum_lock, "USB config SX lock", 0, LK_CANRECURSE);
 	/* XXX (mp) is this LK_CANRECURSE necessary? */
 	lockinit(&udev->sr_lock, "USB suspend and resume SX lock", 0, LK_CANRECURSE);
+	lockinit(&udev->ctrl_lock, "USB control transfer SX lock", 0, LK_CANRECURSE);
 
 	cv_init(&udev->ctrlreq_cv, "WCTRL");
 	cv_init(&udev->ref_cv, "UGONE");
@@ -2196,6 +2197,7 @@ usb_free_device(struct usb_device *udev, uint8_t flag)
 
 	lockuninit(&udev->enum_lock);
 	lockuninit(&udev->sr_lock);
+	lockuninit(&udev->ctrl_lock);
 
 	cv_destroy(&udev->ctrlreq_cv);
 	cv_destroy(&udev->ref_cv);
@@ -2899,6 +2901,41 @@ void
 usbd_sr_unlock(struct usb_device *udev)
 {
 	lockmgr(&udev->sr_lock, LK_RELEASE);
+}
+
+/*
+ * The following function is used to serialize access to USB control
+ * transfers and the USB scratch area. If the lock is already grabbed
+ * this function returns zero. Else a value of one is returned.
+ */
+uint8_t
+usbd_ctrl_lock(struct usb_device *udev)
+{
+	if (lockstatus(&udev->ctrl_lock, curthread)==LK_EXCLUSIVE)
+		return (0);
+
+	lockmgr(&udev->ctrl_lock, LK_EXCLUSIVE);
+
+	/*
+	 * We need to allow suspend and resume at this point, else the
+	 * control transfer will timeout if the device is suspended!
+	 */
+	if (usbd_enum_is_locked(udev))
+		usbd_sr_unlock(udev);
+	return (1);
+}
+
+void
+usbd_ctrl_unlock(struct usb_device *udev)
+{
+	lockmgr(&udev->ctrl_lock, LK_RELEASE);
+
+	/*
+	 * Restore the suspend and resume lock after we have unlocked
+	 * the USB control transfer lock to avoid LOR:
+	 */
+	if (usbd_enum_is_locked(udev))
+		usbd_sr_lock(udev);
 }
 
 /*

@@ -187,6 +187,7 @@ struct usb_device {
 	struct usb_udev_msg cs_msg[2];
 	struct lock enum_lock;
 	struct lock sr_lock;
+	struct lock ctrl_lock;
 	struct lock device_lock;
 	struct cv ctrlreq_cv;
 	struct cv ref_cv;
@@ -321,6 +322,8 @@ uint8_t	usbd_enum_lock(struct usb_device *);
 void	usbd_enum_unlock(struct usb_device *);
 void	usbd_sr_lock(struct usb_device *);
 void	usbd_sr_unlock(struct usb_device *);
+uint8_t	usbd_ctrl_lock(struct usb_device *);
+void	usbd_ctrl_unlock(struct usb_device *);
 uint8_t usbd_enum_is_locked(struct usb_device *);
 
 #if USB_HAVE_TT_SUPPORT
