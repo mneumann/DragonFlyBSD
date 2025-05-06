@@ -50,10 +50,10 @@
 #include <sys/conf.h>
 #include <sys/fcntl.h>
 
-#include <dev/usb/usb.h>
+#include <bus/u4b/usb.h>
 #define USB_DEBUG_VAR uvc_debug
-#include <dev/usb/usb_debug.h>
-#include <dev/usb/usbdi.h>
+#include <bus/u4b/usb_debug.h>
+#include <bus/u4b/usbdi.h>
 
 #include <contrib/v4l/videodev.h>
 #include <contrib/v4l/videodev2.h>
@@ -119,7 +119,7 @@ uvc_v4l2_query_cap(struct uvc_drv_video *v, void *addr)
 
 	memset(&cap, 0x00, sizeof(cap));
 	strlcpy(cap.driver, UVC_DRIVER_NAME, sizeof(cap.driver));
-	snprintf(cap.card, sizeof(cap.card), "%s", v->sc->name);
+	ksnprintf(cap.card, sizeof(cap.card), "%s", v->sc->name);
 
 	if (!v->sc)
 		return EINVAL;
@@ -127,7 +127,7 @@ uvc_v4l2_query_cap(struct uvc_drv_video *v, void *addr)
 	if (!udev)
 		return EINVAL;
 	usbd_get_phys(udev, bus_info, 128);
-	snprintf(cap.bus_info, sizeof(cap.bus_info), "%s", bus_info);
+	ksnprintf(cap.bus_info, sizeof(cap.bus_info), "%s", bus_info);
 	cap.version = V4L_VERSION(3, 14, 1);
 
 	/*
@@ -237,7 +237,7 @@ uvc_simple_frac(uint32_t *numerator, uint32_t *denominator,
 		 return;
 	 }
 
-	coeff = (uint32_t *)malloc(max_iters * sizeof(uint32_t),
+	coeff = (uint32_t *)kmalloc(max_iters * sizeof(uint32_t),
 		M_UVC, M_ZERO | M_WAITOK);
 	if (coeff == NULL)
 		return;
@@ -269,7 +269,7 @@ uvc_simple_frac(uint32_t *numerator, uint32_t *denominator,
 
 	*numerator = best_num;
 	*denominator = best_den;
-	free(coeff, M_UVC);
+	kfree(coeff, M_UVC);
 }
 
 static int
@@ -333,7 +333,7 @@ uvc_v4l2_dtor(void *data)
 
 	atomic_subtract_64(&v->users, 1);
 
-	free(data, M_UVC);
+	kfree(data, M_UVC);
 
 	DPRINTF("%s\n", __func__);
 }
@@ -384,7 +384,7 @@ uvc_v4l2_open(struct cdev *dev, int flags, int fmt, struct thread *td)
 	DPRINTF("enable:%lu\n", v->enable);
 
 	priv = (struct uvc_v4l2_cdev_priv *)
-		malloc(sizeof(*priv), M_UVC, M_ZERO | M_WAITOK);
+		kmalloc(sizeof(*priv), M_UVC, M_ZERO | M_WAITOK);
 	if (!priv) {
 		DPRINTF("%s %d------>Error.\n", __func__, __LINE__);
 		atomic_subtract_64(&v->users, 1);
@@ -505,11 +505,11 @@ uvc_v4l2_ioctl(struct cdev *dev, u_long cmd, caddr_t data, int fflag,
 		break;
 
 	case VIDIOC_G_INPUT:
-		printf("unsupport ioctl VIDIOC_G_INPUT.\n");
+		kprintf("unsupport ioctl VIDIOC_G_INPUT.\n");
 		*(int *)data = 0;
 		break;
 	case VIDIOC_ENUMSTD:
-		printf("unsupport ioctl VIDIOC_ENUMSTD\n");
+		kprintf("unsupport ioctl VIDIOC_ENUMSTD\n");
 		ret = ENOTTY;
 		break;
 
@@ -524,11 +524,11 @@ uvc_v4l2_ioctl(struct cdev *dev, u_long cmd, caddr_t data, int fflag,
 		break;
 
 	case VIDIOC_G_CTRL:
-		printf("unsupport ioctl VIDIOC_G_CTRL.\n");
+		kprintf("unsupport ioctl VIDIOC_G_CTRL.\n");
 		ret = EINVAL;
 		break;
 	case VIDIOC_G_STD:
-		printf("unsupport ioctl VIDIOC_G_STD.\n");
+		kprintf("unsupport ioctl VIDIOC_G_STD.\n");
 		ret = ENOTTY;
 		break;
 
@@ -621,7 +621,7 @@ uvc_v4l2_ioctl(struct cdev *dev, u_long cmd, caddr_t data, int fflag,
 		break;
 
 	case VIDIOC_EXPBUF:
-		printf("unsupport ioctl VIDIOC_EXPBUF.\n");
+		kprintf("unsupport ioctl VIDIOC_EXPBUF.\n");
 		ret = ENOTTY;
 		break;
 
@@ -660,7 +660,7 @@ uvc_v4l2_ioctl(struct cdev *dev, u_long cmd, caddr_t data, int fflag,
 		return ret;
 
 	case UVCIOC_CTRL_MAP:
-		printf("unsupport ioctl UVCIOC_CTRL_MAP.\n");
+		kprintf("unsupport ioctl UVCIOC_CTRL_MAP.\n");
 		ret = ENXIO;
 		break;
 
@@ -678,7 +678,7 @@ uvc_v4l2_ioctl(struct cdev *dev, u_long cmd, caddr_t data, int fflag,
 		break;
 
 	default:
-		printf("%lx-%s need to be implement\n", cmd, __func__);
+		kprintf("%lx-%s need to be implement\n", cmd, __func__);
 		//ret = EINVAL;
 		ret = 0;
 		break;
@@ -745,7 +745,7 @@ uvc_v4l2_unreg(struct uvc_drv_video *v)
 		if (v->v4l2->cdev)
 			destroy_dev(v->v4l2->cdev);
 
-		free(v->v4l2, M_UVC);
+		kfree(v->v4l2, M_UVC);
 	}
 	/* remove */
 	v->v4l2 = NULL;
@@ -760,7 +760,7 @@ uvc_v4l2_reg(struct uvc_drv_video *v)
 	int ret;
 
 	DPRINTF("%s\n", __func__);
-	v4l2 = malloc(sizeof(*v4l2), M_UVC, M_ZERO | M_WAITOK);
+	v4l2 = kmalloc(sizeof(*v4l2), M_UVC, M_ZERO | M_WAITOK);
 	if (!v4l2)
 		return ENOMEM;
 

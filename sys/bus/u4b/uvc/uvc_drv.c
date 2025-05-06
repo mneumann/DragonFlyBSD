@@ -45,16 +45,16 @@
 #include <sys/kthread.h>
 #include <sys/lock.h>
 
-#include <dev/usb/usb.h>
-#include <dev/usb/usbdi.h>
-#include <dev/usb/usbdi_util.h>
-#include <dev/usb/usb_request.h>
+#include <bus/u4b/usb.h>
+#include <bus/u4b/usbdi.h>
+#include <bus/u4b/usbdi_util.h>
+#include <bus/u4b/usb_request.h>
 
 #define USB_DEBUG_VAR uvc_debug
-#include <dev/usb/usb_debug.h>
-#include <dev/usb/usb_core.h>
-#include <dev/usb/usb_device.h>
-#include <dev/usb/quirk/usb_quirk.h>
+#include <bus/u4b/usb_debug.h>
+#include <bus/u4b/usb_core.h>
+#include <bus/u4b/usb_device.h>
+#include <bus/u4b/quirk/usb_quirk.h>
 
 #include <contrib/v4l/videodev.h>
 #include <contrib/v4l/videodev2.h>
@@ -146,13 +146,13 @@ dump_hex(void *src, int len)
 		return;
 
 	for (i = 0; i < len; i++) {
-		printf("%02x  ", pkt[i]);
+		kprintf("%02x  ", pkt[i]);
 		if ((i + 1) % 8 == 0)
-			printf("    ");
+			kprintf("    ");
 		if ((i + 1) % 16 == 0)
-			printf("\n");
+			kprintf("\n");
 	}
-	printf("\n");
+	kprintf("\n");
 }
 
 static uint8_t
@@ -214,7 +214,7 @@ uvc_drv_do_request(struct usb_device *udev, uint8_t query, uint8_t unit,
 
 	err = usbd_do_request_flags(udev, NULL, &req, data, 0, NULL, timeout);
 	if (err)
-		printf("%s-%d-%s\n", __func__, query, usbd_errstr(err));
+		kprintf("%s-%d-%s\n", __func__, query, usbd_errstr(err));
 	return err;
 }
 
@@ -282,7 +282,7 @@ uvc_drv_fixup_req(struct uvc_drv_video *video,
 	if (!(fmt->flags & UVC_FMT_FLAG_COMPRESSED)) {
 		sizeimage = frm->width * frm->height / 8 * fmt->bpp;
 		if (sizeimage != UGETDW(req->dwMaxFrameSize)) {
-			printf("sizeimage %d != dmMaxFrameSize %d\n",
+			kprintf("sizeimage %d != dmMaxFrameSize %d\n",
 				sizeimage, UGETDW(req->dwMaxFrameSize));
 			USETDW(req->dwMaxFrameSize, sizeimage);
 		}
@@ -558,7 +558,7 @@ uvc_drv_get_v4l2_fmt(struct uvc_drv_video *v, struct v4l2_format *vfmt)
 #endif
 	DPRINTF("v4l2-dev get format\n");
 	if (v->cur_fmt == NULL || v->cur_frm == NULL) {
-		printf("get cur format failed\n");
+		kprintf("get cur format failed\n");
 		return EINVAL;
 	}
 
@@ -1279,7 +1279,7 @@ uvc_drv_halt_ep_request(struct usb_device *udev, uint8_t epaddr, int timeout)
 
 	err = usbd_do_request_flags(udev, NULL, &req, NULL, 0, NULL, timeout);
 	if (err)
-		printf("%s-%s\n", __func__, usbd_errstr(err));
+		kprintf("%s-%s\n", __func__, usbd_errstr(err));
 	return err;
 
 }
@@ -1352,12 +1352,12 @@ uvc_drv_set_streampar(struct uvc_drv_video *v, struct v4l2_streamparm *p)
 	uint32_t interval;
 	int ret;
 
-	printf("uvc_v4l2_set_streampar\n");
+	kprintf("uvc_v4l2_set_streampar\n");
 	timeperframe = p->parm.capture.timeperframe;
 
 	interval = uvc_fraction_to_interval(timeperframe.numerator,
 		timeperframe.denominator);
-	printf("Setting frame interval to %u/%u (%u).\n",
+	kprintf("Setting frame interval to %u/%u (%u).\n",
 		timeperframe.numerator, timeperframe.denominator, interval);
 
 	probe = v->req;
@@ -1439,7 +1439,7 @@ uvc_drv_init_cur_fmt_frm(struct uvc_drv_video *v, struct uvc_data_request *req)
 		}
 	}
 	if (fmt->nfrm == 0) {
-		printf("No frame desc found for default format.\n");
+		kprintf("No frame desc found for default format.\n");
 		return EINVAL;
 	}
 
@@ -1473,7 +1473,7 @@ uvc_drv_init_video(struct uvc_softc *sc, struct uvc_drv_ctrl *ctrl,
 	struct uvc_data_request *req;
 	int ret, i;
 
-	v = malloc(sizeof(*v), M_UVC, M_ZERO | M_WAITOK);
+	v = kmalloc(sizeof(*v), M_UVC, M_ZERO | M_WAITOK);
 	if (v == NULL)
 		return v;
 
@@ -1569,7 +1569,7 @@ uvc_drv_init_video(struct uvc_softc *sc, struct uvc_drv_ctrl *ctrl,
 
 	return v;
 done:
-	free(v, M_UVC);
+	kfree(v, M_UVC);
 	return NULL;
 }
 
@@ -1706,7 +1706,7 @@ uvc_drv_init_data_fmt(struct uvc_softc *sc, struct uvc_drv_data *data)
 		nitv * sizeof(struct uvc_data_interval);
 	DPRINTF("format:%u frame:%u interval:%u size:%d\n",
 		nfmt, nfrm, nitv, size);
-	data->fmt = malloc(size, M_UVC, M_ZERO | M_WAITOK);
+	data->fmt = kmalloc(size, M_UVC, M_ZERO | M_WAITOK);
 	if (!data->fmt) {
 		DPRINTF("Memory Leak.\n");
 		return ENOMEM;
@@ -1946,9 +1946,9 @@ uvc_drv_destroy_data(struct uvc_drv_data *data)
 {
 	if (data) {
 		if (data->fmt) {
-			free(data->fmt, M_UVC);
+			kfree(data->fmt, M_UVC);
 		}
-		free(data, M_UVC);
+		kfree(data, M_UVC);
 	}
 }
 
@@ -1958,7 +1958,7 @@ uvc_drv_init_data(struct usb_interface *iface, uint8_t iface_index,
 {
 	struct uvc_drv_data *pd;
 
-	pd = malloc(sizeof(*pd), M_UVC, M_ZERO | M_WAITOK);
+	pd = kmalloc(sizeof(*pd), M_UVC, M_ZERO | M_WAITOK);
 	if (pd) {
 		pd->iface = iface;
 		pd->iface_index = iface_index;
@@ -1970,22 +1970,22 @@ uvc_drv_init_data(struct usb_interface *iface, uint8_t iface_index,
 static void uvc_free_topo_node(struct uvc_topo_node *topo_node)
 {
 	if (topo_node->src_ids != NULL) {
-		free(topo_node->src_ids , M_UVC);
+		kfree(topo_node->src_ids , M_UVC);
 	}
 
 	if (topo_node->controls_mask != NULL) {
-		free(topo_node->controls_mask , M_UVC);
+		kfree(topo_node->controls_mask , M_UVC);
 	}
 
 	if (topo_node->node_info != NULL) {
-		free(topo_node->node_info , M_UVC);
+		kfree(topo_node->node_info , M_UVC);
 	}
 
 	if (topo_node->controls != NULL) {
-		free(topo_node->controls, M_UVC);
+		kfree(topo_node->controls, M_UVC);
 	}
 
-	free(topo_node, M_UVC);
+	kfree(topo_node, M_UVC);
 }
 
 static struct uvc_topo_node *
@@ -1998,27 +1998,27 @@ uvc_alloc_topo_node(uint16_t node_info_size,
 	uint8_t *ctrls_mask = NULL;
 	uint8_t *src_ids = NULL;
 
-	topo_node = malloc(sizeof(struct uvc_topo_node), M_UVC, M_ZERO | M_WAITOK);
+	topo_node = kmalloc(sizeof(struct uvc_topo_node), M_UVC, M_ZERO | M_WAITOK);
 	if (topo_node == NULL) {
 		goto mem_fail;
 	}
 
 	if (node_info_size != 0) {
-		node_info = malloc(node_info_size, M_UVC, M_ZERO | M_WAITOK);
+		node_info = kmalloc(node_info_size, M_UVC, M_ZERO | M_WAITOK);
 		if (node_info == NULL) {
 			goto mem_fail;
 		}
 	}
 
 	if (ctrls_mask_size != 0) {
-		ctrls_mask = malloc(ctrls_mask_size, M_UVC, M_ZERO | M_WAITOK);
+		ctrls_mask = kmalloc(ctrls_mask_size, M_UVC, M_ZERO | M_WAITOK);
 		if (ctrls_mask == NULL) {
 			goto mem_fail;
 		}
 	}
 
 	if (src_ids_num != 0) {
-		src_ids = malloc(src_ids_num, M_UVC, M_ZERO | M_WAITOK);
+		src_ids = kmalloc(src_ids_num, M_UVC, M_ZERO | M_WAITOK);
 		if (src_ids == NULL) {
 			goto mem_fail;
 		}
@@ -2035,22 +2035,22 @@ uvc_alloc_topo_node(uint16_t node_info_size,
 	return topo_node;
 
 mem_fail:
-	printf("%s:%d Lack of mem\n", __func__, __LINE__);
+	kprintf("%s:%d Lack of mem\n", __func__, __LINE__);
 
 	if (src_ids != NULL) {
-		free(src_ids , M_UVC);
+		kfree(src_ids , M_UVC);
 	}
 
 	if (ctrls_mask != NULL) {
-		free(ctrls_mask, M_UVC);
+		kfree(ctrls_mask, M_UVC);
 	}
 
 	if (node_info != NULL) {
-		free(node_info, M_UVC);
+		kfree(node_info, M_UVC);
 	}
 
 	if (topo_node != NULL) {
-		free(topo_node, M_UVC);
+		kfree(topo_node, M_UVC);
 	}
 
 	return NULL;
@@ -2157,7 +2157,7 @@ uvc_drv_parse_standard_ctrl(struct uvc_softc *sc,
 		if (su_desc->iSelector != 0) {
 			DPRINTF("WARNING: need to get usb string by id\n");
 		} else {
-			snprintf(topo_node->node_name, 64, "Selector %u", topo_node->node_id);
+			ksnprintf(topo_node->node_name, 64, "Selector %u", topo_node->node_id);
 		}
 
 		STAILQ_INSERT_TAIL(&ctrl->topo_nodes, topo_node, link);
@@ -2179,7 +2179,7 @@ uvc_drv_parse_standard_ctrl(struct uvc_softc *sc,
 
 		// only support UVC_ITT_CAMERA node
 		if (UGETW(it_desc->wTerminalType) != UVC_ITT_CAMERA) {
-			printf("WARNING: to_be_implement\n");
+			kprintf("WARNING: to_be_implement\n");
 			return EINVAL;
 		}
 
@@ -2214,11 +2214,11 @@ uvc_drv_parse_standard_ctrl(struct uvc_softc *sc,
 			(uint8_t *)it_desc + 15, ctrls_mask_size);
 
 		if (it_desc->bITerminal != 0) {
-			printf("WARNING: need to get usb string by id\n");
+			kprintf("WARNING: need to get usb string by id\n");
 		} else if (UVC_ENT_TYPE(topo_node) == UVC_ITT_CAMERA) {
-			snprintf(topo_node->node_name, 64, "Camera %u", topo_node->node_id);
+			ksnprintf(topo_node->node_name, 64, "Camera %u", topo_node->node_id);
 		} else
-			snprintf(topo_node->node_name, 64, "Input %u", topo_node->node_id);
+			ksnprintf(topo_node->node_name, 64, "Input %u", topo_node->node_id);
 
 		STAILQ_INSERT_TAIL(&ctrl->topo_nodes, topo_node, link);
 		break;
@@ -2251,9 +2251,9 @@ uvc_drv_parse_standard_ctrl(struct uvc_softc *sc,
 		    (uint8_t *)ot_desc + 7, 1);
 
 		if (ot_desc->bITerminal != 0) {
-			printf("WARNING: need to get usb string by id\n");
+			kprintf("WARNING: need to get usb string by id\n");
 		} else
-			snprintf(topo_node->node_name, 64, "Output %u", topo_node->node_id);
+			ksnprintf(topo_node->node_name, 64, "Output %u", topo_node->node_id);
 
 		STAILQ_INSERT_TAIL(&ctrl->topo_nodes, topo_node, link);
 		break;
@@ -2295,9 +2295,9 @@ uvc_drv_parse_standard_ctrl(struct uvc_softc *sc,
 				pu_desc->bmVideoStandards;
 
 		if (pu_desc->iProcessing != 0) {
-			printf("WARNING: need to get usb string by id\n");
+			kprintf("WARNING: need to get usb string by id\n");
 		} else
-			snprintf(topo_node->node_name, 64, "Processing %u", topo_node->node_id);
+			ksnprintf(topo_node->node_name, 64, "Processing %u", topo_node->node_id);
 
 		STAILQ_INSERT_TAIL(&ctrl->topo_nodes, topo_node, link);
 		break;
@@ -2318,7 +2318,7 @@ uvc_drv_parse_standard_ctrl(struct uvc_softc *sc,
 		DPRINTF("extension unit id:%d\n", *((char *)desc + 3));
 		if (!memcmp((char *)desc + 4, vc_ext_h264ctrl,
 			sizeof(vc_ext_h264ctrl))) {
-			printf("this is h264 extension.\n");
+			kprintf("this is h264 extension.\n");
 			ctrl->h264id = *((char *)desc + 3);
 		}
 
@@ -2345,9 +2345,9 @@ uvc_drv_parse_standard_ctrl(struct uvc_softc *sc,
 		       (uint8_t *)xu_desc + 22, src_ids_num);
 
 		if (*(&xu_desc->iExtension + ctrls_mask_size + src_ids_num) != 0)
-			printf("WARNING: need to get usb string by id\n");
+			kprintf("WARNING: need to get usb string by id\n");
 		else
-			sprintf(topo_node->node_name, "Extension %u", topo_node->node_id);
+			ksprintf(topo_node->node_name, "Extension %u", topo_node->node_id);
 
 		STAILQ_INSERT_TAIL(&ctrl->topo_nodes, topo_node, link);
 		break;
@@ -2362,12 +2362,12 @@ uvc_drv_show_ctrl(struct uvc_drv_ctrl *ctrl)
 {
 	KASSERT(ctrl != NULL, ("Input Error"));
 
-	printf("\n");
-	printf("ctrl interface idx:%u num:%u\n", ctrl->iface_index,
+	kprintf("\n");
+	kprintf("ctrl interface idx:%u num:%u\n", ctrl->iface_index,
 		ctrl->iface_num);
-	printf("revision:0x%x clock_freq:%u\n", ctrl->revision,
+	kprintf("revision:0x%x clock_freq:%u\n", ctrl->revision,
 		ctrl->clock_freq);
-	printf("select unit id:%d\n", ctrl->sid);
+	kprintf("select unit id:%d\n", ctrl->sid);
 }
 
 static int
@@ -2414,7 +2414,7 @@ uvc_drv_init_ctrl(struct usb_interface *iface, uint8_t iface_index,
 {
 	struct uvc_drv_ctrl *pc;
 
-	pc = malloc(sizeof(*pc), M_UVC, M_ZERO | M_WAITOK);
+	pc = kmalloc(sizeof(*pc), M_UVC, M_ZERO | M_WAITOK);
 	if (pc) {
 		pc->iface = iface;
 		pc->iface_index = iface_index;
@@ -2440,12 +2440,12 @@ uvc_drv_destroy_ctrl(struct uvc_drv_ctrl *c)
 					continue;
 
 				uvc_ctrl_destroy_mappings(ctrl);
-				free(ctrl->uvc_data, M_UVC);
+				kfree(ctrl->uvc_data, M_UVC);
 			}
 
 			uvc_free_topo_node(topo_node);
 		}
-		free(c, M_UVC);
+		kfree(c, M_UVC);
 	}
 }
 
@@ -2486,7 +2486,7 @@ uvc_drv_detach(device_t self)
 		/* entry close */
 		uvc_v4l2_unreg(sc->video);
 		/* data free */
-		free(sc->video, M_UVC);
+		kfree(sc->video, M_UVC);
 		sc->video = NULL;
 	}
 	DPRINTF("%s-%d-%p\n", __func__, __LINE__, self);
@@ -2664,9 +2664,9 @@ uvc_drv_attach(device_t dev)
 
 	str = usb_get_product(uaa->device);
 	if (!str || !strncmp(str, "product", strlen("product")))
-		snprintf(sc->name, 64, "UVC Camera");
+		ksnprintf(sc->name, 64, "UVC Camera");
 	else
-		snprintf(sc->name, 64, "%s", str);
+		ksnprintf(sc->name, 64, "%s", str);
 
 	if (usb_test_quirk(uaa, UQ_UVC_IR_INTRF_DISABLE)) {
 		if (interface == 2) {

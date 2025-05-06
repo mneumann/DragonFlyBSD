@@ -58,22 +58,22 @@
 #include <sys/sbuf.h>
 
 #include <sys/filedesc.h>
-#include <dev/usb/usb.h>
-#include <dev/usb/usbdi.h>
-#include <dev/usb/usbdi_util.h>
-#include <dev/usb/usbhid.h>
+#include <bus/u4b/usb.h>
+#include <bus/u4b/usbdi.h>
+#include <bus/u4b/usbdi_util.h>
+#include <bus/u4b/usbhid.h>
 
 #define USB_DEBUG_VAR uvc_debug
-#include <dev/usb/usb_debug.h>
+#include <bus/u4b/usb_debug.h>
 
-#include <dev/usb/usb_core.h>
-#include <dev/usb/usb_dev.h>
-#include <dev/usb/usb_mbuf.h>
-#include <dev/usb/usb_process.h>
-#include <dev/usb/usb_device.h>
-#include <dev/usb/usb_busdma.h>
-#include <dev/usb/usb_dynamic.h>
-#include <dev/usb/usb_util.h>
+#include <bus/u4b/usb_core.h>
+#include <bus/u4b/usb_dev.h>
+#include <bus/u4b/usb_mbuf.h>
+#include <bus/u4b/usb_process.h>
+#include <bus/u4b/usb_device.h>
+#include <bus/u4b/usb_busdma.h>
+#include <bus/u4b/usb_dynamic.h>
+#include <bus/u4b/usb_util.h>
 
 #include <vm/vm.h>
 #include <vm/pmap.h>
@@ -335,7 +335,7 @@ uvc_buf_sell_buf(struct uvc_buf_queue *bq,
 
 #if FRAME_DUMP
 			char path[PATH_MAX];
-			sprintf(path, "/tmp/%x_%4lu.data", (short)bq->video, bq->seq);
+			ksprintf(path, "/tmp/%x_%4lu.data", (short)bq->video, bq->seq);
 			uvc_writefile(path,
 				      (void *)((char *)buf->mem + buf->offset),
 				      buf->vbuf.bytesused);
@@ -490,7 +490,7 @@ static void
 uvc_buf_queue_free_bufs_locked(struct uvc_buf_queue *bq)
 {
 	if (bq->mem) {
-		free(bq->mem, M_UVC);
+		kfree(bq->mem, M_UVC);
 		bq->mem = NULL;
 		bq->buf_count = 0;
 	}
@@ -528,7 +528,7 @@ uvc_buf_queue_req_bufs(struct uvc_buf_queue *bq, uint32_t *count, uint32_t len)
 		goto done;
 
 	for (; num > 0; num--) {
-		mem = malloc(num * rl, M_UVC, M_WAITOK | M_ZERO);
+		mem = kmalloc(num * rl, M_UVC, M_WAITOK | M_ZERO);
 		if (mem)
 			break;
 	}

@@ -50,10 +50,10 @@
 #include <sys/conf.h>
 #include <sys/fcntl.h>
 
-#include <dev/usb/usb.h>
+#include <bus/u4b/usb.h>
 #define USB_DEBUG_VAR uvc_debug
-#include <dev/usb/usb_debug.h>
-#include <dev/usb/usbdi.h>
+#include <bus/u4b/usb_debug.h>
+#include <bus/u4b/usbdi.h>
 
 #include <contrib/v4l/videodev.h>
 #include <contrib/v4l/videodev2.h>
@@ -102,45 +102,45 @@ uvc_ctrl_init_sub_info(struct uvc_ctrl_info *info,
 	if (info->topo_type == UVC_TOPO_TYPE_PROCESSING_UNIT) {
 		switch (id) {
 		case V4L2_CID_BRIGHTNESS:
-			sprintf(name, "Brightness");
+			ksprintf(name, "Brightness");
 			bit_size = 16;
 			break;
 		case V4L2_CID_CONTRAST:
-			sprintf(name, "Contrast");
+			ksprintf(name, "Contrast");
 			bit_size = 16;
 			break;
 		case V4L2_CID_HUE:
-			sprintf(name, "Hue");
+			ksprintf(name, "Hue");
 			bit_size = 16;
 			superior_id = V4L2_CID_HUE_AUTO;
 			break;
 		case V4L2_CID_SATURATION:
-			sprintf(name, "Saturation");
+			ksprintf(name, "Saturation");
 			bit_size = 16;
 			break;
 		case V4L2_CID_SHARPNESS:
-			sprintf(name, "Sharpness");
+			ksprintf(name, "Sharpness");
 			bit_size = 16;
 			break;
 		case V4L2_CID_GAMMA:
-			sprintf(name, "Gamma");
+			ksprintf(name, "Gamma");
 			bit_size = 16;
 			break;
 		case V4L2_CID_BACKLIGHT_COMPENSATION:
-			sprintf(name, "Backlight Compensation");
+			ksprintf(name, "Backlight Compensation");
 			bit_size = 16;
 			break;
 		case V4L2_CID_GAIN:
-			sprintf(name, "Gain");
+			ksprintf(name, "Gain");
 			bit_size = 16;
 			break;
 		case V4L2_CID_POWER_LINE_FREQUENCY:
-			sprintf(name, "Power Line Frequency");
+			ksprintf(name, "Power Line Frequency");
 			type = V4L2_CTRL_TYPE_MENU;
 			bit_size = 2;
 			break;
 		case V4L2_CID_HUE_AUTO:
-			sprintf(name, "Hue, Auto");
+			ksprintf(name, "Hue, Auto");
 			type = V4L2_CTRL_TYPE_BOOLEAN;
 			bit_size = 1;
 			sub_info->inferior_v4l2_ids[0] = V4L2_CID_HUE;
@@ -148,14 +148,14 @@ uvc_ctrl_init_sub_info(struct uvc_ctrl_info *info,
 		case V4L2_CID_AUTO_WHITE_BALANCE:
 			if (info->selector ==
 			    UVC_PU_WHITE_BALANCE_TEMPERATURE_AUTO_CONTROL) {
-				sprintf(name, "White Balance Temperature, Auto");
+				ksprintf(name, "White Balance Temperature, Auto");
 				type = V4L2_CTRL_TYPE_BOOLEAN;
 				bit_size = 1;
 				inferior_ids[0] =
 				    V4L2_CID_WHITE_BALANCE_TEMPERATURE;
 			} else if (info->selector ==
 			    UVC_PU_WHITE_BALANCE_COMPONENT_AUTO_CONTROL) {
-				sprintf(name, "White Balance Component, Auto");
+				ksprintf(name, "White Balance Component, Auto");
 				type = V4L2_CTRL_TYPE_BOOLEAN;
 				bit_size = 1;
 				inferior_ids[0] = V4L2_CID_BLUE_BALANCE;
@@ -165,17 +165,17 @@ uvc_ctrl_init_sub_info(struct uvc_ctrl_info *info,
 			}
 			break;
 		case V4L2_CID_WHITE_BALANCE_TEMPERATURE:
-			sprintf(name, "White Balance Temperature");
+			ksprintf(name, "White Balance Temperature");
 			bit_size = 16;
 			superior_id = V4L2_CID_AUTO_WHITE_BALANCE;
 			break;
 		case V4L2_CID_BLUE_BALANCE:
-			sprintf(name, "White Balance Blue Component");
+			ksprintf(name, "White Balance Blue Component");
 			bit_size = 16;
 			superior_id = V4L2_CID_AUTO_WHITE_BALANCE;
 			break;
 		case V4L2_CID_RED_BALANCE:
-			sprintf(name, "White Balance Red Component");
+			ksprintf(name, "White Balance Red Component");
 			bit_offset = 16;
 			bit_size = 16;
 			superior_id = V4L2_CID_AUTO_WHITE_BALANCE;
@@ -188,69 +188,69 @@ uvc_ctrl_init_sub_info(struct uvc_ctrl_info *info,
 	} else if (info->topo_type == UVC_TOPO_TYPE_CAMERA_TERMINAL) {
 		switch (id) {
 		case V4L2_CID_EXPOSURE_AUTO:
-			sprintf(name, "Exposure, Auto");
+			ksprintf(name, "Exposure, Auto");
 			type = V4L2_CTRL_TYPE_MENU;
 			bit_size = 4;
 			inferior_ids[0] = V4L2_CID_EXPOSURE_ABSOLUTE;
 			break;
 		case V4L2_CID_EXPOSURE_AUTO_PRIORITY:
-			sprintf(name, "Exposure, Auto Priority");
+			ksprintf(name, "Exposure, Auto Priority");
 			type = V4L2_CTRL_TYPE_BOOLEAN;
 			bit_size = 1;
 			break;
 		case V4L2_CID_EXPOSURE_ABSOLUTE:
-			sprintf(name, "Exposure (Absolute)");
+			ksprintf(name, "Exposure (Absolute)");
 			bit_size = 32;
 			superior_id = V4L2_CID_EXPOSURE_AUTO;
 			superior_manual = V4L2_EXPOSURE_MANUAL;
 			break;
 		case V4L2_CID_FOCUS_ABSOLUTE:
-			sprintf(name, "Focus (absolute)");
+			ksprintf(name, "Focus (absolute)");
 			bit_size = 16;
 			superior_id = V4L2_CID_FOCUS_AUTO;
 			break;
 		case V4L2_CID_FOCUS_AUTO:
-			sprintf(name, "Focus, Auto");
+			ksprintf(name, "Focus, Auto");
 			type = V4L2_CTRL_TYPE_BOOLEAN;
 			bit_size = 1;
 			inferior_ids[0] = V4L2_CID_FOCUS_ABSOLUTE;
 			break;
 		case V4L2_CID_IRIS_ABSOLUTE:
-			sprintf(name, "Iris, Absolute");
+			ksprintf(name, "Iris, Absolute");
 			bit_size = 16;
 			break;
 		case V4L2_CID_IRIS_RELATIVE:
-			sprintf(name, "Iris, Relative");
+			ksprintf(name, "Iris, Relative");
 			bit_size = 8;
 			break;
 		case V4L2_CID_ZOOM_ABSOLUTE:
-			sprintf(name, "Zoom, Absolute");
+			ksprintf(name, "Zoom, Absolute");
 			bit_size = 16;
 			break;
 		case V4L2_CID_ZOOM_CONTINUOUS:
-			sprintf(name, "Zoom, Continuous");
+			ksprintf(name, "Zoom, Continuous");
 			bit_size = 0; // should use get/set
 			break;
 		case V4L2_CID_PAN_ABSOLUTE:
-			sprintf(name, "Pan (Absolute)");
+			ksprintf(name, "Pan (Absolute)");
 			bit_size = 32;
 			break;
 		case V4L2_CID_TILT_ABSOLUTE:
-			sprintf(name, "Tilt (Absolute)");
+			ksprintf(name, "Tilt (Absolute)");
 			bit_offset = 32;
 			bit_size = 32;
 			break;
 		case V4L2_CID_PAN_SPEED:
-			sprintf(name, "Pan (Speed)");
+			ksprintf(name, "Pan (Speed)");
 			bit_size = 16;
 			break;
 		case V4L2_CID_TILT_SPEED:
-			sprintf(name, "Tilt (Speed)");
+			ksprintf(name, "Tilt (Speed)");
 			bit_offset = 16;
 			bit_size = 16;
 			break;
 		case V4L2_CID_PRIVACY:
-			sprintf(name, "Privacy");
+			ksprintf(name, "Privacy");
 			type = V4L2_CTRL_TYPE_BOOLEAN;
 			bit_size = 1;
 			break;
@@ -275,7 +275,7 @@ uvc_ctrl_init_sub_info(struct uvc_ctrl_info *info,
 	return 0;
 
 err_done:
-	printf("%s:%d Unknown topo 0x%x, selector 0x%x, v4l2 id 0x%x\n",
+	kprintf("%s:%d Unknown topo 0x%x, selector 0x%x, v4l2 id 0x%x\n",
 			 __func__, __LINE__, info->topo_type, info->selector, id);
 
 	return ret;
@@ -598,10 +598,10 @@ uvc_ctrl_init_menu(struct uvc_ctrl_info *info)
 	}
 
 	len = item_num * sizeof(struct uvc_ctrl_menu_item);
-	dst_menu_data = malloc(len, M_UVC, M_ZERO | M_WAITOK);
+	dst_menu_data = kmalloc(len, M_UVC, M_ZERO | M_WAITOK);
 
 	if (dst_menu_data == NULL) {
-		printf("%s:%d fail to alloc mem\n", __func__, __LINE__);
+		kprintf("%s:%d fail to alloc mem\n", __func__, __LINE__);
 		return ENOMEM;
 	}
 
@@ -762,10 +762,10 @@ uvc_ctrl_build_mapping(struct uvc_ctrl_info *info)
 	}
 
 	for (i = 0; i < sub_info_num; i++) {
-		sub_info = malloc(sizeof(*sub_info), M_UVC, M_ZERO | M_WAITOK);
+		sub_info = kmalloc(sizeof(*sub_info), M_UVC, M_ZERO | M_WAITOK);
 
 		if (sub_info == NULL) {
-			printf("%s:%d fail to alloc mem\n", __func__, __LINE__);
+			kprintf("%s:%d fail to alloc mem\n", __func__, __LINE__);
 			ret = ENOMEM;
 			goto err_done;
 		}
@@ -795,7 +795,7 @@ uvc_ctrl_build_mapping(struct uvc_ctrl_info *info)
 err_done:
 	for (i = 0; i < MAX_MAPPING_NUM; i++) {
 		if (info->sub_infos[i] != NULL) {
-			free(info->sub_infos[i], M_UVC);
+			kfree(info->sub_infos[i], M_UVC);
 			info->sub_infos[i] = NULL;
 		}
 	}
@@ -830,11 +830,11 @@ uvc_ctrl_initialize_control(struct uvc_control *ctrl)
 		return 0;
 	}
 
-	ctrl->uvc_data = malloc(tmp_info.byte_size * UVC_CTRL_DATA_LAST + 1, M_UVC,
+	ctrl->uvc_data = kmalloc(tmp_info.byte_size * UVC_CTRL_DATA_LAST + 1, M_UVC,
 	    M_ZERO | M_WAITOK);
 
 	if (ctrl->uvc_data == NULL) {
-		printf("%s:%d fail to allocate memory\n", __func__, __LINE__);
+		kprintf("%s:%d fail to allocate memory\n", __func__, __LINE__);
 		ret = ENOMEM;
 		goto err;
 	}
@@ -858,7 +858,7 @@ uvc_ctrl_initialize_control(struct uvc_control *ctrl)
 
 err:
 	if (ctrl->uvc_data != NULL) {
-		free(ctrl->uvc_data, M_UVC);
+		kfree(ctrl->uvc_data, M_UVC);
 		ctrl->uvc_data = NULL;
 	}
 
@@ -878,12 +878,12 @@ uvc_ctrl_destroy_mappings(struct uvc_control *ctrl)
 			DPRINTF("removing v4l2 mapping '%s' \n",
 				ctrl->info.sub_infos[i]->v4l2_name);
 
-			free(ctrl->info.sub_infos[i], M_UVC);
+			kfree(ctrl->info.sub_infos[i], M_UVC);
 			ctrl->info.sub_infos[i] = NULL;
 		}
 
 		if (ctrl->info.menus[i].menu_data != NULL) {
-			free(ctrl->info.menus[i].menu_data, M_UVC);
+			kfree(ctrl->info.menus[i].menu_data, M_UVC);
 			ctrl->info.menus[i].menu_data = NULL;
 		}
 	}
@@ -951,7 +951,7 @@ uvc_ctrl_init_dev(struct uvc_softc *sc, struct uvc_drv_ctrl *ctrls)
 		nctrls = uvc_ctrl_count_control(bmCtrls, bCtrlSize);
 		if (nctrls == 0)
 			continue;
-		topo_node->controls = malloc(nctrls * sizeof(*ctrl), M_UVC,
+		topo_node->controls = kmalloc(nctrls * sizeof(*ctrl), M_UVC,
 		    M_ZERO | M_WAITOK);
 		if (!topo_node->controls)
 			return ENOMEM;
