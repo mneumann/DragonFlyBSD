@@ -83,7 +83,7 @@
 #define UVC_LOCK(lkp)   lockmgr(lkp, LK_EXCLUSIVE)
 #define UVC_UNLOCK(lkp) lockmgr(lkp, LK_RELEASE)
 
-#define FRAME_DUMP 1
+#define FRAME_DUMP 0
 #if FRAME_DUMP
 #include <sys/kern_syscall.h>
 #include <sys/nlookup.h>
@@ -335,7 +335,7 @@ uvc_buf_sell_buf(struct uvc_buf_queue *bq,
 
 #if FRAME_DUMP
 			char path[PATH_MAX];
-			ksprintf(path, "/tmp/%p_%4lu.data", bq->video, bq->seq);
+			ksprintf(path, "/var/tmp/%p_%4lu.data", bq->video, bq->seq);
 			uvc_writefile(path,
 				      (void *)((char *)buf->mem + buf->offset),
 				      buf->vbuf.bytesused);
@@ -677,7 +677,7 @@ uvc_writefile(char *path, void *data, int len)
 	int error, fd = -1;
 	struct nlookupdata nd;
 
-	error = nlookup_init(&nd, path, UIO_USERSPACE, NLC_FOLLOW|NLC_LOCKVP);
+	error = nlookup_init(&nd, path, UIO_SYSSPACE, NLC_FOLLOW);
 	if (error)
 		return;
 
