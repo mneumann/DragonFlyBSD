@@ -83,10 +83,13 @@
 #define UVC_LOCK(lkp)   lockmgr(lkp, LK_EXCLUSIVE)
 #define UVC_UNLOCK(lkp) lockmgr(lkp, LK_RELEASE)
 
-#define FRAME_DUMP 0
+#define FRAME_DUMP 1
 #if FRAME_DUMP
+#include <sys/kern_syscall.h>
+#include <sys/nlookup.h>
 static void uvc_writefile(char *path, void *data, int len);
 #endif
+
 
 static void
 uvc_buf_fill_v4l2(struct v4l2_buffer *buf, uint32_t index, uint32_t size,
@@ -332,7 +335,7 @@ uvc_buf_sell_buf(struct uvc_buf_queue *bq,
 
 #if FRAME_DUMP
 			char path[PATH_MAX];
-			ksprintf(path, "/tmp/%x_%4lu.data", (short)bq->video, bq->seq);
+			ksprintf(path, "/tmp/%p_%4lu.data", bq->video, bq->seq);
 			uvc_writefile(path,
 				      (void *)((char *)buf->mem + buf->offset),
 				      buf->vbuf.bytesused);
@@ -665,25 +668,23 @@ uvc_buf_queue_init(struct uvc_drv_video *v, struct uvc_buf_queue *bq)
 }
 
 #if FRAME_DUMP
+// TODO: fix
 static void
 uvc_writefile(char *path, void *data, int len)
 {
-	struct thread *td;
 	struct uio auio;
 	struct iovec aiov;
 	int error, fd = -1;
+	struct nlookupdata nd;
 
-	td = curthread;
+	error = nlookup_init(&nd, path, UIO_USERSPACE, NLC_FOLLOW|NLC_LOCKVP);
+	if (error)
+		return;
 
-	pwd_ensure_dirs();
-
-	KLG("write: %s; %p; %d\n", path, data, len);
-	error = kern_openat(td, AT_FDCWD, path, UIO_SYSSPACE, O_CREAT | O_RDWR, 0666);
+	error = kern_open(&nd, O_CREAT | O_RDWR, 0666, &fd);
 	if (error) {
-		KLG("open %s error: %d\n", path, error);
 		goto out;
 	}
-	fd = td->td_retval[0];
 
 	aiov.iov_base = data;
 	aiov.iov_len = len;
@@ -691,13 +692,14 @@ uvc_writefile(char *path, void *data, int len)
 	auio.uio_iovcnt = 1;
 	auio.uio_resid = len;
 	auio.uio_segflg = UIO_SYSSPACE;
-	error = kern_writev(td, fd, &auio);
+	error = kern_pwritev(fd, &auio, 0, NULL);
 	if (error) {
-		KLG("write %s error: %d\n", path, error);
 		goto out;
 	}
 out:
 	if (fd >= 0)
-		kern_close(td, fd);
+		kern_close(fd);
+
+	nlookup_done(&nd);
 }
 #endif
