@@ -29,8 +29,6 @@
 
 .PATH:	${.CURDIR}
 
-CFLAGS+=-DUSB_DEBUG
-
 KMOD=	uvc
 SRCS=	opt_bus.h opt_usb.h device_if.h \
 	bus_if.h usb_if.h usbdevs.h \
@@ -40,3 +38,5 @@ SRCS=	opt_bus.h opt_usb.h device_if.h \
 	uvc_ctrls.c
 
 .include <bsd.kmod.mk>
+
+CFLAGS+=-DUSB_DEBUG
