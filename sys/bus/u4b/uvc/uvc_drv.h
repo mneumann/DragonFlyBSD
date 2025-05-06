@@ -412,7 +412,10 @@ struct uvc_data_request {
 	uByte bPreferedVersion;
 	uByte bMinVersion;
 	uByte bMaxVersion;
+	uByte __dummy[14];
 } __packed;
+
+typedef char assert_uvc_data_request_is_48_bytes[(!!(sizeof(struct uvc_data_request)==48))*2-1];
 
 struct uvc_data_payload_header {
 	uint8_t	len;

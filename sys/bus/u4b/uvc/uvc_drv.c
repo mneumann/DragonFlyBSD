@@ -78,7 +78,7 @@
 int uvc_debug = 0;
 #ifdef USB_DEBUG
 static SYSCTL_NODE(_hw_usb, OID_AUTO, uvc, CTLFLAG_RW, 0, "USB uvc");
-SYSCTL_INT(_hw_usb_uvc, OID_AUTO, debug, CTLFLAG_RWTUN,
+SYSCTL_INT(_hw_usb_uvc, OID_AUTO, debug, CTLFLAG_RW,
 		&uvc_debug, 0, "Debug level");
 #endif
 
@@ -242,15 +242,28 @@ uvc_drv_show_video_ctrl(struct uvc_data_request *req)
 		UGETDW(req->dwMaxFrameSize), UGETDW(req->dwMaxPayloadSize), req->bFramingInfo);
 }
 
+static __inline int
+uvc_drv_get_max_ctrl_size(struct uvc_drv_video *video)
+{
+	if (video->ctrl->revision < 0x0110)
+		return 26;
+	else if (video->ctrl->revision < 0x0150)
+		return 34;
+	else
+		return 48;
+}
+
 static int
 uvc_drv_set_video_ctrl(struct uvc_drv_video *video,
 	struct uvc_data_request *req, int probe)
 {
 	int ret = 0;
-	int size = (video->ctrl->revision >= 0x0110) ? 34 : 26;
+	int size = uvc_drv_get_max_ctrl_size(video);
 
 	UVC_ASSERT_LOCKED(&video->mtx);
 	UVC_UNLOCK(&video->mtx);
+
+	KKASSERT(sizeof(*req) >= size);
 
 	ret = uvc_drv_do_request(video->sc->udev, SET_CUR, 0,
 		video->data->iface_index,
@@ -309,10 +322,12 @@ uvc_drv_get_video_ctrl(struct uvc_drv_video *video,
 	int size, ret;
 
 	memset(&tmp, 0x0, sizeof(tmp));
-	size = (video->ctrl->revision >= 0x0110) ? 34 : 26;
+	size = uvc_drv_get_max_ctrl_size(video);
 
 	UVC_ASSERT_LOCKED(&video->mtx);
 	UVC_UNLOCK(&video->mtx);
+
+	KKASSERT(size <= sizeof(tmp));
 
 	ret = uvc_drv_do_request(video->sc->udev, query, 0,
 		video->data->iface_index,
