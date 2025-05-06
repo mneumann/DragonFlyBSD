@@ -1153,7 +1153,7 @@ uvc_drv_start_video(struct uvc_drv_video *video)
 		uvc_drv_get_video_ctrl(video, &video->req, 1, GET_CUR);
 		ret = uvc_drv_set_video_ctrl(video, &video->req, 0);
 		if (ret) {
-			kthread_suspend(curthread, 300);
+			suspend_kproc(curthread, 300);
 			ret = uvc_drv_set_video_ctrl(video, &video->req, 0);
 		}
 		mps = UGETDW(video->req.dwMaxPayloadSize);
