@@ -706,6 +706,9 @@ uvc_v4l2_mmap(struct dev_mmap_args *ap)
 
 	//DPRINTF("paddr:%p offset:%ld\n", paddr, offset);
 	uvc_buf_queue_mmap(&v->bq, &paddr, offset);
+
+	ap->a_result = paddr;
+
 	return 0;
 }
 
