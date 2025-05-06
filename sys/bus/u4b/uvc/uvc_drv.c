@@ -148,7 +148,7 @@ vc_ext_h264ctrl[16] =
 	0x1a, 0xff, 0x0, 0x3b
 };
 
-static void
+__unused static void
 dump_hex(void *src, int len)
 {
 	int i;
@@ -1141,6 +1141,8 @@ uvc_drv_start_video(struct uvc_drv_video *video)
 	int ret, num, found, mps, ps/*, burst, packet*/;
 	int i;
 
+	ps = 0;
+
 	UVC_LOCK(&video->mtx);
 
 	if (video->enable) {
@@ -1276,7 +1278,7 @@ done:
 	return 0;
 }
 
-static int
+__unused static int
 uvc_drv_halt_ep_request(struct usb_device *udev, uint8_t epaddr, int timeout)
 {
 	struct usb_device_request req;
@@ -1434,8 +1436,8 @@ uvc_init_intrxfer(struct uvc_drv_video *video)
 static int
 uvc_drv_init_cur_fmt_frm(struct uvc_drv_video *v, struct uvc_data_request *req)
 {
-	struct uvc_data_format *fmt;
-	struct uvc_data_frame *frm;
+	struct uvc_data_format *fmt = NULL;
+	struct uvc_data_frame *frm = NULL;
 	int i = 0;
 
 	if (v == NULL || v->data == NULL || req == NULL)
@@ -1480,8 +1482,8 @@ uvc_drv_init_video(struct uvc_softc *sc, struct uvc_drv_ctrl *ctrl,
 	struct uvc_drv_data *data)
 {
 	struct uvc_drv_video *v;
-	struct uvc_data_format *fmt;
-	struct uvc_data_frame *frm;
+	struct uvc_data_format *fmt = NULL;
+	struct uvc_data_frame *frm = NULL;
 	struct uvc_data_request *req;
 	int ret, i;
 
@@ -2769,4 +2771,5 @@ static const STRUCT_USB_HOST_ID __used uvc_devs[] = {
 	 USB_IFACE_SUBCLASS(UISUBCLASS_CTRL),},
 };
 
-USB_PNP_HOST_INFO(uvc_devs);
+// TODO
+// USB_PNP_HOST_INFO(uvc_devs);
