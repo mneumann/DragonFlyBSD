@@ -66,6 +66,15 @@
 #define UVC_UNLOCK(lkp) lockmgr(lkp, LK_RELEASE)
 #define UVC_ASSERT_LOCKED(lkp) KKASSERT(lockowned(lkp))
 
+/*
+ * DragonFly does not implement _SAFE macros because they are generally not
+ * actually safe in a MP environment, and so it is bad programming practice
+ * to use them.
+ */
+#define STAILQ_FOREACH_SAFE(scan, list, next, save)	\
+	for (scan = STAILQ_FIRST(list); (save = scan ? STAILQ_NEXT(scan, next) : NULL), scan; scan = save) 	\
+
+
 #ifdef USB_DEBUG
 int uvc_debug = 0;
 
