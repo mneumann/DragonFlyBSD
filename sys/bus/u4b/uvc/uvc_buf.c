@@ -42,8 +42,6 @@
 #include <sys/bus.h>
 #include <sys/module.h>
 #include <sys/lock.h>
-#include <sys/mutex.h>
-#include <sys/rwlock.h>
 #include <sys/condvar.h>
 #include <sys/stat.h>
 #include <sys/syscallsubr.h>
@@ -85,6 +83,9 @@
 #include "uvc_buf.h"
 #include "uvc_v4l2.h"
 
+#define UVC_LOCK(lkp)   lockmgr(lkp, LK_EXCLUSIVE)
+#define UVC_UNLOCK(lkp) lockmgr(lkp, LK_RELEASE)
+
 #define FRAME_DUMP 0
 #if FRAME_DUMP
 static void uvc_writefile(char *path, void *data, int len);
@@ -108,10 +109,10 @@ void
 uvc_buf_queue_mmap(struct uvc_buf_queue *bq,
 	vm_paddr_t *paddr, vm_offset_t offset)
 {
-	mtx_lock(&bq->mtx);
+	UVC_LOCK(&bq->mtx);
 	if (bq->mem)
 		*paddr = vtophys((uint8_t *)bq->mem + offset);
-	mtx_unlock(&bq->mtx);
+	UVC_UNLOCK(&bq->mtx);
 }
 
 static void
@@ -138,12 +139,12 @@ uvc_buf_reset_buf(struct uvc_buf_queue *bq)
 {
 	struct uvc_buf *buf;
 
-	mtx_lock(&bq->mtx);
+	UVC_LOCK(&bq->mtx);
 	buf = STAILQ_FIRST(&bq->product);
 	if (buf) {
 		buf->vbuf.bytesused = 0;
 	}
-	mtx_unlock(&bq->mtx);
+	UVC_UNLOCK(&bq->mtx);
 
 	return 0;
 }
@@ -204,7 +205,7 @@ uvc_bulkbuf_sell_buf(struct uvc_buf_queue *bq,
 	uint32_t maxlen, nbytes;
 	int ret = 0;
 
-	mtx_lock(&bq->mtx);
+	UVC_LOCK(&bq->mtx);
 	if (!UVC_BUF_QUEUE_IS_RUNNING(bq)) {
 		ret = EINVAL;
 		goto done;
@@ -280,7 +281,7 @@ clean:
 	}
 
 done:
-	mtx_unlock(&bq->mtx);
+	UVC_UNLOCK(&bq->mtx);
 	return ret;
 }
 
@@ -293,7 +294,7 @@ uvc_buf_sell_buf(struct uvc_buf_queue *bq,
 	unsigned char *ptr;
 	int ret = 0;
 
-	mtx_lock(&bq->mtx);
+	UVC_LOCK(&bq->mtx);
 	if (!UVC_BUF_QUEUE_IS_RUNNING(bq)) {
 		ret = EINVAL;
 		goto done;
@@ -352,7 +353,7 @@ uvc_buf_sell_buf(struct uvc_buf_queue *bq,
 	}
 
 done:
-	mtx_unlock(&bq->mtx);
+	UVC_UNLOCK(&bq->mtx);
 	return ret;
 }
 
@@ -383,7 +384,7 @@ uvc_buf_queue_dequeue_buf(struct uvc_buf_queue *bq,
 	struct uvc_buf *buf;
 	int ret = 0;
 
-	mtx_lock(&bq->mtx);
+	UVC_LOCK(&bq->mtx);
 	do {
 		if (!UVC_BUF_QUEUE_IS_RUNNING(bq)) {
 			ret = EINVAL;
@@ -424,7 +425,7 @@ uvc_buf_queue_dequeue_buf(struct uvc_buf_queue *bq,
 		}
 	} while (!nonblock);
 
-	mtx_unlock(&bq->mtx);
+	UVC_UNLOCK(&bq->mtx);
 	return ret;
 }
 
@@ -434,7 +435,7 @@ uvc_buf_queue_queue_buf(struct uvc_buf_queue *bq, struct v4l2_buffer *vbuf)
 	struct uvc_buf *buf;
 	int ret = 0;
 
-	mtx_lock(&bq->mtx);
+	UVC_LOCK(&bq->mtx);
 	if (vbuf->index >= bq->buf_count) {
 		ret = EINVAL;
 		goto done;
@@ -456,7 +457,7 @@ uvc_buf_queue_queue_buf(struct uvc_buf_queue *bq, struct v4l2_buffer *vbuf)
 	buf->vbuf.bytesused = 0;
 	STAILQ_INSERT_TAIL(&bq->product, buf, link);
 done:
-	mtx_unlock(&bq->mtx);
+	UVC_UNLOCK(&bq->mtx);
 	return ret;
 }
 
@@ -467,7 +468,7 @@ uvc_buf_queue_query_buf(struct uvc_buf_queue *bq, struct v4l2_buffer *vbuf)
 
 	DPRINTF("%s\n", __func__);
 
-	mtx_lock(&bq->mtx);
+	UVC_LOCK(&bq->mtx);
 
 	if (vbuf->index >= bq->buf_count) {
 		ret = EINVAL;
@@ -476,7 +477,7 @@ uvc_buf_queue_query_buf(struct uvc_buf_queue *bq, struct v4l2_buffer *vbuf)
 
 	uvc_buf_queue_query_buf_locked(bq->buf + vbuf->index, vbuf);
 done:
-	mtx_unlock(&bq->mtx);
+	UVC_UNLOCK(&bq->mtx);
 	return ret;
 }
 
@@ -499,11 +500,11 @@ uvc_buf_queue_free_bufs_locked(struct uvc_buf_queue *bq)
 void
 uvc_buf_queue_free_bufs(struct uvc_buf_queue *bq)
 {
-	mtx_lock(&bq->mtx);
+	UVC_LOCK(&bq->mtx);
 
 	/* check mmap finish */
 	uvc_buf_queue_free_bufs_locked(bq);
-	mtx_unlock(&bq->mtx);
+	UVC_UNLOCK(&bq->mtx);
 }
 
 int
@@ -522,7 +523,7 @@ uvc_buf_queue_req_bufs(struct uvc_buf_queue *bq, uint32_t *count, uint32_t len)
 	if (num > UVC_BUF_MAX_BUFFERS)
 		num = UVC_BUF_MAX_BUFFERS;
 
-	mtx_lock(&bq->mtx);
+	UVC_LOCK(&bq->mtx);
 	uvc_buf_queue_free_bufs_locked(bq);
 	if (!num)
 		goto done;
@@ -555,7 +556,7 @@ uvc_buf_queue_req_bufs(struct uvc_buf_queue *bq, uint32_t *count, uint32_t len)
 	uvc_buf_queue_show(bq);
 
 done:
-	mtx_unlock(&bq->mtx);
+	UVC_UNLOCK(&bq->mtx);
 	DPRINTF("reqbuf nums:%d\n", *count);
 	return ret;
 }
@@ -575,10 +576,10 @@ uvc_buf_queue_poll(struct uvc_buf_queue *queue, int events, struct thread *td)
 	int ret = 0;
 	struct uvc_buf *buf;
 
-	mtx_lock(&queue->mtx);
+	UVC_LOCK(&queue->mtx);
 
 	if (queue->flags == 0) {
-		mtx_unlock(&queue->mtx);
+		UVC_UNLOCK(&queue->mtx);
 		return POLLHUP;
 	}
 
@@ -598,7 +599,7 @@ uvc_buf_queue_poll(struct uvc_buf_queue *queue, int events, struct thread *td)
 			}
 		}
 	}
-	mtx_unlock(&queue->mtx);
+	UVC_UNLOCK(&queue->mtx);
 
 	return ret;
 }
@@ -610,9 +611,9 @@ uvc_buf_queue_disable(struct uvc_buf_queue *queue)
 
 	DPRINTF("%s\n", __func__);
 
-	mtx_lock(&queue->mtx);
+	UVC_LOCK(&queue->mtx);
 	if ((queue->flags & UVC_BUFFER_QUEUE_WORKING) == 0) {
-		mtx_unlock(&queue->mtx);
+		UVC_UNLOCK(&queue->mtx);
 		return EINVAL;
 	}
 
@@ -623,7 +624,7 @@ uvc_buf_queue_disable(struct uvc_buf_queue *queue)
 
 	cv_broadcast(&queue->io_cv);
 	queue->flags = 0;
-	mtx_unlock(&queue->mtx);
+	UVC_UNLOCK(&queue->mtx);
 	return 0;
 }
 
@@ -632,17 +633,17 @@ uvc_buf_queue_enable(struct uvc_buf_queue *queue)
 {
 	DPRINTF("%s\n", __func__);
 
-	mtx_lock(&queue->mtx);
+	UVC_LOCK(&queue->mtx);
 
 	if (queue->flags & UVC_BUFFER_QUEUE_WORKING) {
-		mtx_unlock(&queue->mtx);
+		UVC_UNLOCK(&queue->mtx);
 		return EBUSY;
 	}
 
 	queue->seq = 0;
 
 	queue->flags |= UVC_BUFFER_QUEUE_WORKING;
-	mtx_unlock(&queue->mtx);
+	UVC_UNLOCK(&queue->mtx);
 	return 0;
 }
 
@@ -654,7 +655,7 @@ uvc_buf_queue_init(struct uvc_drv_video *v, struct uvc_buf_queue *bq)
 	DPRINTF("init buf\n");
 
 	bq->video = v;
-	mtx_init(&bq->mtx, "uvc buffer lock", NULL, MTX_DEF);
+	lockinit(&bq->mtx, "uvc buffer lock", 0, 0);
 	cv_init(&bq->io_cv, "uvcbufiocv");
 	STAILQ_INIT(&bq->consumer);
 	STAILQ_INIT(&bq->product);

@@ -43,7 +43,7 @@
 
 #include <sys/types.h>
 #include <sys/bus.h>
-#include <sys/mutex.h>
+#include <sys/lock.h>
 #include <sys/condvar.h>
 #include <sys/malloc.h>
 #include <sys/priv.h>

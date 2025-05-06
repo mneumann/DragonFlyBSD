@@ -63,7 +63,7 @@ struct uvc_buf {
 
 struct uvc_drv_video;
 struct uvc_buf_queue {
-	struct mtx	mtx;
+	struct lock	mtx;
 	struct cv	io_cv;
 	struct uvc_drv_video *video;
 

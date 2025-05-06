@@ -43,7 +43,7 @@
 
 #include <sys/types.h>
 #include <sys/bus.h>
-#include <sys/mutex.h>
+#include <sys/lock.h>
 #include <sys/condvar.h>
 #include <sys/malloc.h>
 #include <sys/priv.h>
@@ -61,6 +61,9 @@
 #include "uvc_drv.h"
 #include "uvc_buf.h"
 #include "uvc_v4l2.h"
+
+#define UVC_LOCK(lkp)   lockmgr(lkp, LK_EXCLUSIVE)
+#define UVC_UNLOCK(lkp) lockmgr(lkp, LK_RELEASE)
 
 #define UVC_CTRL_DATA_CURRENT	0
 #define UVC_CTRL_DATA_BACKUP	1
@@ -1101,7 +1104,7 @@ uvc_query_v4l2_ctrl(struct uvc_drv_video *video, struct v4l2_queryctrl *query)
 	struct uvc_control *ctrl;
 	int ret = EINVAL;
 
-	mtx_lock(&video->ctrl->mtx);
+	UVC_LOCK(&video->ctrl->mtx);
 
 	ctrl = uvc_search_control(video->ctrl, query->id);
 	if (ctrl == NULL) {
@@ -1111,7 +1114,7 @@ uvc_query_v4l2_ctrl(struct uvc_drv_video *video, struct v4l2_queryctrl *query)
 
 	ret = uvc_query_v4l2_ctrl_sub(ctrl, query);
 done:
-	mtx_unlock(&video->ctrl->mtx);
+	UVC_UNLOCK(&video->ctrl->mtx);
 	return ret;
 }
 
@@ -1129,7 +1132,7 @@ uvc_query_v4l2_menu(struct uvc_drv_video *video,
 	qm->id = id;
 	qm->index = index;
 
-	mtx_lock(&video->ctrl->mtx);
+	UVC_LOCK(&video->ctrl->mtx);
 
 	ctrl = uvc_search_control(video->ctrl, qm->id);
 	if (ctrl == NULL) {
@@ -1149,6 +1152,6 @@ uvc_query_v4l2_menu(struct uvc_drv_video *video,
 		sizeof(qm->name));
 
 done:
-	mtx_unlock(&video->ctrl->mtx);
+	UVC_UNLOCK(&video->ctrl->mtx);
 	return ret;
 }

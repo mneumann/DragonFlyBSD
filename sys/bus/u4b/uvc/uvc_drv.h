@@ -670,7 +670,7 @@ struct uvc_drv_ctrl {
 	uint8_t	iface_num;
 	/* for usb framework */
 	uint8_t	iface_index;
-	struct mtx	mtx;
+	struct lock	mtx;
 
 /* desc infomation */
 	STAILQ_HEAD(, uvc_topo_node) topo_nodes;
@@ -692,7 +692,7 @@ struct uvc_drv_video {
 	struct uvc_drv_data	*data;
 	struct usb_xfer		*intr_xfer[UVCINTR_N_TRANSFER];
 
-	struct mtx mtx;
+	struct lock mtx;
 	struct uvc_data_request	req;
 	struct uvc_data_format *cur_fmt;
 	struct uvc_data_frame *cur_frm;

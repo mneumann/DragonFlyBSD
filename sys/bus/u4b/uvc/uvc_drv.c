@@ -38,12 +38,11 @@
 #include <sys/kernel.h>
 #include <sys/bus.h>
 #include <sys/module.h>
-#include <sys/mutex.h>
-#include <sys/condvar.h>
 #include <sys/sysctl.h>
 #include <sys/malloc.h>
 #include <sys/kthread.h>
 #include <sys/lock.h>
+#include <sys/condvar.h>
 
 #include <bus/u4b/usb.h>
 #include <bus/u4b/usbdi.h>
@@ -62,6 +61,10 @@
 #include "uvc_drv.h"
 #include "uvc_buf.h"
 #include "uvc_v4l2.h"
+
+#define UVC_LOCK(lkp)   lockmgr(lkp, LK_EXCLUSIVE)
+#define UVC_UNLOCK(lkp) lockmgr(lkp, LK_RELEASE)
+#define UVC_ASSERT_LOCKED(lkp) KKASSERT(lockowned(lkp))
 
 #ifdef USB_DEBUG
 int uvc_debug = 0;
@@ -238,15 +241,15 @@ uvc_drv_set_video_ctrl(struct uvc_drv_video *video,
 	int ret = 0;
 	int size = (video->ctrl->revision >= 0x0110) ? 34 : 26;
 
-	mtx_assert(&video->mtx, MA_OWNED);
-	mtx_unlock(&video->mtx);
+	UVC_ASSERT_LOCKED(&video->mtx);
+	UVC_UNLOCK(&video->mtx);
 
 	ret = uvc_drv_do_request(video->sc->udev, SET_CUR, 0,
 		video->data->iface_index,
 		probe ? VS_PROBE_CONTROL : VS_COMMIT_CONTROL,
 		req, size, USB_DEFAULT_TIMEOUT);
 
-	mtx_lock(&video->mtx);
+	UVC_LOCK(&video->mtx);
 
 	return ret;
 }
@@ -300,14 +303,14 @@ uvc_drv_get_video_ctrl(struct uvc_drv_video *video,
 	memset(&tmp, 0x0, sizeof(tmp));
 	size = (video->ctrl->revision >= 0x0110) ? 34 : 26;
 
-	mtx_assert(&video->mtx, MA_OWNED);
-	mtx_unlock(&video->mtx);
+	UVC_ASSERT_LOCKED(&video->mtx);
+	UVC_UNLOCK(&video->mtx);
 
 	ret = uvc_drv_do_request(video->sc->udev, query, 0,
 		video->data->iface_index,
 		probe ? VS_PROBE_CONTROL : VS_COMMIT_CONTROL,
 		&tmp, size, USB_DEFAULT_TIMEOUT);
-	mtx_lock(&video->mtx);
+	UVC_LOCK(&video->mtx);
 	if (ret)
 		return ret;
 
@@ -331,7 +334,7 @@ uvc_drv_xu_ctrl_query(struct uvc_drv_video *v, struct uvc_xu_control_query *q)
 	if (!(q->query & 0x80))
 		ret = copyin(q->data, tmp, q->size);
 
-	mtx_lock(&v->mtx);
+	UVC_LOCK(&v->mtx);
 	ret = uvc_drv_do_request(v->sc->udev, q->query, q->unit, 0, q->selector,
 		tmp, q->size, USB_DEFAULT_TIMEOUT);
 	if (ret)
@@ -346,7 +349,7 @@ uvc_drv_xu_ctrl_query(struct uvc_drv_video *v, struct uvc_xu_control_query *q)
 				v->htsf = 1;
 			}
 	}
-	mtx_unlock(&v->mtx);
+	UVC_UNLOCK(&v->mtx);
 
 	return ret;
 }
@@ -358,7 +361,7 @@ uvc_drv_probe_video(struct uvc_drv_video *video, struct uvc_data_request *req)
 	int ret, i;
 	uint32_t ps;
 
-	mtx_lock(&video->mtx);
+	UVC_LOCK(&video->mtx);
 
 	ret = uvc_drv_set_video_ctrl(video, req, 1);
 	if (ret)
@@ -404,7 +407,7 @@ uvc_drv_probe_video(struct uvc_drv_video *video, struct uvc_data_request *req)
 	}
 
 done:
-	mtx_unlock(&video->mtx);
+	UVC_UNLOCK(&video->mtx);
 	return ret;
 }
 
@@ -419,11 +422,11 @@ uvc_drv_set_video(struct uvc_drv_video *video,
 	DPRINTF("set video %p\n", curthread);
 
 	uvc_drv_show_video_ctrl(req);
-	mtx_lock(&video->mtx);
+	UVC_LOCK(&video->mtx);
 
 	if (video->enable) {
 		DPRINTF("video is enable\n");
-		mtx_unlock(&video->mtx);
+		UVC_UNLOCK(&video->mtx);
 		return EBUSY;
 	}
 	if (sc->quirks & UVC_COMMIT_IN_ADVANCE)
@@ -432,7 +435,7 @@ uvc_drv_set_video(struct uvc_drv_video *video,
 		ret = uvc_drv_set_video_ctrl(video, req, 1);
 	if (ret) {
 		DPRINTF("video CONTROL COMMIT fault %d\n", ret);
-		mtx_unlock(&video->mtx);
+		UVC_UNLOCK(&video->mtx);
 		return ret;
 	}
 
@@ -440,7 +443,7 @@ uvc_drv_set_video(struct uvc_drv_video *video,
 	video->cur_frm = frm;
 	memcpy(&video->req, req, sizeof(struct uvc_data_request));
 
-	mtx_unlock(&video->mtx);
+	UVC_UNLOCK(&video->mtx);
 	return 0;
 }
 
@@ -518,10 +521,10 @@ uvc_drv_get_selection(struct uvc_drv_video *v, struct v4l2_selection *sel)
 
 	sel->r.left = 0;
 	sel->r.top = 0;
-	mtx_lock(&v->mtx);
+	UVC_LOCK(&v->mtx);
 	sel->r.width = v->cur_frm->width;
 	sel->r.height = v->cur_frm->height;
-	mtx_unlock(&v->mtx);
+	UVC_UNLOCK(&v->mtx);
 
 	return 0;
 }
@@ -650,9 +653,9 @@ uvc_drv_try_v4l2_fmt(struct uvc_drv_video *video, struct v4l2_format *vfmt,
 
 	while (retry-- > 0) {
 		memset(req, 0, sizeof(*req));
-		mtx_lock(&video->mtx);
+		UVC_LOCK(&video->mtx);
 		ret = uvc_drv_get_video_ctrl(video, req, 1, GET_CUR);
-		mtx_unlock(&video->mtx);
+		UVC_UNLOCK(&video->mtx);
 		if (ret) {
 			continue;
 		}
@@ -1129,11 +1132,11 @@ uvc_drv_start_video(struct uvc_drv_video *video)
 	int ret, num, found, mps, ps/*, burst, packet*/;
 	int i;
 
-	mtx_lock(&video->mtx);
+	UVC_LOCK(&video->mtx);
 
 	if (video->enable) {
 		DPRINTF("video is on\n");
-		mtx_unlock(&video->mtx);
+		UVC_UNLOCK(&video->mtx);
 		return EBUSY;
 	}
 
@@ -1142,7 +1145,7 @@ uvc_drv_start_video(struct uvc_drv_video *video)
 	ret = uvc_buf_queue_enable(&video->bq);
 	if (ret) {
 		DPRINTF("buffer queue enable fault\n");
-		mtx_unlock(&video->mtx);
+		UVC_UNLOCK(&video->mtx);
 		return EBUSY;
 	}
 
@@ -1155,7 +1158,7 @@ uvc_drv_start_video(struct uvc_drv_video *video)
 		}
 		mps = UGETDW(video->req.dwMaxPayloadSize);
 		if (!mps) {
-			mtx_unlock(&video->mtx);
+			UVC_UNLOCK(&video->mtx);
 			DPRINTF("Max Packet Size is %u\n", mps);
 			return EINVAL;
 		}
@@ -1167,12 +1170,12 @@ uvc_drv_start_video(struct uvc_drv_video *video)
 			uvc_bulk_config[0].bufsize = 125 * 1024;
 			uvc_bulk_config[1].bufsize = 125 * 1024;
 		}
-		mtx_unlock(&video->mtx);
+		UVC_UNLOCK(&video->mtx);
 		ret = usbd_transfer_setup(sc->udev, &video->data->iface_index,
 			video->data->xfer, uvc_bulk_config,
 			UVC_N_BULKTRANSFER, sc, &video->mtx);
 
-		mtx_lock(&video->mtx);
+		UVC_LOCK(&video->mtx);
 		/* start xfer */
 		for (i = 0; i < UVC_N_TRANSFER; i++)
 			usbd_transfer_start(video->data->xfer[i]);
@@ -1184,14 +1187,14 @@ uvc_drv_start_video(struct uvc_drv_video *video)
 	num = usbd_iface_get_altsetting_num(sc->udev, video->data->iface);
 	DPRINTF("streaming setting num:%u\n", num);
 	if (num <= 1) {
-		mtx_unlock(&video->mtx);
+		UVC_UNLOCK(&video->mtx);
 		DPRINTF("WARNING: _TO_BE_IMPLEMENT_ BULK ep or bad Intf\n");
 		return EINVAL;
 	}
 	/* 2. loop ep */
 	mps = UGETDW(video->req.dwMaxPayloadSize);
 	if (!mps) {
-		mtx_unlock(&video->mtx);
+		UVC_UNLOCK(&video->mtx);
 		DPRINTF("Max Packet Size is %u\n", mps);
 		return EINVAL;
 	}
@@ -1229,7 +1232,7 @@ uvc_drv_start_video(struct uvc_drv_video *video)
 	if (video->htsf)
 		found = 1;
 	if (!found) {
-		mtx_unlock(&video->mtx);
+		UVC_UNLOCK(&video->mtx);
 		DPRINTF("don't have fit ep\n");
 		return EINVAL;
 	}
@@ -1246,7 +1249,7 @@ uvc_drv_start_video(struct uvc_drv_video *video)
 	}
 	DPRINTF("streaming interface setting:%u\n", num);
 
-	mtx_unlock(&video->mtx);
+	UVC_UNLOCK(&video->mtx);
 
 	usbd_set_alt_interface_index(sc->udev, video->data->iface_index, num);
 
@@ -1254,13 +1257,13 @@ uvc_drv_start_video(struct uvc_drv_video *video)
 	ret = usbd_transfer_setup(sc->udev, &video->data->iface_index,
 	    video->data->xfer, uvc_config, UVC_N_TRANSFER, sc, &video->mtx);
 
-	mtx_lock(&video->mtx);
+	UVC_LOCK(&video->mtx);
 	/* start xfer */
 	for (i = 0; i < UVC_N_TRANSFER; i++)
 		usbd_transfer_start(video->data->xfer[i]);
 done:
 	video->enable = 1;
-	mtx_unlock(&video->mtx);
+	UVC_UNLOCK(&video->mtx);
 	return 0;
 }
 
@@ -1315,12 +1318,12 @@ uvc_drv_stop_video(struct uvc_drv_video *video, int close)
 		}
 	}
 
-	mtx_lock(&video->mtx);
+	UVC_LOCK(&video->mtx);
 	uvc_buf_queue_disable(&video->bq);
 	video->enable = 0;
 	if (close)
 		video->htsf = 0;
-	mtx_unlock(&video->mtx);
+	UVC_UNLOCK(&video->mtx);
 
 	return 0;
 }
@@ -1414,9 +1417,9 @@ uvc_init_intrxfer(struct uvc_drv_video *video)
 	if (ret)
 		return;
 
-	mtx_lock(&video->mtx);
+	UVC_LOCK(&video->mtx);
 	usbd_transfer_start(video->intr_xfer[0]);
-	mtx_unlock(&video->mtx);
+	UVC_UNLOCK(&video->mtx);
 }
 
 static int
@@ -1477,8 +1480,8 @@ uvc_drv_init_video(struct uvc_softc *sc, struct uvc_drv_ctrl *ctrl,
 	if (v == NULL)
 		return v;
 
-	mtx_init(&v->mtx, device_get_nameunit(sc->dev),
-		NULL, MTX_DEF | MTX_RECURSE);
+	lockinit(&v->mtx, device_get_nameunit(sc->dev),
+		0, LK_CANRECURSE);
 	v->sc = sc;
 	v->type = sc->type;
 	v->unit = device_get_unit(sc->dev);
@@ -1493,12 +1496,12 @@ uvc_drv_init_video(struct uvc_softc *sc, struct uvc_drv_ctrl *ctrl,
 
 	/* fill video data request */
 	req = &v->req;
-	mtx_lock(&v->mtx);
+	UVC_LOCK(&v->mtx);
 	ret = uvc_drv_get_video_ctrl(v, req, 1, GET_DEF);
 	if (ret) {
 		DPRINTF("video GET_DEF fault %d\n", ret);
 		ret = uvc_drv_get_video_ctrl(v, req, 1, GET_CUR);
-		mtx_unlock(&v->mtx);
+		UVC_UNLOCK(&v->mtx);
 		if (ret) {
 			DPRINTF("video GET_CUR fault %d\n", ret);
 			goto done;
@@ -1537,7 +1540,7 @@ uvc_drv_init_video(struct uvc_softc *sc, struct uvc_drv_ctrl *ctrl,
 	} else {
 		/*do not care whether it successes or not*/
 		uvc_drv_set_video_ctrl(v, req, 1);
-		mtx_unlock(&v->mtx);
+		UVC_UNLOCK(&v->mtx);
 	}
 
 	/*
@@ -1545,9 +1548,9 @@ uvc_drv_init_video(struct uvc_softc *sc, struct uvc_drv_ctrl *ctrl,
 	 * 1. GET_DEF don't fill max payload size
 	 * 2. GET_DEF inherbs config set before
 	 */
-	mtx_lock(&v->mtx);
+	UVC_LOCK(&v->mtx);
 	ret = uvc_drv_get_video_ctrl(v, req, 1, GET_CUR);
-	mtx_unlock(&v->mtx);
+	UVC_UNLOCK(&v->mtx);
 	if (ret) {
 		DPRINTF("uvc drv GET_CUR fault %d\n", ret);
 		goto done;
@@ -2419,7 +2422,7 @@ uvc_drv_init_ctrl(struct usb_interface *iface, uint8_t iface_index,
 		pc->iface = iface;
 		pc->iface_index = iface_index;
 		pc->iface_num = iface_num;
-		mtx_init(&pc->mtx, "uvc ctrl lock", NULL, MTX_DEF);
+		lockinit(&pc->mtx, "uvc ctrl lock", 0, 0);
 		STAILQ_INIT(&pc->topo_nodes);
 	}
 	return pc;
