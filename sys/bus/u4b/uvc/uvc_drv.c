@@ -75,9 +75,8 @@
 	for (scan = STAILQ_FIRST(list); (save = scan ? STAILQ_NEXT(scan, next) : NULL), scan; scan = save) 	\
 
 
-#ifdef USB_DEBUG
 int uvc_debug = 0;
-
+#ifdef USB_DEBUG
 static SYSCTL_NODE(_hw_usb, OID_AUTO, uvc, CTLFLAG_RW, 0, "USB uvc");
 SYSCTL_INT(_hw_usb_uvc, OID_AUTO, debug, CTLFLAG_RWTUN,
 		&uvc_debug, 0, "Debug level");
