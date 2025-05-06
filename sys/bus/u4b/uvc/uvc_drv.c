@@ -2751,13 +2751,15 @@ static device_method_t uvc_methods[] = {
 	DEVMETHOD_END
 };
 
+static devclass_t uvc_devclass;
+
 static driver_t uvc_driver = {
 	.name = UVC_DRIVER_NAME,
 	.methods = uvc_methods,
 	.size = sizeof(struct uvc_softc),
 };
 
-DRIVER_MODULE(uvc, uhub, uvc_driver, NULL, 0);
+DRIVER_MODULE(uvc, uhub, uvc_driver, uvc_devclass, NULL, NULL);
 MODULE_DEPEND(uvc, usb, 1, 1, 1);
 MODULE_VERSION(uvc, 1);
 
