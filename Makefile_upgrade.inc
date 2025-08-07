@@ -3937,6 +3937,26 @@ TO_REMOVE+=/usr/share/man/man4/safe.4.gz
 TO_REMOVE+=/usr/share/man/man4/ubsec.4.gz
 TO_REMOVE+=/usr/share/man/man4/crypto.4.gz
 TO_REMOVE+=/usr/share/man/man4/cryptodev.4.gz
+TO_REMOVE+=/usr/share/man/man9/crypto.9.gz
+TO_REMOVE+=/usr/share/man/man9/crypto_dispatch.9.gz
+TO_REMOVE+=/usr/share/man/man9/crypto_done.9.gz
+TO_REMOVE+=/usr/share/man/man9/crypto_find_device_byhid.9.gz
+TO_REMOVE+=/usr/share/man/man9/crypto_find_driver.9.gz
+TO_REMOVE+=/usr/share/man/man9/crypto_freereq.9.gz
+TO_REMOVE+=/usr/share/man/man9/crypto_freesession.9.gz
+TO_REMOVE+=/usr/share/man/man9/crypto_get_driverid.9.gz
+TO_REMOVE+=/usr/share/man/man9/crypto_getcaps.9.gz
+TO_REMOVE+=/usr/share/man/man9/crypto_getreq.9.gz
+TO_REMOVE+=/usr/share/man/man9/crypto_kdispatch.9.gz
+TO_REMOVE+=/usr/share/man/man9/crypto_kdone.9.gz
+TO_REMOVE+=/usr/share/man/man9/crypto_kregister.9.gz
+TO_REMOVE+=/usr/share/man/man9/crypto_newsession.9.gz
+TO_REMOVE+=/usr/share/man/man9/crypto_register.9.gz
+TO_REMOVE+=/usr/share/man/man9/crypto_unblock.9.gz
+TO_REMOVE+=/usr/share/man/man9/crypto_unregister_all.9.gz
+TO_REMOVE+=/usr/share/man/man9/crypto_unregister.9.gz
+TO_REMOVE+=/usr/share/man/man9/aesni.4.gz
+
  
 .if !defined(WANT_INSTALLER)
 TO_REMOVE+=/usr/sbin/dfuibe_installer

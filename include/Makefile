@@ -168,8 +168,6 @@ copies:		mtree_setup
 		${INSTALL} -C -o ${BINOWN} -g ${BINGRP} -m 444 crypto/rijndael/rijndael.h \
 		${DESTDIR}/usr/include/crypto; \
 		${INSTALL} -C -o ${BINOWN} -g ${BINGRP} -m 444 crypto/rmd160/rmd160.h \
-		${DESTDIR}/usr/include/crypto; \
-		${INSTALL} -C -o ${BINOWN} -g ${BINGRP} -m 444 opencrypto/*.h \
 		${DESTDIR}/usr/include/crypto
 	cd ${.CURDIR}/../sys/dev/acpica; \
 		${INSTALL} -C -o ${BINOWN} -g ${BINGRP} -m 444 acpiio.h \
@@ -238,8 +236,6 @@ symlinks:	mtree_setup
 	rm -rf ${DESTDIR}/usr/include/$i
 	${LN} -s ../../sys/$i ${DESTDIR}/usr/include/$i
 .endfor
-	rm -rf ${DESTDIR}/usr/include/crypto
-	${LN} -s ../../sys/opencrypto ${DESTDIR}/usr/include/crypto
 .for i in ${LSYMSUBDIRS}
 	rm -rf ${DESTDIR}/usr/include/$i
 	${LN} -s ${i:C;[^/]+/?;../;g}../sys/$i ${DESTDIR}/usr/include/$i
