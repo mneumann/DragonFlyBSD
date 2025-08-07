@@ -297,7 +297,6 @@ pseudo-device	carp
 pseudo-device	bpf		#Berkeley packet filter
 
 device		crypto		# core crypto support, used by wlan
-device		cryptodev	# /dev/crypto for access to h/w
 
 # USB support
 #
