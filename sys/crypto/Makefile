@@ -2,10 +2,7 @@
 
 KMOD=	crypto
 
-.PATH:	${.CURDIR}/../opencrypto
-SRCS=	cast.c criov.c crypto.c cryptosoft.c deflate.c gmac.c \
-	skipjack.c xform.c
-SRCS+=	cryptodev_if.c cryptodev_if.h
+SRCS=
 
 SRCS+=	sha1.c
 SRCS+=	chachapoly.c
