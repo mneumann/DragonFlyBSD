@@ -2,7 +2,7 @@
 
 KMOD=	crypto
 
-SRCS=
+SRCS=	crypto.c
 
 SRCS+=	sha1.c
 SRCS+=	chachapoly.c
@@ -51,8 +51,6 @@ SRCS+=	twofish.c
 
 .PATH:	${.CURDIR}/cryptoapi
 SRCS+=	cryptoapi.c
-
-SRCS+=	bus_if.h device_if.h opt_ddb.h
 
 SUBDIR=	rc4
 
