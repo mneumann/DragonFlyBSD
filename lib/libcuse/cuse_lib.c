@@ -34,6 +34,7 @@
 #include <stdarg.h>
 
 #include <sys/types.h>
+#include <sys/sysctl.h>
 #include <sys/queue.h>
 #include <sys/fcntl.h>
 #include <sys/mman.h>
@@ -91,6 +92,19 @@ static struct cuse_vm_allocation a_cuse[CUSE_ALLOC_UNIT_MAX];
 #define	CUSE_UNLOCK() \
 	pthread_mutex_unlock(&m_cuse)
 
+static int
+cuse_feature_present(void)
+{
+	size_t len;
+	int i;
+
+	if (sysctlbyname("kern.features.cuse", &i, &len, NULL, 0) < 0)
+		return 0;
+	if (len != sizeof(i))
+		return 0;
+	return (i != 0);
+}
+
 int
 cuse_init(void)
 {
@@ -98,7 +112,7 @@ cuse_init(void)
 
 	f_cuse = open("/dev/cuse", O_RDWR);
 	if (f_cuse < 0) {
-		if (feature_present("cuse") == 0)
+		if (cuse_feature_present() == 0)
 			return (CUSE_ERR_NOT_LOADED);
 		else
 			return (CUSE_ERR_INVALID);
