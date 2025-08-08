@@ -30,7 +30,7 @@ SHLIB_MINOR=	0
 SRCS=		cuse_lib.c
 INCS=		cuse.h
 MAN=		cuse.3
-CFLAGS+=	-D_GNU_SOURCE -I/usr/src/sys
+CFLAGS+=	-D_GNU_SOURCE -I${.CURDIR}/../../sys -I${.CURDIR}/../../include
 .if defined(HAVE_DEBUG)
 CFLAGS+=	-g
 CFLAGS+=	-DHAVE_DEBUG
