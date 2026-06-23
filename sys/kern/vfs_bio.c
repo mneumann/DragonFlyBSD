@@ -15,7 +15,7 @@
  */
 
 /*
- * this file contains a new buffer I/O scheme implementing a coherent
+ * This file contains a new buffer I/O scheme implementing a coherent
  * VM object and buffer cache scheme.  Pains have been taken to make
  * sure that the performance degradation associated with schemes such
  * as this is not realized.
@@ -788,7 +788,7 @@ push_bio(struct bio *bio)
 }
 
 /*
- * Pop a BIO translation layer, returning the previous layer.  The
+ * Pop a BIO translation layer, returning the previous layer.  The BIO
  * must have been previously pushed.
  */
 struct bio *
@@ -1365,7 +1365,7 @@ brelse(struct buf *bp)
 
 	/*
 	 * VMIO buffer rundown.  Make sure the VM page array is restored
-	 * after an I/O may have replaces some of the pages with bogus pages
+	 * after an I/O may have replaced some of the pages with bogus pages
 	 * in order to not destroy dirty pages in a fill-in read.
 	 *
 	 * Note that due to the code above, if a buffer is marked B_DELWRI

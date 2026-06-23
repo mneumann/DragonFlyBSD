@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, 2025 The DragonFly Project.  All rights reserved.
+ * Copyright (c) 2010, 2024-2026 The DragonFly Project.  All rights reserved.
  *
  * This code is derived from software contributed to The DragonFly Project
  * by Alex Hornung <ahornung@gmail.com> and
@@ -51,10 +51,17 @@
 
 #include <sys/proc.h>
 #include <sys/types.h>
-#include <sys/mpipe.h>
+#include <sys/sysctl.h>
 
 MALLOC_DEFINE(M_DMCRYPT, "dm_crypt", "Device Mapper Target Crypt");
 
+static int dmtc_active_read;
+SYSCTL_INT(_debug, OID_AUTO, dmtc_active_read, CTLFLAG_RW, &dmtc_active_read, 0,
+	   "Number of active dmtc read IOs");
+
+static int dmtc_active_write;
+SYSCTL_INT(_debug, OID_AUTO, dmtc_active_write, CTLFLAG_RW, &dmtc_active_write, 0,
+	   "Number of active dmtc write IOs");
 
 struct target_crypt_config;
 
@@ -77,6 +84,41 @@ struct essiv_ivgen_priv {
 	u_int8_t		crypto_keyhash[SHA512_DIGEST_LENGTH];
 };
 
+
+struct target_crypt_config;
+struct dmtc_rq;
+
+struct dmtc_buf {
+	TAILQ_ENTRY(dmtc_buf)		entry;
+	struct target_crypt_config	*priv;
+	struct dmtc_rq			*rq;
+	struct bio			*bio;
+	uint8_t				*data;
+	size_t				size;
+	void				*aux;
+};
+
+typedef void (*dmtc_rq_cb)(struct dmtc_buf *);
+
+/**
+  * BIO request queue.
+  */
+struct dmtc_rq {
+	struct target_crypt_config	*priv;
+	struct lock			lk;
+	dmtc_rq_cb			callback;
+	bool				running;
+	const char			*descr;
+	TAILQ_HEAD(, bio)		bioq;
+	TAILQ_HEAD(, dmtc_buf)		buf_freeq;
+	TAILQ_HEAD(, dmtc_buf)		buf_pendq;
+};
+
+static void dmtc_rq_init(struct dmtc_rq *rq, int nbufs, dmtc_rq_cb callback, struct target_crypt_config	*priv, const char *descr);
+static void dmtc_rq_destroy(struct dmtc_rq *rq);
+static void dmtc_rq_submit(struct dmtc_rq *rq, struct bio *bio);
+static void dmtc_rq_release(struct dmtc_buf *buf);
+
 typedef struct target_crypt_config {
 	size_t	params_len;
 	dm_pdev_t *pdev;
@@ -93,9 +135,8 @@ typedef struct target_crypt_config {
 	struct iv_generator	*ivgen;
 	void	*ivgen_priv;
 
-	struct malloc_pipe	read_mpipe;
-	struct malloc_pipe	write_mpipe;
-
+	struct dmtc_rq	rq_read;
+	struct dmtc_rq	rq_write;
 } dm_target_crypt_config_t;
 
 struct dmtc_dump_helper {
@@ -118,25 +159,13 @@ dmtc_find_crypto_cipher(const char *crypto_alg, const char *crypto_mode,
 
 static void dmtc_bio_read_done(struct bio *bio);
 
-static void dmtc_bio_read_decrypt_start(struct bio *bio);
-
-static void dmtc_bio_read_decrypt_retry(void *arg1, void *arg2);
-
-static void dmtc_bio_read_decrypt(struct bio *bio, uint8_t *data_buf,
-    size_t data_buf_sz);
-
-static void dmtc_bio_write_encrypt_start(struct bio *bio);
-
-static void dmtc_bio_write_encrypt_retry(void *arg1, void *arg2);
-
-static void dmtc_bio_write_encrypt(struct bio *bio, uint8_t *data_buf,
-    size_t data_buf_sz);
+static void dmtc_bio_read_decrypt(struct dmtc_buf *);
+static void dmtc_bio_write_encrypt(struct dmtc_buf *);
 
 static void dmtc_bio_write_done(struct bio *bio);
 
 static int dmtc_bio_encdec(dm_target_crypt_config_t *priv, uint8_t *data_buf,
     int bytes, off_t offset, cryptoapi_cipher_mode mode);
-
 
 static void dmtc_crypto_dump(dm_target_crypt_config_t *priv,
     struct dmtc_dump_helper *dump_helper);
@@ -175,12 +204,6 @@ dmtc_get_nmax(void)
 }
 
 static void
-dmtc_zero_mpipe_buffer(void *buffer, void *priv __unused)
-{
-	explicit_bzero(buffer, DMTC_BUF_SIZE);
-}
-
-static void
 dmtc_init_mpipe(struct target_crypt_config *priv)
 {
 	int nmax = dmtc_get_nmax();
@@ -190,21 +213,188 @@ dmtc_init_mpipe(struct target_crypt_config *priv)
 	kprintf("dm_target_crypt: Setting %d mpipe read buffers\n", nmax_read);
 	kprintf("dm_target_crypt: Setting %d mpipe write buffers\n", nmax_write);
 
-	mpipe_init(&priv->read_mpipe, M_DMCRYPT, DMTC_BUF_SIZE,
-		nmax_read, nmax_read, MPF_NOZERO | MPF_CALLBACK,
-		NULL, dmtc_zero_mpipe_buffer, NULL);
-
-	mpipe_init(&priv->write_mpipe, M_DMCRYPT, DMTC_BUF_SIZE,
-		nmax_write, nmax_write, MPF_NOZERO | MPF_CALLBACK,
-		NULL, dmtc_zero_mpipe_buffer, NULL);
+	dmtc_rq_init(&priv->rq_read, nmax_read, dmtc_bio_read_decrypt, priv, "dmtc read rq");
+	dmtc_rq_init(&priv->rq_write, nmax_write, dmtc_bio_write_encrypt, priv, "dmtc write rq");
 }
 
 static void
 dmtc_destroy_mpipe(struct target_crypt_config *priv)
 {
-	mpipe_done(&priv->read_mpipe);
-	mpipe_done(&priv->write_mpipe);
+	dmtc_rq_destroy(&priv->rq_read);
+	dmtc_rq_destroy(&priv->rq_write);
 }
+
+#if 0
+static void
+dmtc_rq_thread(void *);
+
+void
+dmtc_rq_thread(void *arg)
+{
+	struct dmtc_rq *rq = arg;
+	struct dmtc_buf *buf;
+	struct bio *next_bio;
+
+	lockmgr(&rq->lk, LK_EXCLUSIVE);
+	while (rq->running) {
+		next_bio = TAILQ_FIRST(&rq->bioq);
+		buf = TAILQ_FIRST(&rq->buf_freeq);
+
+		if (next_bio && buf) {
+			TAILQ_REMOVE(&rq->bioq, next_bio, bio_act);
+			TAILQ_REMOVE(&rq->buf_freeq, buf, entry);
+	
+			lockmgr(&rq->lk, LK_RELEASE);
+			buf->bio = next_bio;
+			rq->callback(buf);
+			lockmgr(&rq->lk, LK_EXCLUSIVE);
+		} else {
+			lksleep(rq, &rq->lk, 0, "wait", 0);
+		}
+	}
+
+	rq->thread = NULL;
+	wakeup(&rq->thread);
+	lockmgr(&rq->lk, LK_RELEASE);
+	kprintf("rq_thread terminated\n");
+}
+#endif
+
+void dmtc_rq_init(struct dmtc_rq *rq, int nbufs, dmtc_rq_cb callback, struct target_crypt_config *priv, const char *descr)
+{
+	struct dmtc_buf *buf;
+	int i;
+
+	lockinit(&rq->lk, descr, 0, LK_CANRECURSE);
+	TAILQ_INIT(&rq->bioq);
+	TAILQ_INIT(&rq->buf_freeq);
+	TAILQ_INIT(&rq->buf_pendq);
+	rq->callback = callback;
+	rq->priv = priv;
+	rq->running = true;
+	rq->descr = descr;
+
+	for (i = 0; i < nbufs; ++i) {
+		buf = kmalloc(sizeof(*buf), M_DMCRYPT, M_WAITOK | M_ZERO);
+		buf->priv = priv;
+		buf->rq = rq;
+		buf->bio = NULL;
+		buf->data = kmalloc(DMTC_BUF_SIZE, M_DMCRYPT, M_WAITOK);
+		buf->size = DMTC_BUF_SIZE;
+		TAILQ_INSERT_TAIL(&rq->buf_freeq, buf, entry);
+	}
+
+	//kthread_create(dmtc_rq_thread, rq, &rq->thread, descr);
+}
+
+void dmtc_rq_destroy(struct dmtc_rq *rq) 
+{
+	struct bio *next_bio;
+	struct bio *obio;
+	struct dmtc_buf *buf;
+
+	kprintf("Destroying queue: %s\n", rq->descr);
+
+	lockmgr(&rq->lk, LK_EXCLUSIVE);
+	rq->running = false;
+#if 0
+	while (rq->thread) {
+		kprintf("shutting down\n");
+		wakeup(rq);
+		lksleep(&rq->thread, &rq->lk, 0, "wait", hz);
+	}
+#endif
+
+	// cancel all pending bios
+	while ((next_bio = TAILQ_FIRST(&rq->bioq)) != NULL) {
+		kprintf("cancel pending BIO\n");
+		TAILQ_REMOVE(&rq->bioq, next_bio, bio_act);
+		next_bio->bio_buf->b_flags |= B_ERROR;
+		lockmgr(&rq->lk, LK_RELEASE);
+		obio = pop_bio(next_bio);
+		biodone(obio);
+		lockmgr(&rq->lk, LK_EXCLUSIVE);
+	}
+
+	// XXX
+	while ((TAILQ_FIRST(&rq->buf_pendq)) != NULL) {
+		kprintf("wait for pending bufs to complete\n");
+		lksleep(rq, &rq->lk, 0, "wait", hz);
+	}
+
+	while ((buf = TAILQ_FIRST(&rq->buf_freeq)) != NULL) {
+		TAILQ_REMOVE(&rq->buf_freeq, buf, entry);
+		explicit_bzero(buf->data, buf->size);
+		kfree(buf->data, M_DMCRYPT);
+		bzero(buf, sizeof(*buf));
+		kfree(buf, M_DMCRYPT);
+	}
+
+	lockmgr(&rq->lk, LK_RELEASE);
+	lockuninit(&rq->lk);
+}
+
+void dmtc_rq_submit(struct dmtc_rq *rq, struct bio *bio)
+{
+	struct dmtc_buf *buf;
+	struct bio *obio;
+
+	lockmgr(&rq->lk, LK_EXCLUSIVE);
+
+	if (!rq->running) {
+		lockmgr(&rq->lk, LK_RELEASE);
+
+		kprintf("rq_submit: queue not running\n");
+		bio->bio_buf->b_flags |= B_ERROR;
+		obio = pop_bio(bio);
+		biodone(obio);
+		return;
+	}
+
+	buf = TAILQ_FIRST(&rq->buf_freeq);
+
+	if (buf) {
+		buf->bio = bio;
+		TAILQ_REMOVE(&rq->buf_freeq, buf, entry);
+		TAILQ_INSERT_TAIL(&rq->buf_pendq, buf, entry);
+		lockmgr(&rq->lk, LK_RELEASE);
+		rq->callback(buf);
+	} else {
+		TAILQ_INSERT_TAIL(&rq->bioq, bio, bio_act);
+		lockmgr(&rq->lk, LK_RELEASE);
+	}
+}
+
+void dmtc_rq_release(struct dmtc_buf *buf)
+{
+	struct dmtc_rq *rq = buf->rq;
+	struct bio *next_bio;
+
+	lockmgr(&rq->lk, LK_EXCLUSIVE);
+
+	// XXX
+	//bzero(buf->data, buf->size);
+	buf->bio = NULL;
+
+	next_bio = TAILQ_FIRST(&rq->bioq);
+	
+	if (next_bio) {
+		TAILQ_REMOVE(&rq->bioq, next_bio, bio_act);
+		buf->bio = next_bio;
+		lockmgr(&rq->lk, LK_RELEASE);
+		rq->callback(buf);
+	} else {
+		TAILQ_REMOVE(&rq->buf_pendq, buf, entry);
+		TAILQ_INSERT_TAIL(&rq->buf_freeq, buf, entry);
+		buf->bio = NULL;
+		lockmgr(&rq->lk, LK_RELEASE);
+	}
+
+	//if (TAILQ_FIRST(&rq->bioq))
+		//wakeup(rq);
+
+}
+
 
 /*
  * Overwrite private information (in buf) to avoid leaking it
@@ -654,13 +844,8 @@ dm_target_crypt_destroy(dm_table_entry_t *table_en)
  * Usage of the "struct bio" bio_caller_infoX fields:
  *
  * bio_caller_info1:
- * 	- always points to "priv"
- * bio_caller_info2:
- * 	- used to chain bio requests. points to next enqueued bio request
- * 	  (only within bio request queue)
- *	- orig b_data pointer (within write path)
- * bio_caller_info3:
- * 	- points to the mpipe
+ * 	- Points to "rq" (dmtc_bio_read_done),
+	  or "buf" (dmtc_bio_write_done).
  */
 
 /*
@@ -693,18 +878,15 @@ dm_target_crypt_strategy(dm_table_entry_t *table_en, struct buf *bp)
 	switch (bp->b_cmd) {
 	case BUF_CMD_READ:
 		bio = push_bio(&bp->b_bio1);
-		bio->bio_offset = bp->b_bio1.bio_offset +
-		    priv->block_offset * DEV_BSIZE;
-		bio->bio_caller_info1.ptr = priv;
+		bio->bio_offset = bp->b_bio1.bio_offset + priv->block_offset * DEV_BSIZE;
+		bio->bio_caller_info1.ptr = &priv->rq_read;
 		bio->bio_done = dmtc_bio_read_done;
 		vn_strategy(priv->pdev->pdev_vnode, bio);
 		break;
 	case BUF_CMD_WRITE:
 		bio = push_bio(&bp->b_bio1);
-		bio->bio_offset = bp->b_bio1.bio_offset +
-		    priv->block_offset * DEV_BSIZE;
-		bio->bio_caller_info1.ptr = priv;
-		dmtc_bio_write_encrypt_start(bio);
+		bio->bio_offset = bp->b_bio1.bio_offset + priv->block_offset * DEV_BSIZE;
+		dmtc_rq_submit(&priv->rq_write, bio);
 		break;
 	default:
 		vn_strategy(priv->pdev->pdev_vnode, &bp->b_bio1);
@@ -717,8 +899,7 @@ dm_target_crypt_strategy(dm_table_entry_t *table_en, struct buf *bp)
  * READ PATH
  ************************************************************************
  *
- * DO IO -> dmtc_bio_read_done -> dmtc_bio_read_decrypt_start ->
- * (dmtc_bio_read_decrypt_retry) -> dmtc_bio_read_decrypt -> COMPLETE
+ * DO IO -> dmtc_bio_read_done -> dmtc_bio_read_decrypt -> COMPLETE
  *
  */
 
@@ -728,7 +909,10 @@ dm_target_crypt_strategy(dm_table_entry_t *table_en, struct buf *bp)
 static void
 dmtc_bio_read_done(struct bio *bio)
 {
+	struct dmtc_rq *rq;
 	struct bio *obio;
+
+	rq = bio->bio_caller_info1.ptr;
 
 	/*
 	 * If a read error occurs we shortcut the operation, otherwise
@@ -738,42 +922,8 @@ dmtc_bio_read_done(struct bio *bio)
 		obio = pop_bio(bio);
 		biodone(obio);
 	} else {
-		dmtc_bio_read_decrypt_start(bio);
+		dmtc_rq_submit(rq, bio);
 	}
-}
-
-/**
- * Starts decryption by allocating a buffer.
- *
- * If allocation fails, dmtc_bio_read_decrypt_retry is called.
- */
-void
-dmtc_bio_read_decrypt_start(struct bio *bio)
-{
-	dm_target_crypt_config_t *priv;
-	uint8_t *data_buf;
-
-	priv = bio->bio_caller_info1.ptr;
-
-	KKASSERT(bio->bio_buf->b_cmd == BUF_CMD_READ);
-
-	data_buf = mpipe_alloc_callback(&priv->read_mpipe,
-	    dmtc_bio_read_decrypt_retry, bio, NULL);
-
-	if (data_buf == NULL)
-		return;
-
-	bio->bio_caller_info3.ptr = &priv->read_mpipe;
-	dmtc_bio_read_decrypt(bio, data_buf, DMTC_BUF_SIZE);
-}
-
-/**
- * Retries the allocation.
- */
-void
-dmtc_bio_read_decrypt_retry(void *arg1, void *arg2 __unused)
-{
-	dmtc_bio_read_decrypt_start(arg1);
 }
 
 /**
@@ -781,33 +931,36 @@ dmtc_bio_read_decrypt_retry(void *arg1, void *arg2 __unused)
  * bio request.
  */
 void
-dmtc_bio_read_decrypt(struct bio *bio, uint8_t *data_buf, size_t data_buf_sz)
+dmtc_bio_read_decrypt(struct dmtc_buf *buf)
 {
-	dm_target_crypt_config_t *priv;
-	struct malloc_pipe *mpipe;
+	struct bio *bio;
+	struct bio *obio;
 
-	priv = bio->bio_caller_info1.ptr;
-	mpipe = bio->bio_caller_info3.ptr;
+	bio = buf->bio;
 
 	/*
-	 * Note: b_resid no good after read I/O, it will be 0, use
-	 *	 b_bcount.
+	 * Note: b_resid no good after read I/O, it will be 0, use b_bcount.
 	 */
 	int bytes = bio->bio_buf->b_bcount;
 
-	if (__predict_false(data_buf_sz < bytes))
+	if (__predict_false(buf->size < bytes))
 		panic("dmtc: Allocated data buffer is too small");
 
-	/*
-	 * Unconditionally copy in data. Never decrypt in place!
-	 *
-	 * For reads with bogus page we can't decrypt in place as stuff
-	 * can get ripped out from under us.
-	 */
-	memcpy(data_buf, bio->bio_buf->b_data, bytes);
 
-	bio->bio_buf->b_error = dmtc_bio_encdec(priv, data_buf, bytes,
-	    bio->bio_offset, CRYPTOAPI_CIPHER_DECRYPT);
+	if (!bio->bio_buf->b_error) {
+		/*
+		 * Unconditionally copy in data. Never decrypt in place!
+		 *
+		 * For reads with bogus page we can't decrypt in place as stuff
+		 * can get ripped out from under us.
+		 *
+		 * What are bogus pages?
+		 */
+		bcopy(bio->bio_buf->b_data, buf->data, bytes);
+
+		bio->bio_buf->b_error = dmtc_bio_encdec(buf->priv, buf->data, bytes,
+		    bio->bio_offset, CRYPTOAPI_CIPHER_DECRYPT);
+	}
 
 	if (bio->bio_buf->b_error) {
 		kprintf("dm_target_crypt: dmtc_bio_read_decrypt error = %d\n",
@@ -815,7 +968,7 @@ dmtc_bio_read_decrypt(struct bio *bio, uint8_t *data_buf, size_t data_buf_sz)
 
 		bio->bio_buf->b_flags |= B_ERROR;
 	} else {
-		memcpy(bio->bio_buf->b_data, data_buf, bytes);
+		bcopy(buf->data, bio->bio_buf->b_data, bytes);
 	}
 #if 0
 	else if (bio->bio_buf->b_flags & B_HASBOGUS) {
@@ -824,55 +977,19 @@ dmtc_bio_read_decrypt(struct bio *bio, uint8_t *data_buf, size_t data_buf_sz)
 	}
 #endif
 
-	struct bio *obio = pop_bio(bio);
+	obio = pop_bio(bio);
 	biodone(obio);
 
-	if (mpipe)
-		mpipe_free(mpipe, data_buf);
+	dmtc_rq_release(buf);
 }
 
 /************************************************************************
  * WRITE PATH
  ************************************************************************
  *
- * dmtc_bio_write_encrypt_start -> (dmtc_bio_write_encrypt_retry) ->
  * dmtc_bio_write_encrypt -> DO IO -> dmtc_bio_write_done -> COMPLETE
  *
  */
-
-/**
- * Allocates a mpipe buffer in order to proceed with encryption.
- *
- * If that fails, dmtc_bio_write_encrypt_retry will be called.
- */
-void
-dmtc_bio_write_encrypt_start(struct bio *bio)
-{
-	dm_target_crypt_config_t *priv;
-	uint8_t *data_buf;
-
-	priv = bio->bio_caller_info1.ptr;
-
-	KKASSERT(bio->bio_buf->b_cmd == BUF_CMD_WRITE);
-
-	data_buf = mpipe_alloc_callback(&priv->write_mpipe,
-	    dmtc_bio_write_encrypt_retry, bio, NULL);
-
-	if (data_buf == NULL)
-		return;
-
-	bio->bio_caller_info3.ptr = &priv->write_mpipe;
-	dmtc_bio_write_encrypt(bio, data_buf, DMTC_BUF_SIZE);
-}
-
-/**
- * Retries the allocation.
- */
-void
-dmtc_bio_write_encrypt_retry(void *arg1, void *arg2 __unused)
-{
-	dmtc_bio_write_encrypt_start(arg1);
-}
 
 /**
  *
@@ -881,34 +998,42 @@ dmtc_bio_write_encrypt_retry(void *arg1, void *arg2 __unused)
  * will be called.
  */
 void
-dmtc_bio_write_encrypt(struct bio *bio, uint8_t *data_buf, size_t data_buf_sz)
+dmtc_bio_write_encrypt(struct dmtc_buf *buf)
 {
-	dm_target_crypt_config_t *priv = bio->bio_caller_info1.ptr;
+	struct bio *bio;
+	struct bio *obio;
+	int bytes;
+
+	bio = buf->bio;
 
 	/*
 	 * Use b_bcount for consistency
 	 */
-	int bytes = bio->bio_buf->b_bcount;
+	bytes = bio->bio_buf->b_bcount;
 
-	if (__predict_false(data_buf_sz < bytes))
+	if (__predict_false(buf->size < bytes))
 		panic("dmtc: Allocated data buffer is too small");
 
-	memcpy(data_buf, bio->bio_buf->b_data, bytes);
 
-	bio->bio_buf->b_error = dmtc_bio_encdec(priv, data_buf, bytes,
-	    bio->bio_offset, CRYPTOAPI_CIPHER_ENCRYPT);
+	if (!bio->bio_buf->b_error) {
+		bcopy(bio->bio_buf->b_data, buf->data, bytes);
+		bio->bio_buf->b_error = dmtc_bio_encdec(buf->priv, buf->data, bytes,
+	    		bio->bio_offset, CRYPTOAPI_CIPHER_ENCRYPT);
+	}
 
 	if (bio->bio_buf->b_error) {
 		kprintf("dm_target_crypt: dmtc_bio_write_encrypt error = %d\n",
 		    bio->bio_buf->b_error);
 
-		mpipe_free(&priv->write_mpipe, data_buf);
 		bio->bio_buf->b_flags |= B_ERROR;
-		struct bio *obio = pop_bio(bio);
+		obio = pop_bio(bio);
 		biodone(obio);
+
+		dmtc_rq_release(buf);
 	} else {
-		bio->bio_caller_info2.ptr = bio->bio_buf->b_data; /* orig_buf */
-		bio->bio_buf->b_data = data_buf;
+		buf->aux = bio->bio_buf->b_data; /* orig_buf */
+		bio->bio_caller_info1.ptr = buf;
+		bio->bio_buf->b_data = buf->data;
 		bio->bio_done = dmtc_bio_write_done;
 
 		/*
@@ -920,7 +1045,7 @@ dmtc_bio_write_encrypt(struct bio *bio, uint8_t *data_buf, size_t data_buf_sz)
 		 * own buffer, call vn_stategy() and once it finished with
 		 * dmtc_bio_write_done(), free our buffer.
 		 */
-		vn_strategy(priv->pdev->pdev_vnode, bio);
+		vn_strategy(buf->priv->pdev->pdev_vnode, bio);
 	}
 }
 
@@ -930,22 +1055,18 @@ dmtc_bio_write_encrypt(struct bio *bio, uint8_t *data_buf, size_t data_buf_sz)
 void
 dmtc_bio_write_done(struct bio *bio)
 {
-	dm_target_crypt_config_t *priv;
-	uint8_t *data_buf;
-	struct malloc_pipe *mpipe;
+	struct dmtc_buf *buf;
+	struct bio *obio;
 
-	priv = bio->bio_caller_info1.ptr;
-	data_buf = bio->bio_buf->b_data;
-	mpipe = bio->bio_caller_info3.ptr;
-
-	if (mpipe)
-		mpipe_free(mpipe, data_buf);
+	buf = bio->bio_caller_info1.ptr;
 
 	// Restore original bio buffer
-	bio->bio_buf->b_data = bio->bio_caller_info2.ptr;
+	bio->bio_buf->b_data = buf->aux;
 
-	struct bio *obio = pop_bio(bio);
+	obio = pop_bio(bio);
 	biodone(obio);
+
+	dmtc_rq_release(buf);
 }
 
 /************************************************************************
