@@ -924,8 +924,9 @@ uvc_drv_bulkdata_callback(struct usb_xfer *xfer, usb_error_t error)
 	int dir = UE_GET_DIR(xfer->endpoint->edesc->bEndpointAddress);
 	int actlen, sumlen;
 
-	if (xfer->endpoint == NULL || xfer->endpoint->edesc == NULL)
+	if (xfer->endpoint == NULL || xfer->endpoint->edesc == NULL) {
 		return;
+	}
 	dir = UE_GET_DIR(xfer->endpoint->edesc->bEndpointAddress);
 	usbd_xfer_status(xfer, &actlen, &sumlen, NULL, NULL);
 	switch (USB_GET_STATE(xfer)) {
@@ -1172,7 +1173,8 @@ uvc_drv_start_video(struct uvc_drv_video *video)
 		uvc_drv_get_video_ctrl(video, &video->req, 1, GET_CUR);
 		ret = uvc_drv_set_video_ctrl(video, &video->req, 0);
 		if (ret) {
-			suspend_kproc(curthread, 300);
+			usb_pause_mtx(NULL, USB_MS_TO_TICKS(300));
+			// suspend_kproc(curthread, 300);
 			ret = uvc_drv_set_video_ctrl(video, &video->req, 0);
 		}
 		mps = UGETDW(video->req.dwMaxPayloadSize);
@@ -1190,6 +1192,7 @@ uvc_drv_start_video(struct uvc_drv_video *video)
 			uvc_bulk_config[1].bufsize = 125 * 1024;
 		}
 		UVC_UNLOCK(&video->mtx);
+		kprintf("UVC: setup BULKTRANSFER\n");
 		ret = usbd_transfer_setup(sc->udev, &video->data->iface_index,
 			video->data->xfer, uvc_bulk_config,
 			UVC_N_BULKTRANSFER, sc, &video->mtx);
@@ -1198,92 +1201,119 @@ uvc_drv_start_video(struct uvc_drv_video *video)
 		/* start xfer */
 		for (i = 0; i < UVC_N_TRANSFER; i++)
 			usbd_transfer_start(video->data->xfer[i]);
-		goto done;
-	}
 
-	/* choose setting */
-	/* 1. check */
-	num = usbd_iface_get_altsetting_num(sc->udev, video->data->iface);
-	DPRINTF("streaming setting num:%u\n", num);
-	if (num <= 1) {
+		video->enable = 1;
 		UVC_UNLOCK(&video->mtx);
-		DPRINTF("WARNING: _TO_BE_IMPLEMENT_ BULK ep or bad Intf\n");
-		return EINVAL;
-	}
-	/* 2. loop ep */
-	mps = UGETDW(video->req.dwMaxPayloadSize);
-	if (!mps) {
-		UVC_UNLOCK(&video->mtx);
-		DPRINTF("Max Packet Size is %u\n", mps);
-		return EINVAL;
-	}
-	DPRINTF("payload --- %d\n", mps);
-	found = 0;
-
-	desc = (struct usb_descriptor *)(video->data->iface->idesc);
-	while ((desc = usb_desc_foreach(sc->udev->cdesc, desc))) {
-		if (desc->bDescriptorType == UDESC_INTERFACE) {
-			if (desc->bDescriptorSubtype != video->data->iface_num)
-				break;
-
-			idesc = (struct usb_interface_descriptor *)desc;
-			num = idesc->bAlternateSetting;
-			continue;
-		}
-		if (((desc->bDescriptorType != UDESC_ENDPOINT) &&
-		      (desc->bDescriptorType != UDESC_ENDPOINT_SS_COMP)))
-			continue;
-		ed = (struct usb_endpoint_descriptor *)desc;
-		if (desc->bDescriptorType == UDESC_ENDPOINT_SS_COMP) {
-			essd = (struct usb_endpoint_ss_comp_descriptor *)desc;
-			ps = UGETW(essd->wBytesPerInterval);
-		}
-		if (desc->bDescriptorType == UDESC_ENDPOINT) {
-			ps = UGETW(ed->wMaxPacketSize);
-			ps = (ps & 0x07ff) * (1 + ((ps >> 11) & 3));
-		}
-
-		if (ps >= mps && !video->htsf) {
-			found = 1;
-			break;
-		}
-	}
-	if (video->htsf)
-		found = 1;
-	if (!found) {
-		UVC_UNLOCK(&video->mtx);
-		DPRINTF("don't have fit ep\n");
-		return EINVAL;
-	}
-	DPRINTF("max packet size:%u ep size:%u\n", mps, ps);
-
-	/* 3. set */
-	if (video->htsf) {
-		uvc_drv_get_video_ctrl(video, &video->req, 1, GET_CUR);
-		ret = uvc_drv_set_video_ctrl(video, &video->req, 0);
-		DPRINTF("uvc_drv_set_video_ctrl ret:%d\n", ret);
+		return 0;
 	} else {
-		if (!(sc->quirks & UVC_COMMIT_IN_ADVANCE))
-			uvc_drv_set_video_ctrl(video, &video->req, 0);
+		KKASSERT(video->data->num_altsettings > 1);
+
+		/* choose setting */
+		/* 1. check */
+		num = usbd_iface_get_altsetting_num(sc->udev, video->data->iface);
+		DPRINTF("streaming setting num:%u\n", num);
+		kprintf("XXX: streaming setting num:%u\n", num);
+		if (num <= 1) {
+			UVC_UNLOCK(&video->mtx);
+			DPRINTF("WARNING: _TO_BE_IMPLEMENT_ BULK ep or bad Intf\n");
+			kprintf("XXX: WARNING: _TO_BE_IMPLEMENT_ BULK ep or bad Intf\n");
+			return EINVAL;
+		}
+		/* 2. loop ep */
+		mps = UGETDW(video->req.dwMaxPayloadSize);
+		if (!mps) {
+			UVC_UNLOCK(&video->mtx);
+			DPRINTF("Max Packet Size is %u\n", mps);
+			kprintf("XXX: Max Packet Size is %u\n", mps);
+			return EINVAL;
+		}
+		DPRINTF("payload --- %d\n", mps);
+		kprintf("XXX: payload --- %d\n", mps);
+		found = 0;
+
+		desc = (struct usb_descriptor *)(video->data->iface->idesc);
+		while ((desc = usb_desc_foreach(sc->udev->cdesc, desc))) {
+			if (desc->bDescriptorType == UDESC_INTERFACE) {
+				if (desc->bDescriptorSubtype != video->data->iface_num)
+					break;
+
+				idesc = (struct usb_interface_descriptor *)desc;
+				num = idesc->bAlternateSetting;
+				continue;
+			}
+			if (((desc->bDescriptorType != UDESC_ENDPOINT) &&
+			      (desc->bDescriptorType != UDESC_ENDPOINT_SS_COMP)))
+				continue;
+			ed = (struct usb_endpoint_descriptor *)desc;
+			if (desc->bDescriptorType == UDESC_ENDPOINT_SS_COMP) {
+				essd = (struct usb_endpoint_ss_comp_descriptor *)desc;
+				ps = UGETW(essd->wBytesPerInterval);
+			}
+			if (desc->bDescriptorType == UDESC_ENDPOINT) {
+				ps = UGETW(ed->wMaxPacketSize);
+				ps = (ps & 0x07ff) * (1 + ((ps >> 11) & 3));
+			}
+
+			if (ps >= mps && !video->htsf) {
+				found = 1;
+				break;
+			}
+		}
+		if (video->htsf)
+			found = 1;
+		if (!found) {
+			UVC_UNLOCK(&video->mtx);
+			DPRINTF("don't have fit ep\n");
+			kprintf("XXX: don't have fit ep\n");
+			return EINVAL;
+		}
+		DPRINTF("max packet size:%u ep size:%u\n", mps, ps);
+
+		/* 3. set */
+		if (video->htsf) {
+			uvc_drv_get_video_ctrl(video, &video->req, 1, GET_CUR);
+			ret = uvc_drv_set_video_ctrl(video, &video->req, 0);
+			DPRINTF("uvc_drv_set_video_ctrl ret:%d\n", ret);
+			kprintf("XXX: uvc_drv_set_video_ctrl ret:%d\n", ret);
+		} else {
+			if (!(sc->quirks & UVC_COMMIT_IN_ADVANCE)) {
+				ret = uvc_drv_set_video_ctrl(video, &video->req, 0);
+				if (ret) {
+					kprintf("XXX: retry\n");
+					usb_pause_mtx(NULL, USB_MS_TO_TICKS(300));
+					//suspend_kproc(curthread, 300);
+					ret = uvc_drv_set_video_ctrl(video, &video->req, 0);
+				}
+				if (ret)
+					kprintf("XXX: failed second time\n");
+			}
+		}
+		DPRINTF("streaming interface setting:%u\n", num);
+		kprintf("XXX: streaming interface setting:%u\n", num);
+
+		UVC_UNLOCK(&video->mtx);
+
+		usb_pause_mtx(NULL, USB_MS_TO_TICKS(300));
+//		suspend_kproc(curthread, 300);
+		usbd_set_alt_interface_index(sc->udev, video->data->iface_index, num);
+
+		/* setup xfer */
+		kprintf("UVC: setup TRANSFER\n");
+		ret = usbd_transfer_setup(sc->udev, &video->data->iface_index,
+		    video->data->xfer, uvc_config, UVC_N_TRANSFER, sc, &video->mtx);
+
+		if (ret)
+			kprintf("XXX: failed to setup usbd transfer\n");
+
+		UVC_LOCK(&video->mtx);
+		/* start xfer */
+		for (i = 0; i < UVC_N_TRANSFER; i++)
+			usbd_transfer_start(video->data->xfer[i]);
+
+		video->enable = 1;
+		UVC_UNLOCK(&video->mtx);
+		return 0;
 	}
-	DPRINTF("streaming interface setting:%u\n", num);
-
-	UVC_UNLOCK(&video->mtx);
-
-	usbd_set_alt_interface_index(sc->udev, video->data->iface_index, num);
-
-	/* setup xfer */
-	ret = usbd_transfer_setup(sc->udev, &video->data->iface_index,
-	    video->data->xfer, uvc_config, UVC_N_TRANSFER, sc, &video->mtx);
-
-	UVC_LOCK(&video->mtx);
-	/* start xfer */
-	for (i = 0; i < UVC_N_TRANSFER; i++)
-		usbd_transfer_start(video->data->xfer[i]);
-done:
-	video->enable = 1;
-	UVC_UNLOCK(&video->mtx);
-	return 0;
 }
 
 int
@@ -1293,8 +1323,16 @@ uvc_drv_stop_video(struct uvc_drv_video *video, int close)
 	struct usb_endpoint *pep = NULL;
 
 	DPRINTF("uvc_drv_stop_video\n");
+	kprintf("Stop video\n");
+
+	if (!video->enable) {
+		kprintf("Video is not enabled!!!!\n");
+		// uvc_buf_queue_free_bufs(&video->bq);
+		return EINVAL;
+	}
 
 	if (video->data->num_altsetting > 1) {
+		kprintf("UVC: unsetup TRANSFER\n");
 		usbd_transfer_unsetup(video->data->xfer, UVC_N_TRANSFER);
 		usbd_set_alt_interface_index(video->sc->udev,
 			video->data->iface_index, 0);
@@ -1302,6 +1340,7 @@ uvc_drv_stop_video(struct uvc_drv_video *video, int close)
 		if (video->data->xfer[0])
 			ep_addr =
 			video->data->xfer[0]->endpoint->edesc->bEndpointAddress;
+		kprintf("UVC: unsetup BULKTRANSFER\n");
 		usbd_transfer_unsetup(video->data->xfer, UVC_N_BULKTRANSFER);
 		/*
 		 * uvc spec does not tell how to stop a bulk camera
@@ -1320,8 +1359,10 @@ uvc_drv_stop_video(struct uvc_drv_video *video, int close)
 	UVC_LOCK(&video->mtx);
 	uvc_buf_queue_disable(&video->bq);
 	video->enable = 0;
-	if (close)
+	if (close) {
+		// uvc_buf_queue_free_bufs(&video->bq);
 		video->htsf = 0;
+	}
 	UVC_UNLOCK(&video->mtx);
 
 	return 0;
@@ -1370,6 +1411,9 @@ uvc_drv_set_streampar(struct uvc_drv_video *v, struct v4l2_streamparm *p)
 	if (ret < 0) {
 		return ret;
 	}
+	if (ret != 0)
+		kprintf("UVC: Error: %d\n", ret);
+
 	v->req = probe;
 	timeperframe.numerator = UGETDW(probe.dwFrameInterval);
 	timeperframe.denominator = 10000000;
@@ -1580,8 +1624,10 @@ uvc_drv_destroy_video(struct uvc_drv_video *v)
 {
 	if (v) {
 		/* thread stop */
-		if (v->data)
-			usbd_transfer_unsetup(v->data->xfer, UVC_N_TRANSFER);
+		if (v->data) {
+			kprintf("UVC: destroy unsetup BULKTRANSFER\n");
+			usbd_transfer_unsetup(v->data->xfer, UVC_N_BULKTRANSFER);
+		}
 
 		uvc_buf_queue_disable(&v->bq);
 		uvc_buf_queue_free_bufs(&v->bq);

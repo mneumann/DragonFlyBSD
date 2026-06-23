@@ -338,7 +338,7 @@ uvc_v4l2_dtor(void *data)
 
 	kfree(data, M_UVC);
 
-	DPRINTF("%s\n", __func__);
+	kprintf("%s\n", __func__);
 }
 
 static int
@@ -371,12 +371,13 @@ uvc_v4l2_open(struct dev_open_args *ap)
 	cdev_t dev = ap->a_head.a_dev;
 	struct uvc_v4l2_cdev_priv *priv;
 	struct uvc_drv_video *v = dev->si_drv1;
+	uint64_t num_users;
 
 	if (v4l2_not_allowed != 0) {
 		return ENXIO;			/* failure */
 	}
 
-	atomic_add_64(&v->users, 1);
+	num_users = atomic_fetchadd_64(&v->users, 1);
 
 	DPRINTF("===v4l2 open %s-%s %d-%d mem:%lu pri:%lu===\n",
 		curthread->td_proc->p_comm, curthread->td_proc->p_pptr->p_comm,
@@ -399,7 +400,7 @@ uvc_v4l2_open(struct dev_open_args *ap)
 	priv->work_mode = UVC_V4L2_MODE_READ;
 	priv->work_pri = UVC_V4L2_PRI_PASSIVE;
 	priv->v = v;
-	priv->num = v->users;
+	priv->num = num_users + 1;
 	(void)devfs_set_cdevpriv(ap->a_fpp ? *ap->a_fpp : NULL, priv, uvc_v4l2_dtor);
 	return 0;
 }
@@ -412,26 +413,29 @@ uvc_v4l2_close(struct dev_close_args *ap)
 	struct uvc_v4l2_cdev_priv *priv;
 	int ret;
 
+	kprintf("%s\n", __func__);
+
 	ret = devfs_get_cdevpriv(ap->a_fp, (void **)&priv);
 	if (ret != 0) {
-		DPRINTF("error===================================\n");
+		kprintf("error===================================\n");
 		return (ret);
 	}
 
-	DPRINTF("===v4l2 begin to close %s-%s %d-%d num:%lu mem:%lu===\n",
+	kprintf("===v4l2 begin to close %s-%s %d-%d num:%lu mem:%lu===\n",
 		curthread->td_proc->p_comm, curthread->td_proc->p_pptr->p_comm,
 		curthread->td_proc->p_pid, curthread->td_proc->p_pptr->p_pid,
 		priv->num, v->users);
-	DPRINTF("=vedio device pri:%lu--thispri:%lu\n", v->pri, priv->work_pri);
-	DPRINTF("----%s----\n", __func__);
+	kprintf("=video device pri:%lu--thispri:%lu\n", v->pri, priv->work_pri);
+	kprintf("----%s----\n", __func__);
 
 	if (uvc_v4l2_has_pri(priv)) {
+		kprintf("has pri\n");
 		ret = uvc_drv_stop_video(v, 1);
 		if (ret)
-			DPRINTF("close stop video fault\n");
-		uvc_buf_queue_free_bufs(&v->bq);
+			kprintf("close stop video fault\n");
 		uvc_v4l2_dismiss_pri(priv);
 	}
+	kprintf("users: %ld\n", v->users);
 	//atomic_subtract_64(&v->users, 1);
 
 	return 0;
@@ -818,6 +822,7 @@ void
 uvc_v4l2_unreg(struct uvc_drv_video *v)
 {
 	DPRINTF("%s\n", __func__);
+	kprintf("%s\n", __func__);
 	/* destroy v4l2 */
 	if (v->v4l2) {
 

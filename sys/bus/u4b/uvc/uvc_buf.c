@@ -101,10 +101,10 @@ uvc_buf_fill_v4l2(struct v4l2_buffer *buf, uint32_t index, uint32_t size,
 	buf->flags = 0;
 }
 
-static __inline int
+static __always_inline int
 uvc_buf_queue_mmap_locked(struct uvc_buf_queue *bq, vm_paddr_t *paddr, vm_offset_t offset)
 {
-	 uint64_t max_offset = (uint64_t)(bq->buf_size * bq->buf_count) - PAGE_SIZE;
+	 uint64_t max_offset = (bq->buf_size * bq->buf_count) - PAGE_SIZE;
 
 	if (bq->mem == NULL)
 		return EINVAL;
@@ -122,6 +122,8 @@ uvc_buf_queue_mmap_locked(struct uvc_buf_queue *bq, vm_paddr_t *paddr, vm_offset
 				max_offset);
 		return EINVAL;
 	}
+
+	// kprintf("offset=%ld, max_offset=%ld\n", offset, max_offset);
 
 	*paddr = atop(vtophys((uint8_t *)bq->mem + offset));
 
@@ -189,6 +191,8 @@ uvc_buf_check_length(struct uvc_drv_video *v, struct uvc_buf *buf,
 	 * calls crash not call, we do not figure out why yet, so do not let go
 	 * temply, we will figure out why it behaves this weird here
 	 */
+
+	// XXX
 
 	if (vbuf->length == 0) {
 		return 1;
@@ -336,6 +340,7 @@ uvc_buf_sell_buf(struct uvc_buf_queue *bq,
 			buf->status = UVC_BUF_STATE_ACTIVE;
 		}
 		if (uvc_buf_check_length(bq->video, buf, len, finish)) {
+			kprintf("check length == 1\n");
 			buf->vbuf.bytesused = 0;
 			goto done;
 		}
@@ -552,7 +557,7 @@ uvc_buf_queue_req_bufs(struct uvc_buf_queue *bq, uint32_t *count, uint32_t len)
 
 	UVC_LOCK(&bq->mtx);
 	uvc_buf_queue_free_bufs_locked(bq);
-	if (!num)
+	if (num == 0)
 		goto done;
 
 	for (; num > 0; num--) {
@@ -672,6 +677,8 @@ uvc_buf_queue_disable(struct uvc_buf_queue *queue)
 		return EINVAL;
 	}
 
+	kprintf("uvc_buf_queue_disable\n");
+
 	STAILQ_INIT(&queue->consumer);
 	STAILQ_INIT(&queue->product);
 	for (i = 0; i < UVC_BUF_MAX_BUFFERS; i++)
@@ -689,6 +696,8 @@ uvc_buf_queue_enable(struct uvc_buf_queue *queue)
 {
 	DPRINTF("%s\n", __func__);
 
+	kprintf("uvc_buf_queue_enable\n");
+
 	UVC_LOCK(&queue->mtx);
 
 	if (queue->flags & UVC_BUFFER_QUEUE_WORKING) {
@@ -699,6 +708,7 @@ uvc_buf_queue_enable(struct uvc_buf_queue *queue)
 	queue->seq = 0;
 
 	queue->flags |= UVC_BUFFER_QUEUE_WORKING;
+
 	UVC_UNLOCK(&queue->mtx);
 	return 0;
 }
@@ -719,8 +729,6 @@ uvc_buf_queue_init(struct uvc_drv_video *v, struct uvc_buf_queue *bq)
 
 	for (i = 0; i < UVC_BUF_MAX_BUFFERS; i++)
 		uvc_buf_queue_init_qbuf(bq->buf + i, i);
-
-	return;
 }
 
 #if FRAME_DUMP
