@@ -1286,26 +1286,6 @@ done:
 	return 0;
 }
 
-__unused static int
-uvc_drv_halt_ep_request(struct usb_device *udev, uint8_t epaddr, int timeout)
-{
-	struct usb_device_request req;
-	int err;
-
-	memset(&req, 0x00, sizeof(req));
-	req.bRequest = UR_CLEAR_FEATURE;
-	req.bmRequestType = UT_WRITE_ENDPOINT;
-	USETW(req.wValue, UF_ENDPOINT_HALT);
-	USETW(req.wIndex, epaddr);
-	USETW(req.wLength, 0);
-
-	err = usbd_do_request_flags(udev, NULL, &req, NULL, 0, NULL, timeout);
-	if (err)
-		kprintf("%s-%s\n", __func__, usbd_errstr(err));
-	return err;
-
-}
-
 int
 uvc_drv_stop_video(struct uvc_drv_video *video, int close)
 {
