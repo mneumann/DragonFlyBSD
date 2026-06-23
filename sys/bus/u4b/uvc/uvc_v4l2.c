@@ -437,6 +437,86 @@ uvc_v4l2_close(struct dev_close_args *ap)
 	return 0;
 }
 
+static const char*
+uvc_v4l2_ioctl_to_string(u_long cmd)
+{
+	#define _CASE(i) case i: return #i
+
+	switch (cmd) {
+	_CASE(VIDIOC_QUERYCAP);
+	_CASE(VIDIOC_RESERVED);
+	_CASE(VIDIOC_ENUM_FMT);
+	_CASE(VIDIOC_G_FMT);
+	_CASE(VIDIOC_S_FMT);
+	_CASE(VIDIOC_REQBUFS);
+	_CASE(VIDIOC_QUERYBUF);
+	_CASE(VIDIOC_G_FBUF);
+	_CASE(VIDIOC_S_FBUF);
+	_CASE(VIDIOC_OVERLAY);
+	_CASE(VIDIOC_QBUF);
+	_CASE(VIDIOC_EXPBUF);
+	_CASE(VIDIOC_DQBUF);
+	_CASE(VIDIOC_STREAMON);
+	_CASE(VIDIOC_STREAMOFF);
+	_CASE(VIDIOC_G_PARM);
+	_CASE(VIDIOC_S_PARM);
+	_CASE(VIDIOC_G_STD);
+	_CASE(VIDIOC_S_STD);
+	_CASE(VIDIOC_ENUMSTD);
+	_CASE(VIDIOC_ENUMINPUT);
+	_CASE(VIDIOC_G_CTRL);
+	_CASE(VIDIOC_S_CTRL);
+	_CASE(VIDIOC_G_TUNER);
+	_CASE(VIDIOC_S_TUNER);
+	_CASE(VIDIOC_G_AUDIO);
+	_CASE(VIDIOC_S_AUDIO);
+	_CASE(VIDIOC_QUERYCTRL);
+	_CASE(VIDIOC_QUERYMENU);
+	_CASE(VIDIOC_G_INPUT);
+	_CASE(VIDIOC_S_INPUT);
+	_CASE(VIDIOC_G_OUTPUT);
+	_CASE(VIDIOC_S_OUTPUT);
+	_CASE(VIDIOC_ENUMOUTPUT);
+	_CASE(VIDIOC_G_AUDOUT);
+	_CASE(VIDIOC_S_AUDOUT);
+	_CASE(VIDIOC_G_MODULATOR);
+	_CASE(VIDIOC_S_MODULATOR);
+	_CASE(VIDIOC_G_FREQUENCY);
+	_CASE(VIDIOC_S_FREQUENCY);
+	_CASE(VIDIOC_CROPCAP);
+	_CASE(VIDIOC_G_CROP);
+	_CASE(VIDIOC_S_CROP);
+	_CASE(VIDIOC_G_JPEGCOMP);
+	_CASE(VIDIOC_S_JPEGCOMP);
+	_CASE(VIDIOC_QUERYSTD);
+	_CASE(VIDIOC_TRY_FMT);
+	_CASE(VIDIOC_ENUMAUDIO);
+	_CASE(VIDIOC_ENUMAUDOUT);
+	_CASE(VIDIOC_G_PRIORITY);
+	_CASE(VIDIOC_S_PRIORITY);
+	_CASE(VIDIOC_G_SLICED_VBI_CAP);
+	_CASE(VIDIOC_LOG_STATUS);
+	_CASE(VIDIOC_G_EXT_CTRLS);
+	_CASE(VIDIOC_S_EXT_CTRLS);
+	_CASE(VIDIOC_TRY_EXT_CTRLS);
+
+	_CASE(VIDIOC_ENUM_FRAMESIZES);
+	_CASE(VIDIOC_ENUM_FRAMEINTERVALS);
+	_CASE(VIDIOC_G_ENC_INDEX);
+	_CASE(VIDIOC_ENCODER_CMD);
+	_CASE(VIDIOC_TRY_ENCODER_CMD);
+
+	_CASE(VIDIOC_S_HW_FREQ_SEEK);
+	_CASE(VIDIOC_ENUM_DV_PRESETS);
+	_CASE(VIDIOC_S_DV_PRESET);
+	_CASE(VIDIOC_G_DV_PRESET);
+	_CASE(VIDIOC_QUERY_DV_PRESET);
+	_CASE(VIDIOC_S_DV_TIMINGS);
+	_CASE(VIDIOC_G_DV_TIMINGS);
+	}
+	return "unknown VIDIOC";
+}
+
 static int
 uvc_v4l2_ioctl(struct dev_ioctl_args *ap)
 {
@@ -495,56 +575,6 @@ uvc_v4l2_ioctl(struct dev_ioctl_args *ap)
 		ret = uvc_v4l2_query_cap(v, data);
 		break;
 
-	case VIDIOC_G_PARM:
-		DPRINTF("VIDIOC_G_PARM\n");
-		ret = uvc_v4l2_get_parm(v, (struct v4l2_streamparm *)data);
-		break;
-
-	case VIDIOC_S_PARM:
-		DPRINTF("VIDIOC_S_PARM\n");
-		strp = (struct v4l2_streamparm *)data;
-		if (strp->type != V4L2_BUF_TYPE_VIDEO_CAPTURE)
-			return EINVAL;
-		ret = uvc_drv_set_streampar(v, strp);
-		break;
-
-	case VIDIOC_ENUMINPUT:
-		DPRINTF("VIDIOC_ENUMINPUT\n");
-		ret = uvc_v4l2_enum_input(v->ctrl, (struct v4l2_input *)data);
-		break;
-
-	case VIDIOC_G_INPUT:
-		kprintf("unsupport ioctl VIDIOC_G_INPUT.\n");
-		*(int *)data = 0;
-		break;
-	case VIDIOC_ENUMSTD:
-		kprintf("unsupport ioctl VIDIOC_ENUMSTD\n");
-		ret = ENOTTY;
-		break;
-
-	case VIDIOC_QUERYCTRL:
-		DPRINTF("VIDIOC_QUERYCTRL\n");
-		ret = uvc_v4l2_queryctrl(v, (struct v4l2_queryctrl *)data);
-		break;
-
-	case VIDIOC_QUERYMENU:
-		DPRINTF("VIDIOC_QUERYMENU.\n");
-		ret = uvc_v4l2_querymenu(v, (struct v4l2_querymenu *)data);
-		break;
-
-	case VIDIOC_G_CTRL:
-		kprintf("unsupport ioctl VIDIOC_G_CTRL.\n");
-		ret = EINVAL;
-		break;
-	case VIDIOC_G_STD:
-		kprintf("unsupport ioctl VIDIOC_G_STD.\n");
-		ret = ENOTTY;
-		break;
-
-	case VIDIOC_CROPCAP:
-		ret = uvc_v4l2_cropcap(v, data);
-		break;
-
 	case VIDIOC_ENUM_FMT:
 		DPRINTF("VIDIOC_ENUM_FMT\n");
 		f_d = (struct v4l2_fmtdesc *)data;
@@ -553,32 +583,12 @@ uvc_v4l2_ioctl(struct dev_ioctl_args *ap)
 		ret = uvc_drv_enum_v4l2_fmt(v, f_d);
 		break;
 
-	case VIDIOC_ENUM_FRAMESIZES:
-		//DPRINTF("VIDIOC_ENUM_FRAMESIZES\n");
-		ret = uvc_drv_enum_v4l2_framesizes(v,
-			(struct v4l2_frmsizeenum *)data);
-		break;
-
-	case VIDIOC_ENUM_FRAMEINTERVALS:
-		//DPRINTF("VIDIOC_ENUM_FRAMEINTERVAL\n");
-		ret = uvc_drv_enum_v4l2_frameintervals(v,
-			(struct v4l2_frmivalenum *)data);
-		break;
-
 	case VIDIOC_G_FMT:
 		DPRINTF("VIDIOC_G_FMT\n");
 		fmt = (struct v4l2_format *)data;
 		if (fmt->type != V4L2_BUF_TYPE_VIDEO_CAPTURE)
 			return EINVAL;
 		ret = uvc_drv_get_v4l2_fmt(v, fmt);
-		break;
-
-	case VIDIOC_TRY_FMT:
-		DPRINTF("VIDIOC_TRY_FMT\n");
-		fmt = (struct v4l2_format *)data;
-		if (fmt->type != V4L2_BUF_TYPE_VIDEO_CAPTURE)
-			return EINVAL;
-		ret = uvc_drv_try_v4l2_fmt(v, fmt, &req, NULL, NULL);
 		break;
 
 	case VIDIOC_S_FMT:
@@ -590,24 +600,6 @@ uvc_v4l2_ioctl(struct dev_ioctl_args *ap)
 		if (!ret) {
 			ret = uvc_drv_set_video(v, &req, rfmt, rfrm);
 		}
-
-		break;
-
-	case VIDIOC_STREAMON:
-		DPRINTF("VIDIOC_STREAMON\n");
-		if (*(int *)data != V4L2_BUF_TYPE_VIDEO_CAPTURE)
-			return EINVAL;
-
-		ret = uvc_drv_start_video(v);
-
-		break;
-
-	case VIDIOC_STREAMOFF:
-		DPRINTF("VIDIOC_STREAMOFF\n");
-		if (*(int *)data != V4L2_BUF_TYPE_VIDEO_CAPTURE)
-			return EINVAL;
-
-		ret = uvc_drv_stop_video(v, 0);
 		break;
 
 	case VIDIOC_REQBUFS:
@@ -629,11 +621,6 @@ uvc_v4l2_ioctl(struct dev_ioctl_args *ap)
 		}
 		break;
 
-	case VIDIOC_EXPBUF:
-		kprintf("unsupport ioctl VIDIOC_EXPBUF.\n");
-		ret = ENOTTY;
-		break;
-
 	case VIDIOC_QUERYBUF:
 		DPRINTF("VIDIOC_QUERYBUF\n");
 		buf = (struct v4l2_buffer *)data;
@@ -653,7 +640,7 @@ uvc_v4l2_ioctl(struct dev_ioctl_args *ap)
 		ret = uvc_buf_queue_queue_buf(&v->bq, buf);
 		if (ret)
 			DPRINTF("return:%d\n", ret);
-		return ret;
+		break;
 
 	case VIDIOC_DQBUF:
 		//DPRINTF("VIDIOC_DQBUF\n");
@@ -667,7 +654,82 @@ uvc_v4l2_ioctl(struct dev_ioctl_args *ap)
 				(fflag & O_NONBLOCK)?1:0);
 		if (ret)
 			DPRINTF("return:%d\n", ret);
-		return ret;
+		break;
+
+	case VIDIOC_STREAMON:
+		DPRINTF("VIDIOC_STREAMON\n");
+		if (*(int *)data != V4L2_BUF_TYPE_VIDEO_CAPTURE)
+			return EINVAL;
+
+		ret = uvc_drv_start_video(v);
+		break;
+
+	case VIDIOC_STREAMOFF:
+		DPRINTF("VIDIOC_STREAMOFF\n");
+		if (*(int *)data != V4L2_BUF_TYPE_VIDEO_CAPTURE)
+			return EINVAL;
+
+		ret = uvc_drv_stop_video(v, 0);
+		break;
+
+	case VIDIOC_G_PARM:
+		DPRINTF("VIDIOC_G_PARM\n");
+		ret = uvc_v4l2_get_parm(v, (struct v4l2_streamparm *)data);
+		break;
+
+	case VIDIOC_S_PARM:
+		DPRINTF("VIDIOC_S_PARM\n");
+		strp = (struct v4l2_streamparm *)data;
+		if (strp->type != V4L2_BUF_TYPE_VIDEO_CAPTURE)
+			return EINVAL;
+		ret = uvc_drv_set_streampar(v, strp);
+		break;
+
+	case VIDIOC_ENUMINPUT:
+		DPRINTF("VIDIOC_ENUMINPUT\n");
+		ret = uvc_v4l2_enum_input(v->ctrl, (struct v4l2_input *)data);
+		break;
+
+	case VIDIOC_QUERYCTRL:
+		DPRINTF("VIDIOC_QUERYCTRL\n");
+		ret = uvc_v4l2_queryctrl(v, (struct v4l2_queryctrl *)data);
+		break;
+
+	case VIDIOC_QUERYMENU:
+		DPRINTF("VIDIOC_QUERYMENU.\n");
+		ret = uvc_v4l2_querymenu(v, (struct v4l2_querymenu *)data);
+		break;
+
+	case VIDIOC_G_INPUT:
+		kprintf("unsupport ioctl VIDIOC_G_INPUT.\n");
+		// XXX
+		*(int *)data = 0;
+		ret = EINVAL;
+		break;
+
+	case VIDIOC_CROPCAP:
+		ret = uvc_v4l2_cropcap(v, data);
+		break;
+
+	case VIDIOC_TRY_FMT:
+		DPRINTF("VIDIOC_TRY_FMT\n");
+		fmt = (struct v4l2_format *)data;
+		if (fmt->type != V4L2_BUF_TYPE_VIDEO_CAPTURE)
+			return EINVAL;
+		ret = uvc_drv_try_v4l2_fmt(v, fmt, &req, NULL, NULL);
+		break;
+
+	case VIDIOC_ENUM_FRAMESIZES:
+		//DPRINTF("VIDIOC_ENUM_FRAMESIZES\n");
+		ret = uvc_drv_enum_v4l2_framesizes(v,
+			(struct v4l2_frmsizeenum *)data);
+		break;
+
+	case VIDIOC_ENUM_FRAMEINTERVALS:
+		//DPRINTF("VIDIOC_ENUM_FRAMEINTERVAL\n");
+		ret = uvc_drv_enum_v4l2_frameintervals(v,
+			(struct v4l2_frmivalenum *)data);
+		break;
 
 	case UVCIOC_CTRL_MAP:
 		kprintf("unsupport ioctl UVCIOC_CTRL_MAP.\n");
@@ -688,7 +750,7 @@ uvc_v4l2_ioctl(struct dev_ioctl_args *ap)
 		break;
 
 	default:
-		kprintf("%lx-%s need to be implement\n", cmd, __func__);
+		kprintf("unsupport ioctl: %s.\n", uvc_v4l2_ioctl_to_string(cmd));
 		//ret = EINVAL;
 		ret = ENOTTY;
 		break;
