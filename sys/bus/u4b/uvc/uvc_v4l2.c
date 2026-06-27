@@ -231,19 +231,22 @@ void
 uvc_simple_frac(uint32_t *numerator, uint32_t *denominator,
 	uint32_t max_iters, uint32_t threshold)
 {
-	uint32_t *coeff;
+	#define MAX_COEFF 16
+	uint32_t coeff[MAX_COEFF];
 	uint32_t best_den, best_num, remainder;
 	uint32_t i, j;
 
-	 if (!numerator || !denominator ||
-	     *denominator == 0 || max_iters == 0) {
-		 return;
-	 }
-
-	coeff = (uint32_t *)kmalloc(max_iters * sizeof(uint32_t),
-		M_UVC, M_ZERO | M_WAITOK);
-	if (coeff == NULL)
+	if (!numerator || !denominator || *denominator == 0 || max_iters == 0)
 		return;
+
+	if (max_iters > MAX_COEFF) {
+		kprintf("WARN: %s: MAX_COEFF sized too small. Required: %d\n",
+			__func__, max_iters);
+		return;
+	}
+
+	for (i = 0; i < max_iters; ++i)
+		coeff[i] = 0;
 
 	best_den = *numerator;
 	best_num = *denominator;
@@ -272,7 +275,6 @@ uvc_simple_frac(uint32_t *numerator, uint32_t *denominator,
 
 	*numerator = best_num;
 	*denominator = best_den;
-	kfree(coeff, M_UVC);
 }
 
 static int
