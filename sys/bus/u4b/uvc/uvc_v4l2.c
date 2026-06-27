@@ -163,8 +163,8 @@ uvc_v4l2_g_selection(struct uvc_drv_video *v, void *addr)
 	return ret;
 }
 
-__unused static int
-uvc_v4l2_enumstd(struct v4l2_standard *std)
+static int
+uvc_v4l2_enumstd(struct uvc_drv_video *v __unused, struct v4l2_standard *std)
 {
 	std->id = V4L2_STD_UNKNOWN;
 
@@ -636,8 +636,7 @@ uvc_v4l2_ioctl(struct dev_ioctl_args *ap)
 		break;
 
 	case VIDIOC_ENUMSTD:
-		kprintf("unsupport ioctl VIDIOC_ENUMSTD\n");
-		ret = ENOTTY;
+		ret = uvc_v4l2_enumstd(v, (struct v4l2_standard *)data);
 		break;
 
 	case VIDIOC_QUERYCTRL:
