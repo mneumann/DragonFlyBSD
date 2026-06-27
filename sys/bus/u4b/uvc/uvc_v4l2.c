@@ -114,24 +114,26 @@ uvc_v4l2_has_pri(struct uvc_v4l2_cdev_priv *priv)
 }
 
 static int
-uvc_v4l2_query_cap(struct uvc_drv_video *v, void *addr)
+uvc_v4l2_query_cap(struct uvc_drv_video *video, struct v4l2_capability *cap)
 {
-	struct v4l2_capability cap;
 	struct usb_device *udev;
 	char bus_info[128];
 
-	memset(&cap, 0x00, sizeof(cap));
-	strlcpy(cap.driver, UVC_DRIVER_NAME, sizeof(cap.driver));
-	ksnprintf(cap.card, sizeof(cap.card), "%s", v->sc->name);
-
-	if (!v->sc)
+	if (!video->sc)
 		return EINVAL;
-	udev = v->sc->udev;
+
+	udev = video->sc->udev;
 	if (!udev)
 		return EINVAL;
+
 	usbd_get_phys(udev, bus_info, sizeof(bus_info));
-	ksnprintf(cap.bus_info, sizeof(cap.bus_info), "%s", bus_info);
-	cap.version = V4L_VERSION(3, 14, 1);
+
+	bzero(cap, sizeof(*cap));
+	strlcpy(cap->driver, UVC_DRIVER_NAME, sizeof(cap->driver));
+	ksnprintf(cap->card, sizeof(cap->card), "%s", video->sc->name);
+
+	ksnprintf(cap->bus_info, sizeof(cap->bus_info), "%s", bus_info);
+	cap->version = V4L_VERSION(3, 14, 1);
 
 	/*
 	 *
@@ -140,31 +142,30 @@ uvc_v4l2_query_cap(struct uvc_drv_video *v, void *addr)
 	 * V4L2_CAP_STREAMING mmap/userptr
 	 *
 	 */
-	cap.capabilities = V4L2_CAP_VIDEO_CAPTURE | V4L2_CAP_STREAMING |
+	cap->capabilities = V4L2_CAP_VIDEO_CAPTURE | V4L2_CAP_STREAMING |
 		V4L2_CAP_ASYNCIO | 0x80000000;
-	cap.reserved[0] = V4L2_CAP_VIDEO_CAPTURE | V4L2_CAP_STREAMING;
-	memcpy(addr, &cap, sizeof(cap));
+	cap->reserved[0] = V4L2_CAP_VIDEO_CAPTURE | V4L2_CAP_STREAMING;
+
 	return 0;
 }
 
 static int
-uvc_v4l2_g_selection(struct uvc_drv_video *v, void *addr)
+uvc_v4l2_g_selection(struct uvc_drv_video *v, struct v4l2_selection *sel)
 {
-	struct v4l2_selection *p = addr;
-	uint32_t old_type = p->type;
+	uint32_t old_type = sel->type;
 	int ret = 0;
 
-	if (p->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE)
-		p->type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-	else if (p->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE)
-		p->type = V4L2_BUF_TYPE_VIDEO_OUTPUT;
-	ret = uvc_drv_get_selection(v, p);
-	p->type = old_type;
+	if (sel->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE)
+		sel->type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+	else if (sel->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE)
+		sel->type = V4L2_BUF_TYPE_VIDEO_OUTPUT;
+	ret = uvc_drv_get_selection(v, sel);
+	sel->type = old_type;
 	return ret;
 }
 
 static int
-uvc_v4l2_enumstd(struct uvc_drv_video *v __unused, struct v4l2_standard *std)
+uvc_v4l2_enumstd(struct uvc_drv_video *video __unused, struct v4l2_standard *std)
 {
 	std->id = V4L2_STD_UNKNOWN;
 
@@ -182,13 +183,10 @@ uvc_v4l2_enumstd(struct uvc_drv_video *v __unused, struct v4l2_standard *std)
 }
 
 static int
-uvc_v4l2_cropcap(struct uvc_drv_video *v, void *addr)
+uvc_v4l2_cropcap(struct uvc_drv_video *video, struct v4l2_cropcap *p)
 {
-	struct v4l2_cropcap *p = NULL;
 	struct v4l2_selection s = {};
 	uint32_t ret = 0;
-
-	p = (struct v4l2_cropcap *)addr;
 
 	p->pixelaspect.numerator = 1;
 	p->pixelaspect.denominator = 1;
@@ -209,7 +207,7 @@ uvc_v4l2_cropcap(struct uvc_drv_video *v, void *addr)
 	else
 		s.target = V4L2_SEL_TGT_CROP_BOUNDS;
 
-	ret = uvc_v4l2_g_selection(v, &s);
+	ret = uvc_v4l2_g_selection(video, &s);
 	if (ret)
 		return ret;
 	p->bounds = s.r;
@@ -218,7 +216,7 @@ uvc_v4l2_cropcap(struct uvc_drv_video *v, void *addr)
 		s.target = V4L2_SEL_TGT_COMPOSE_DEFAULT;
 	else
 		s.target = V4L2_SEL_TGT_CROP_DEFAULT;
-	ret = uvc_v4l2_g_selection(v, &s);
+	ret = uvc_v4l2_g_selection(video, &s);
 	if (ret)
 		return ret;
 
@@ -361,24 +359,6 @@ uvc_v4l2_set_fmt(struct uvc_drv_video *video, struct v4l2_format *fmt)
 	return ret;
 }
 
-static void
-uvc_v4l2_dtor(void *data)
-{
-	struct uvc_v4l2_cdev_priv *priv = data;
-	struct uvc_drv_video *v;
-
-	v = priv->v;
-	if (priv->work_pri == UVC_V4L2_PRI_ACTIVE) {
-		atomic_store_64(&v->pri, 0);
-	}
-
-	atomic_subtract_64(&v->users, 1);
-
-	kfree(data, M_UVC);
-
-	kprintf("%s\n", __func__);
-}
-
 static int
 uvc_v4l2_queryctrl(struct uvc_drv_video *v, struct v4l2_queryctrl *qc)
 {
@@ -401,6 +381,24 @@ uvc_v4l2_querymenu(struct uvc_drv_video *v, struct v4l2_querymenu *qm)
 
 	ret = uvc_query_v4l2_menu(v, qm);
 	return ret;
+}
+
+static void
+uvc_v4l2_dtor(void *data)
+{
+	struct uvc_v4l2_cdev_priv *priv = data;
+	struct uvc_drv_video *v;
+
+	v = priv->v;
+	if (priv->work_pri == UVC_V4L2_PRI_ACTIVE) {
+		atomic_store_64(&v->pri, 0);
+	}
+
+	atomic_subtract_64(&v->users, 1);
+
+	kfree(data, M_UVC);
+
+	kprintf("%s\n", __func__);
 }
 
 static int
@@ -611,7 +609,7 @@ uvc_v4l2_ioctl(struct dev_ioctl_args *ap)
 	switch (cmd) {
 	case VIDIOC_QUERYCAP:
 		DPRINTF("VIDIOC_QUERYCAP\n");
-		ret = uvc_v4l2_query_cap(v, data);
+		ret = uvc_v4l2_query_cap(v, (struct v4l2_capability *)data);
 		break;
 
 	case VIDIOC_G_PARM:
@@ -662,7 +660,7 @@ uvc_v4l2_ioctl(struct dev_ioctl_args *ap)
 		break;
 
 	case VIDIOC_CROPCAP:
-		ret = uvc_v4l2_cropcap(v, data);
+		ret = uvc_v4l2_cropcap(v, (struct v4l2_cropcap *)data);
 		break;
 
 	case VIDIOC_ENUM_FMT:
