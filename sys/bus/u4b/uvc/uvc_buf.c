@@ -218,6 +218,22 @@ uvc_buf_check_length(struct uvc_drv_video *v, const struct uvc_buf *buf,
 	return 0;
 }
 
+static
+void uvc_buf_got_frame(struct uvc_buf_queue *bq, struct uvc_buf *buf)
+{
+	DPRINTF("%s Got frame %ld %4lu\n", __func__, (long)bq->video, bq->seq);
+
+	//const char *frame_data = (char *)buf->mem + buf->offset;
+	//int frame_size = buf->vbuf.bytesused;
+
+	buf->vbuf.sequence = bq->seq++;
+	microtime(&buf->vbuf.timestamp);
+	buf->status = UVC_BUF_STATE_DONE;
+	STAILQ_INSERT_TAIL(&bq->consumer, buf, link);
+	cv_broadcast(&bq->io_cv);
+	KNOTE(&bq->sel.ki_note, 0);
+}
+
 int
 uvc_bulkbuf_sell_buf(struct uvc_buf_queue *bq,
 		struct usb_page_cache *pc, usb_frlength_t offset,
@@ -291,12 +307,7 @@ uvc_bulkbuf_sell_buf(struct uvc_buf_queue *bq,
 finished:
 			if (buf->vbuf.bytesused > 0) {
 				STAILQ_REMOVE_HEAD(&bq->product, link);
-				buf->vbuf.sequence = bq->seq++;
-				microtime(&buf->vbuf.timestamp);
-				buf->status = UVC_BUF_STATE_DONE;
-				STAILQ_INSERT_TAIL(&bq->consumer, buf, link);
-				cv_broadcast(&bq->io_cv);
-				KNOTE(&bq->sel.ki_note, 0);
+				uvc_buf_got_frame(bq, buf);
 			}
 
 clean:
@@ -310,21 +321,6 @@ done:
 	return ret;
 }
 
-static
-void uvc_buf_got_frame(struct uvc_buf_queue *bq, struct uvc_buf *buf)
-{
-	DPRINTF("%s Got frame %ld %4lu\n", __func__, (long)bq->video, bq->seq);
-
-	//const char *frame_data = (char *)buf->mem + buf->offset;
-	//int frame_size = buf->vbuf.bytesused;
-
-	buf->vbuf.sequence = bq->seq++;
-	microtime(&buf->vbuf.timestamp);
-	buf->status = UVC_BUF_STATE_DONE;
-	STAILQ_INSERT_TAIL(&bq->consumer, buf, link);
-	cv_broadcast(&bq->io_cv);
-	KNOTE(&bq->sel.ki_note, 0);
-}
 
 int
 uvc_buf_sell_buf(struct uvc_buf_queue *bq,
