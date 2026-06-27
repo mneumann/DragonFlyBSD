@@ -82,11 +82,6 @@
 #define UVC_LOCK(lkp)   lockmgr(lkp, LK_EXCLUSIVE)
 #define UVC_UNLOCK(lkp) lockmgr(lkp, LK_RELEASE)
 
-#define FRAME_DUMP 0
-#if FRAME_DUMP
-static void uvc_writefile(char *path, void *data, int len);
-#endif
-
 static void
 uvc_buf_fill_v4l2(struct v4l2_buffer *buf, uint32_t index, uint32_t size,
 	uint32_t len)
@@ -315,6 +310,22 @@ done:
 	return ret;
 }
 
+static
+void uvc_buf_got_frame(struct uvc_buf_queue *bq, struct uvc_buf *buf)
+{
+	DPRINTF("%s Got frame %ld %4lu\n", __func__, (long)bq->video, bq->seq);
+
+	//const char *frame_data = (char *)buf->mem + buf->offset;
+	//int frame_size = buf->vbuf.bytesused;
+
+	buf->vbuf.sequence = bq->seq++;
+	microtime(&buf->vbuf.timestamp);
+	buf->status = UVC_BUF_STATE_DONE;
+	STAILQ_INSERT_TAIL(&bq->consumer, buf, link);
+	cv_broadcast(&bq->io_cv);
+	KNOTE(&bq->sel.ki_note, 0);
+}
+
 int
 uvc_buf_sell_buf(struct uvc_buf_queue *bq,
 		struct usb_page_cache *pc, usb_frlength_t offset,
@@ -364,22 +375,8 @@ uvc_buf_sell_buf(struct uvc_buf_queue *bq,
 		}
 
 		if (buf->vbuf.bytesused > 0) {
-			DPRINTF("%s Got frame %ld %4lu\n", __func__, (long)bq->video, bq->seq);
-
-#if FRAME_DUMP
-			char path[PATH_MAX];
-			ksprintf(path, "/tmp/%x_%4lu.data", (short)bq->video, bq->seq);
-			uvc_writefile(path,
-				      (void *)((char *)buf->mem + buf->offset),
-				      buf->vbuf.bytesused);
-#endif
 			STAILQ_REMOVE_HEAD(&bq->product, link);
-			buf->vbuf.sequence = bq->seq++;
-			microtime(&buf->vbuf.timestamp);
-			buf->status = UVC_BUF_STATE_DONE;
-			STAILQ_INSERT_TAIL(&bq->consumer, buf, link);
-			cv_broadcast(&bq->io_cv);
-			KNOTE(&bq->sel.ki_note, 0);
+			uvc_buf_got_frame(bq, buf);
 		}
 	}
 
@@ -732,41 +729,3 @@ uvc_buf_queue_init(struct uvc_drv_video *v, struct uvc_buf_queue *bq)
 	for (i = 0; i < UVC_BUF_MAX_BUFFERS; i++)
 		uvc_buf_queue_init_qbuf(bq->buf + i, i);
 }
-
-#if FRAME_DUMP
-static void
-uvc_writefile(char *path, void *data, int len)
-{
-	struct thread *td;
-	struct uio auio;
-	struct iovec aiov;
-	int error, fd = -1;
-
-	td = curthread;
-
-	pwd_ensure_dirs();
-
-	KLG("write: %s; %p; %d\n", path, data, len);
-	error = kern_openat(td, AT_FDCWD, path, UIO_SYSSPACE, O_CREAT | O_RDWR, 0666);
-	if (error) {
-		KLG("open %s error: %d\n", path, error);
-		goto out;
-	}
-	fd = td->td_retval[0];
-
-	aiov.iov_base = data;
-	aiov.iov_len = len;
-	auio.uio_iov = &aiov;
-	auio.uio_iovcnt = 1;
-	auio.uio_resid = len;
-	auio.uio_segflg = UIO_SYSSPACE;
-	error = kern_writev(td, fd, &auio);
-	if (error) {
-		KLG("write %s error: %d\n", path, error);
-		goto out;
-	}
-out:
-	if (fd >= 0)
-		kern_close(td, fd);
-}
-#endif
