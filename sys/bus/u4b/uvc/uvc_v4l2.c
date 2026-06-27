@@ -331,6 +331,34 @@ uvc_v4l2_get_input(struct uvc_drv_video *video, int *input)
 	return 0;
 }
 
+static int
+uvc_v4l2_enum_fmt(struct uvc_drv_video *video, struct v4l2_fmtdesc *fmtdesc)
+{
+	if (fmtdesc->type != V4L2_BUF_TYPE_VIDEO_CAPTURE)
+		return EINVAL;
+
+	return uvc_drv_enum_v4l2_fmt(video, fmtdesc);
+}
+
+static int
+uvc_v4l2_set_fmt(struct uvc_drv_video *video, struct v4l2_format *fmt)
+{
+	struct uvc_data_frame *rfrm;
+	struct uvc_data_format *rfmt;
+	struct uvc_data_request req;
+	int ret;
+
+	if (fmt->type != V4L2_BUF_TYPE_VIDEO_CAPTURE)
+		return EINVAL;
+
+	ret = uvc_drv_try_v4l2_fmt(video, fmt, &req, &rfmt, &rfrm);
+	if (!ret) {
+		ret = uvc_drv_set_video(video, &req, rfmt, rfrm);
+	}
+
+	return ret;
+}
+
 static void
 uvc_v4l2_dtor(void *data)
 {
@@ -539,12 +567,9 @@ uvc_v4l2_ioctl(struct dev_ioctl_args *ap)
 	struct uvc_v4l2_cdev_priv *priv;
 	struct uvc_drv_video *v = dev->si_drv1;
 
-	struct v4l2_fmtdesc *f_d;
 	struct v4l2_format *fmt;
 	struct v4l2_streamparm *strp;
 
-	struct uvc_data_format *rfmt;
-	struct uvc_data_frame *rfrm;
 	struct uvc_data_request req;
 	struct v4l2_requestbuffers *rb;
 	struct v4l2_buffer *buf;
@@ -629,6 +654,7 @@ uvc_v4l2_ioctl(struct dev_ioctl_args *ap)
 		kprintf("unsupport ioctl VIDIOC_G_CTRL.\n");
 		ret = EINVAL;
 		break;
+
 	case VIDIOC_G_STD:
 		kprintf("unsupport ioctl VIDIOC_G_STD.\n");
 		ret = ENOTTY;
@@ -640,10 +666,7 @@ uvc_v4l2_ioctl(struct dev_ioctl_args *ap)
 
 	case VIDIOC_ENUM_FMT:
 		DPRINTF("VIDIOC_ENUM_FMT\n");
-		f_d = (struct v4l2_fmtdesc *)data;
-		if (f_d->type != V4L2_BUF_TYPE_VIDEO_CAPTURE)
-			return EINVAL;
-		ret = uvc_drv_enum_v4l2_fmt(v, f_d);
+		ret = uvc_v4l2_enum_fmt(v, (struct v4l2_fmtdesc *)data);
 		break;
 
 	case VIDIOC_ENUM_FRAMESIZES:
@@ -676,13 +699,7 @@ uvc_v4l2_ioctl(struct dev_ioctl_args *ap)
 
 	case VIDIOC_S_FMT:
 		DPRINTF("VIDIOC_S_FMT\n");
-		fmt = (struct v4l2_format *)data;
-		if (fmt->type != V4L2_BUF_TYPE_VIDEO_CAPTURE)
-			return EINVAL;
-		ret = uvc_drv_try_v4l2_fmt(v, fmt, &req, &rfmt, &rfrm);
-		if (!ret) {
-			ret = uvc_drv_set_video(v, &req, rfmt, rfrm);
-		}
+		ret = uvc_v4l2_set_fmt(v, (struct v4l2_format *)data);
 		break;
 
 	case VIDIOC_STREAMON:
