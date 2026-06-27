@@ -519,10 +519,11 @@ uvc_buf_queue_set_drop_flag(struct uvc_buf_queue *bq)
 	bq->flags |= UVC_BUFFER_QUEUE_DROP_INCOMPLETE;
 }
 
-static void
+static __always_inline void
 uvc_buf_queue_free_bufs_locked(struct uvc_buf_queue *bq)
 {
 	if (bq->mem) {
+		bzero(bq->mem, bq->buf_count * bq->buf_size);
 		kfree(bq->mem, M_UVC);
 		bq->mem = NULL;
 		bq->buf_count = 0;
@@ -596,10 +597,10 @@ done:
 
 
 static void
-uvc_buf_queue_init_qbuf(struct uvc_buf *buf, int ind)
+uvc_buf_queue_init_qbuf(struct uvc_buf *buf, int index)
 {
 	bzero(buf, sizeof(*buf));
-	buf->index = ind;
+	buf->index = index;
 	buf->status = UVC_BUF_STATE_IDLE;
 }
 
