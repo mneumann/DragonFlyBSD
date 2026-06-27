@@ -102,7 +102,7 @@ uvc_buf_fill_v4l2(struct v4l2_buffer *buf, uint32_t index, uint32_t size,
 }
 
 static __always_inline int
-uvc_buf_queue_mmap_locked(struct uvc_buf_queue *bq, vm_paddr_t *paddr, vm_offset_t offset)
+uvc_buf_queue_mmap_locked(const struct uvc_buf_queue *bq, vm_paddr_t *paddr, vm_offset_t offset)
 {
 	 uint64_t max_offset = (bq->buf_size * bq->buf_count) - PAGE_SIZE;
 
@@ -145,14 +145,14 @@ uvc_buf_queue_mmap(struct uvc_buf_queue *bq, vm_paddr_t *paddr, vm_offset_t offs
 }
 
 static void
-uvc_buf_queue_show_qbuf(struct uvc_buf *buf)
+uvc_buf_queue_show_qbuf(const struct uvc_buf *buf)
 {
 	kprintf("buf index:%lu status:%lu mem:%p offset:%lu\n",
 		buf->index, buf->status, buf->mem, buf->offset);
 }
 
 static void
-uvc_buf_queue_show(struct uvc_buf_queue *bq)
+uvc_buf_queue_show(const struct uvc_buf_queue *bq)
 {
 	int i;
 
@@ -179,10 +179,10 @@ uvc_buf_reset_buf(struct uvc_buf_queue *bq)
 }
 
 static int
-uvc_buf_check_length(struct uvc_drv_video *v, struct uvc_buf *buf,
+uvc_buf_check_length(struct uvc_drv_video *v, const struct uvc_buf *buf,
 		     uint32_t len, uint32_t finish)
 {
-	struct v4l2_buffer *vbuf = &buf->vbuf;
+	const struct v4l2_buffer *vbuf = &buf->vbuf;
 
 	/*
 	 * guvcview enables video stream twice on ThinOS, first time it calls
@@ -389,7 +389,7 @@ done:
 }
 
 static void
-uvc_buf_queue_query_buf_locked(struct uvc_buf *buf, struct v4l2_buffer *vbuf)
+uvc_buf_queue_query_buf_locked(const struct uvc_buf *buf, struct v4l2_buffer *vbuf)
 {
 	memcpy(vbuf, &buf->vbuf, sizeof(*vbuf));
 
@@ -462,7 +462,7 @@ uvc_buf_queue_dequeue_buf(struct uvc_buf_queue *bq,
 }
 
 int
-uvc_buf_queue_queue_buf(struct uvc_buf_queue *bq, struct v4l2_buffer *vbuf)
+uvc_buf_queue_queue_buf(struct uvc_buf_queue *bq, const struct v4l2_buffer *vbuf)
 {
 	struct uvc_buf *buf;
 	int ret = 0;

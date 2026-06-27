@@ -97,7 +97,7 @@ extern int uvc_buf_queue_query_buf(struct uvc_buf_queue *queue,
 extern int uvc_buf_queue_mmap(struct uvc_buf_queue *queue,
 	vm_paddr_t *paddr, vm_offset_t offset);
 extern int uvc_buf_queue_queue_buf(struct uvc_buf_queue *queue,
-	struct v4l2_buffer *vbuf);
+	const struct v4l2_buffer *vbuf);
 extern int uvc_buf_queue_dequeue_buf(struct uvc_buf_queue *queue,
 	struct v4l2_buffer *vbuf, int nonblock);
 struct usb_page_cache;
