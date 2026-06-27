@@ -471,7 +471,7 @@ uvc_drv_check_video_context(struct uvc_drv_video *v, unsigned char *data,
 	if (!v->cur_fmt || v->cur_fmt->fcc != V4L2_PIX_FMT_MJPEG || v->htsf)
 		return 0;
 
-	if (data[0] != 0xFF || data[1] != 0xD8)
+	if (len >= 2 && (data[0] != 0xFF || data[1] != 0xD8))
 		return 1;
 
 	return 0;
@@ -906,7 +906,7 @@ uvc_drv_fill_buf(struct uvc_drv_video *v, struct usb_page_cache *pc, int i,
 }
 
 static void
-uvc_drv_bulkdata_clear_stall_callback(struct usb_xfer *xfer, usb_error_t error)
+uvc_drv_bulkdata_clear_stall_callback(struct usb_xfer *xfer, usb_error_t error __unused)
 {
 	struct uvc_softc *sc = usbd_xfer_softc(xfer);
 	struct usb_xfer *xfer_other = sc->video->data->xfer[2];
@@ -942,7 +942,7 @@ uvc_drv_bulkdata_callback(struct usb_xfer *xfer, usb_error_t error)
 		break;
 	default:
 		DPRINTF("error=%s\n", usbd_errstr(error));
-
+		(void)error;
 		break;
 	}
 }
@@ -2422,7 +2422,7 @@ uvc_drv_show_ctrl(struct uvc_drv_ctrl *ctrl)
 
 static int
 uvc_drv_parse_vendor_ctrl(struct uvc_softc *sc, struct usb_descriptor *desc,
-	struct uvc_drv_ctrl *ctrl)
+	struct uvc_drv_ctrl *ctrl __unused)
 {
 	switch (UGETW(sc->udev->ddesc.idVendor)) {
 	case USB_VENDOR_ID_LOGITECH:

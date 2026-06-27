@@ -323,7 +323,7 @@ uvc_v4l2_enum_input(struct uvc_drv_video *video, struct v4l2_input *input)
 }
 
 static int
-uvc_v4l2_get_input(struct uvc_drv_video *video, int *input)
+uvc_v4l2_get_input(struct uvc_drv_video *video __unused, int *input)
 {
 	// TODO(mneumann): Support multiple inputs.
 	*input = 0;
