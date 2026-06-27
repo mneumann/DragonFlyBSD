@@ -878,11 +878,10 @@ uvc_drv_bulkfill_buf(struct uvc_drv_video *v, struct usb_page_cache *pc,
 }
 
 static int
-uvc_drv_fill_buf(struct uvc_drv_video *v, struct usb_page_cache *pc, int i,
-	usb_frlength_t size, usb_frlength_t len)
+uvc_drv_fill_buf(struct uvc_drv_video *v, struct usb_page_cache *pc,
+	usb_frlength_t offset, usb_frlength_t len)
 {
 	struct uvc_data_payload_header h;
-	usb_frlength_t offset = i * size;
 
 	if (len < sizeof(h))
 		return EINVAL;
@@ -956,7 +955,7 @@ static void
 uvc_drv_data_callback(struct usb_xfer *xfer, usb_error_t error)
 {
 	struct uvc_softc *sc = usbd_xfer_softc(xfer);
-	int actlen, nframes, i, size;
+	int actlen, nframes, i;
 	struct usb_page_cache *pc;
 
 	usbd_xfer_status(xfer, &actlen, NULL, NULL, &nframes);
@@ -965,9 +964,10 @@ uvc_drv_data_callback(struct usb_xfer *xfer, usb_error_t error)
 	case USB_ST_TRANSFERRED:
 		pc = usbd_xfer_get_frame(xfer, 0);
 		for (i = 0; i < nframes; i++) {
-			size = usbd_xfer_frame_len(xfer, i);
-			uvc_drv_fill_buf(sc->video, pc, i,
-				usbd_xfer_max_framelen(xfer), size);
+			uvc_drv_fill_buf(sc->video,
+				pc,
+				i * usbd_xfer_max_framelen(xfer),
+				usbd_xfer_frame_len(xfer, i));
 		}
 
 	case USB_ST_SETUP:
