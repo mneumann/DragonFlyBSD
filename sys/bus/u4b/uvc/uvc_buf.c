@@ -147,7 +147,7 @@ uvc_buf_queue_mmap(struct uvc_buf_queue *bq, vm_paddr_t *paddr, vm_offset_t offs
 static void
 uvc_buf_queue_show_qbuf(struct uvc_buf *buf)
 {
-	DPRINTF("buf index:%lu status:%lu mem:%p offset:%lu\n",
+	kprintf("buf index:%lu status:%lu mem:%p offset:%lu\n",
 		buf->index, buf->status, buf->mem, buf->offset);
 }
 
@@ -156,11 +156,11 @@ uvc_buf_queue_show(struct uvc_buf_queue *bq)
 {
 	int i;
 
-	DPRINTF("mem:%p status:%lx flags:%lx seq:%lu buf size:%lu count:%lu\n",
+	kprintf("mem:%p status:%lx flags:%lx seq:%lu buf size:%lu count:%lu\n",
 		bq->mem, bq->status, bq->flags, bq->seq,
 		bq->buf_size, bq->buf_count);
 	for (i = 0; i < UVC_BUF_MAX_BUFFERS; i++)
-		uvc_buf_queue_show_qbuf(bq->buf + i);
+		uvc_buf_queue_show_qbuf(&bq->buf[i]);
 }
 
 int
@@ -585,7 +585,8 @@ uvc_buf_queue_req_bufs(struct uvc_buf_queue *bq, uint32_t *count, uint32_t len)
 	bq->buf_size = rl;
 	*count = num;
 
-	uvc_buf_queue_show(bq);
+	if (uvc_debug)
+		uvc_buf_queue_show(bq);
 
 done:
 	UVC_UNLOCK(&bq->mtx);
