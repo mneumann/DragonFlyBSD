@@ -289,7 +289,7 @@ uvc_ctrl_get_info_ct(uint8_t bit_idx, struct uvc_ctrl_info *info)
 {
 	int ret = 0;
 
-	memset(info, 0, sizeof(*info));
+	bzero(info, sizeof(*info));
 
 	info->topo_type = UVC_TOPO_TYPE_CAMERA_TERMINAL;
 	info->index = bit_idx;
@@ -417,7 +417,7 @@ uvc_ctrl_get_info_ct(uint8_t bit_idx, struct uvc_ctrl_info *info)
 	}
 
 	if (ret != 0) {
-		memset(info, 0, sizeof(*info));
+		bzero(info, sizeof(*info));
 	}
 	return ret;
 }
@@ -427,7 +427,7 @@ uvc_ctrl_get_info_pu(uint8_t bit_idx, struct uvc_ctrl_info *info)
 {
 	int ret = 0;
 
-	memset(info, 0, sizeof(*info));
+	bzero(info, sizeof(*info));
 
 	info->topo_type = UVC_TOPO_TYPE_PROCESSING_UNIT;
 	info->index = bit_idx;
@@ -561,7 +561,7 @@ uvc_ctrl_get_info_pu(uint8_t bit_idx, struct uvc_ctrl_info *info)
 	}
 
 	if (ret != 0) {
-		memset(info, 0, sizeof(*info));
+		bzero(info, sizeof(*info));
 	}
 	return ret;
 }
@@ -990,7 +990,7 @@ uvc_query_v4l2_ctrl_sub(struct uvc_control *ctrl, struct v4l2_queryctrl *query)
 
 	struct uvc_ctrl_sub_info *sub_info = ctrl->info.sub_infos[sub_info_idx];
 
-	memset(query, 0, sizeof(*query));
+	bzero(query, sizeof(*query));
 
 	if (sub_info == NULL) {
 		return EINVAL;
@@ -1128,7 +1128,7 @@ uvc_query_v4l2_menu(struct uvc_drv_video *video,
 	int id = qm->id;
 	int index = qm->index;
 
-	memset(qm, 0, sizeof(*qm));
+	bzero(qm, sizeof(*qm));
 	qm->id = id;
 	qm->index = index;
 

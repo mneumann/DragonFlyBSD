@@ -168,7 +168,7 @@ usbd_iface_num_to_index(struct usb_device *udev, int num)
 	struct usb_idesc_parse_state ips;
 	uint8_t index = -1;
 
-	memset(&ips, 0x0, sizeof(ips));
+	bzero(&ips, sizeof(ips));
 	while ((id = usb_idesc_foreach(udev->cdesc, &ips))) {
 		iface = udev->ifaces + ips.iface_index;
 		if (iface->idesc->bInterfaceNumber == num &&
@@ -209,7 +209,7 @@ uvc_drv_do_request(struct usb_device *udev, uint8_t query, uint8_t unit,
 	int err;
 	uint8_t type = UT_CLASS | UT_INTERFACE;
 
-	memset(&req, 0x00, sizeof(req));
+	bzero(&req, sizeof(req));
 	req.bRequest = query;
 	type |= (query & 0x80) ? UT_READ : UT_WRITE;
 	req.bmRequestType = type;
@@ -315,7 +315,7 @@ uvc_drv_get_video_ctrl(struct uvc_drv_video *video,
 	struct uvc_data_request tmp;
 	int size, ret;
 
-	memset(&tmp, 0x0, sizeof(tmp));
+	bzero(&tmp, sizeof(tmp));
 	size = uvc_drv_get_max_ctrl_size(video);
 
 	UVC_ASSERT_LOCKED(&video->mtx);
@@ -346,7 +346,7 @@ uvc_drv_xu_ctrl_query(struct uvc_drv_video *v, struct uvc_xu_control_query *q)
 	DPRINTF("%s query:%x unit:%d selector:%d size:%d\n",
 		__func__, q->query, q->unit, q->selector, q->size);
 
-	memset(tmp, 0, sizeof(tmp));
+	bzero(tmp, sizeof(tmp));
 
 	if (!(q->query & 0x80))
 		ret = copyin(q->data, tmp, q->size);
@@ -669,7 +669,7 @@ uvc_drv_try_v4l2_fmt(struct uvc_drv_video *video, struct v4l2_format *vfmt,
 	vfmt->fmt.pix.height = frm->height;
 
 	while (retry-- > 0) {
-		memset(req, 0, sizeof(*req));
+		bzero(req, sizeof(*req));
 		UVC_LOCK(&video->mtx);
 		ret = uvc_drv_get_video_ctrl(video, req, 1, GET_CUR);
 		UVC_UNLOCK(&video->mtx);

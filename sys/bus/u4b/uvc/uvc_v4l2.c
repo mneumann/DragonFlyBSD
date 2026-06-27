@@ -287,7 +287,7 @@ uvc_v4l2_get_parm(struct uvc_drv_video *video, struct v4l2_streamparm *arg)
 	denominator = 10000000;
 	uvc_simple_frac(&numerator, &denominator, 8, 333);
 
-	memset(arg, 0, sizeof(*arg));
+	bzero(arg, sizeof(*arg));
 	arg->type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 
 	arg->parm.capture.capability = V4L2_CAP_TIMEPERFRAME;

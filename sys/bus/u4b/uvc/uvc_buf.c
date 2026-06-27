@@ -597,7 +597,7 @@ done:
 static void
 uvc_buf_queue_init_qbuf(struct uvc_buf *buf, int ind)
 {
-	memset(buf, 0x0, sizeof(*buf));
+	bzero(buf, sizeof(*buf));
 	buf->index = ind;
 	buf->status = UVC_BUF_STATE_IDLE;
 }
