@@ -176,7 +176,7 @@ uvc_v4l2_enumstd(struct v4l2_standard *std)
 		std->frameperiod.numerator = 1;
 		std->frameperiod.denominator = 25;
 	}
-	strncpy(std->name, "UVC Camera", sizeof(std->name) - 1);
+	strlcpy(std->name, "UVC Camera", sizeof(std->name));
 
 	return 0;
 }
