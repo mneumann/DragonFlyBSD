@@ -478,7 +478,7 @@ uvc_buf_queue_queue_buf(struct uvc_buf_queue *bq, const struct v4l2_buffer *vbuf
 		goto done;
 	}
 
-	buf = bq->buf + vbuf->index;
+	buf = &bq->buf[vbuf->index];
 	if (buf->status != UVC_BUF_STATE_IDLE) {
 		DPRINTF("%s wrong buf type %lu\n", __func__, buf->status);
 		ret = EINVAL;
@@ -507,7 +507,7 @@ uvc_buf_queue_query_buf(struct uvc_buf_queue *bq, struct v4l2_buffer *vbuf)
 		goto done;
 	}
 
-	uvc_buf_queue_query_buf_locked(bq->buf + vbuf->index, vbuf);
+	uvc_buf_queue_query_buf_locked(&bq->buf[vbuf->index], vbuf);
 done:
 	UVC_UNLOCK(&bq->mtx);
 	return ret;
@@ -683,7 +683,7 @@ uvc_buf_queue_disable(struct uvc_buf_queue *queue)
 	STAILQ_INIT(&queue->consumer);
 	STAILQ_INIT(&queue->product);
 	for (i = 0; i < UVC_BUF_MAX_BUFFERS; i++)
-		uvc_buf_queue_init_qbuf(queue->buf + i, i);
+		uvc_buf_queue_init_qbuf(&queue->buf[i], i);
 
 	cv_broadcast(&queue->io_cv);
 	KNOTE(&queue->sel.ki_note, 0);
