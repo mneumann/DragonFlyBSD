@@ -226,13 +226,13 @@ uvc_drv_do_request(struct usb_device *udev, uint8_t query, uint8_t unit,
 static void
 uvc_drv_show_video_ctrl(struct uvc_data_request *req)
 {
-	DPRINTF("hint:%x formatindex:%u frameindex:%u itv:%u\n",
+	kprintf("hint:%x formatindex:%u frameindex:%u itv:%u\n",
 		UGETW(req->wHint), req->bFormatIndex, req->bFrameIndex,
 		UGETDW(req->dwFrameInterval));
-	DPRINTF("keyrate:%u prate:%u compq:%u compwinsize:%u\n",
+	kprintf("keyrate:%u prate:%u compq:%u compwinsize:%u\n",
 		UGETW(req->wKeyFrameRate), UGETW(req->wPFrameRate),
 		UGETW(req->wCompQuality), UGETW(req->wCompWindowSize));
-	DPRINTF("delay:%u framesize:%u payloadsize:%u framinginfo:%x\n", UGETW(req->wDelay),
+	kprintf("delay:%u framesize:%u payloadsize:%u framinginfo:%x\n", UGETW(req->wDelay),
 		UGETDW(req->dwMaxFrameSize), UGETDW(req->dwMaxPayloadSize), req->bFramingInfo);
 }
 
@@ -1635,36 +1635,36 @@ uvc_drv_destroy_video(struct uvc_drv_video *v)
 }
 
 static void
-uvc_drv_show_interval(struct uvc_data_interval *itv)
+uvc_drv_show_interval(const struct uvc_data_interval *itv)
 {
-	DPRINTF("%u	\n", itv->val);
+	kprintf("%u	\n", itv->val);
 }
 
 static void
-uvc_drv_show_frame(struct uvc_data_frame *frm)
+uvc_drv_show_frame(const struct uvc_data_frame *frm)
 {
-	struct uvc_data_interval *itv;
+	const struct uvc_data_interval *itv;
 	int i;
 
-	DPRINTF("interval num:%u\n", frm->interval_type);
-	DPRINTF("frm index:%u width:%u height:%u\n", frm->index,
+	kprintf("interval num:%u\n", frm->interval_type);
+	kprintf("frm index:%u width:%u height:%u\n", frm->index,
 		frm->width, frm->height);
 
 	for (i = 0; i < frm->interval_type; i++) {
 		itv = frm->interval + i;
 		uvc_drv_show_interval(itv);
 	}
-	DPRINTF("\n");
+	kprintf("\n");
 }
 
 static void
-uvc_drv_show_format(struct uvc_data_format *fmt)
+uvc_drv_show_format(const struct uvc_data_format *fmt)
 {
-	struct uvc_data_frame *frm;
+	const struct uvc_data_frame *frm;
 	int i;
 
-	DPRINTF("frame num:%lu flags:0x%lx\n", fmt->nfrm, fmt->flags);
-	DPRINTF("format index:%u name:%s fcc:%u bpp:%u colorspace:%u\n",
+	kprintf("frame num:%lu flags:0x%lx\n", fmt->nfrm, fmt->flags);
+	kprintf("format index:%u name:%s fcc:%u bpp:%u colorspace:%u\n",
 		fmt->index, fmt->name, fmt->fcc, fmt->bpp, fmt->colorspace);
 
 	for (i = 0; i < fmt->nfrm; i++) {
@@ -1674,12 +1674,12 @@ uvc_drv_show_format(struct uvc_data_format *fmt)
 }
 
 static void
-uvc_drv_show_data(struct uvc_drv_data *data)
+uvc_drv_show_data(const struct uvc_drv_data *data)
 {
-	struct uvc_data_format *fmt;
+	const struct uvc_data_format *fmt;
 	int i;
 
-	DPRINTF("streaming interface index:%u num:%u\n"
+	kprintf("streaming interface index:%u num:%u\n"
 		"format num:%u frame num:%d interval:%d\n",
 		data->iface_index, data->iface_num,
 		data->nfmt, data->nfrm, data->nitv);
