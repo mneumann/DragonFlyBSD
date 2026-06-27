@@ -348,6 +348,11 @@ uvc_drv_xu_ctrl_query(struct uvc_drv_video *v, struct uvc_xu_control_query *q)
 
 	bzero(tmp, sizeof(tmp));
 
+	if (q->size > sizeof(tmp)) {
+		kprintf("BUG: %s\n", __func__);
+		return EINVAL;
+	}
+
 	if (!(q->query & 0x80))
 		ret = copyin(q->data, tmp, q->size);
 
