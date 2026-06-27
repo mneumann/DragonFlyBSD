@@ -300,10 +300,10 @@ uvc_v4l2_get_parm(struct uvc_drv_video *video, struct v4l2_streamparm *arg)
 	return 0;
 }
 
-//only stub function
 static int
-uvc_v4l2_enum_input(const struct uvc_drv_ctrl *ctrl, struct v4l2_input *input)
+uvc_v4l2_enum_input(struct uvc_drv_video *video, struct v4l2_input *input)
 {
+	const struct uvc_drv_ctrl *ctrl = video->ctrl;
 	uint32_t index = input->index;
 	struct uvc_topo_node *it; // input terminal
 
@@ -593,7 +593,7 @@ uvc_v4l2_ioctl(struct dev_ioctl_args *ap)
 
 	case VIDIOC_ENUMINPUT:
 		DPRINTF("VIDIOC_ENUMINPUT\n");
-		ret = uvc_v4l2_enum_input(v->ctrl, (struct v4l2_input *)data);
+		ret = uvc_v4l2_enum_input(v, (struct v4l2_input *)data);
 		break;
 
 	case VIDIOC_G_INPUT:
