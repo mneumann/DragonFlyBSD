@@ -600,7 +600,9 @@ uvc_v4l2_ioctl(struct dev_ioctl_args *ap)
 	case VIDIOC_G_INPUT:
 		kprintf("unsupport ioctl VIDIOC_G_INPUT.\n");
 		*(int *)data = 0;
+		ret = 0;
 		break;
+
 	case VIDIOC_ENUMSTD:
 		kprintf("unsupport ioctl VIDIOC_ENUMSTD\n");
 		ret = ENOTTY;
@@ -674,7 +676,6 @@ uvc_v4l2_ioctl(struct dev_ioctl_args *ap)
 		if (!ret) {
 			ret = uvc_drv_set_video(v, &req, rfmt, rfrm);
 		}
-
 		break;
 
 	case VIDIOC_STREAMON:
@@ -683,7 +684,6 @@ uvc_v4l2_ioctl(struct dev_ioctl_args *ap)
 			return EINVAL;
 
 		ret = uvc_drv_start_video(v);
-
 		break;
 
 	case VIDIOC_STREAMOFF:
@@ -737,7 +737,7 @@ uvc_v4l2_ioctl(struct dev_ioctl_args *ap)
 		ret = uvc_buf_queue_queue_buf(&v->bq, buf);
 		if (ret)
 			DPRINTF("return:%d\n", ret);
-		return ret;
+		break;
 
 	case VIDIOC_DQBUF:
 		//DPRINTF("VIDIOC_DQBUF\n");
@@ -751,7 +751,7 @@ uvc_v4l2_ioctl(struct dev_ioctl_args *ap)
 				(fflag & O_NONBLOCK)?1:0);
 		if (ret)
 			DPRINTF("return:%d\n", ret);
-		return ret;
+		break;
 
 	case UVCIOC_CTRL_MAP:
 		kprintf("unsupport ioctl UVCIOC_CTRL_MAP.\n");
@@ -773,7 +773,6 @@ uvc_v4l2_ioctl(struct dev_ioctl_args *ap)
 
 	default:
 		kprintf("unsupport ioctl: %s.\n", uvc_v4l2_ioctl_to_string(cmd));
-		//ret = EINVAL;
 		ret = ENOTTY;
 		break;
 	}
