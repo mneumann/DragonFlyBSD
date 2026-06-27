@@ -302,20 +302,19 @@ uvc_v4l2_get_parm(struct uvc_drv_video *video, struct v4l2_streamparm *arg)
 
 //only stub function
 static int
-uvc_v4l2_enum_input(struct uvc_drv_ctrl *ctrl, struct v4l2_input *input)
+uvc_v4l2_enum_input(const struct uvc_drv_ctrl *ctrl, struct v4l2_input *input)
 {
 	uint32_t index = input->index;
-	struct uvc_topo_node *it = NULL; // input terminal
-
-	/*WARNING: to_be_implement here, hard code no SELECTOR */
-	if (index)
-		return EINVAL;
+	struct uvc_topo_node *it; // input terminal
 
 	it = STAILQ_FIRST(&ctrl->topo_nodes);
-	if (!it)
+	for (int i = 0; it && i < index; ++i)
+		it = STAILQ_NEXT(it, link);
+
+	if (it == NULL)
 		return EINVAL;
 
-	memset(input, 0, sizeof(*input));
+	bzero(input, sizeof(*input));
 	input->index = index;
 	strlcpy(input->name, it->node_name, sizeof(input->name));
 	input->type = V4L2_INPUT_TYPE_CAMERA;
