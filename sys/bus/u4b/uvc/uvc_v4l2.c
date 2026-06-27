@@ -322,6 +322,15 @@ uvc_v4l2_enum_input(struct uvc_drv_video *video, struct v4l2_input *input)
 	return 0;
 }
 
+static int
+uvc_v4l2_get_input(struct uvc_drv_video *video, int *input)
+{
+	// TODO(mneumann): Support multiple inputs.
+	*input = 0;
+
+	return 0;
+}
+
 static void
 uvc_v4l2_dtor(void *data)
 {
@@ -597,9 +606,8 @@ uvc_v4l2_ioctl(struct dev_ioctl_args *ap)
 		break;
 
 	case VIDIOC_G_INPUT:
-		kprintf("unsupport ioctl VIDIOC_G_INPUT.\n");
-		*(int *)data = 0;
-		ret = 0;
+		DPRINTF("VIDIOC_G_INPUT\n");
+		ret = uvc_v4l2_get_input(v, (int*)data);
 		break;
 
 	case VIDIOC_ENUMSTD:
